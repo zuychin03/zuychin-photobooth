@@ -1,65 +1,116 @@
-import Image from "next/image";
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { Camera, Heart, Users, ArrowRight } from "lucide-react";
+import { StripMockup } from "@/components/StripMockup";
+import { newRoomCode, normalizeRoomCode, isValidRoomCode } from "@/lib/room-code";
 
 export default function Home() {
+  const router = useRouter();
+  const [joinCode, setJoinCode] = useState("");
+  const [joinError, setJoinError] = useState(false);
+
+  const createRoom = () => router.push(`/room/${newRoomCode()}?host=1`);
+
+  const joinRoom = () => {
+    if (!isValidRoomCode(joinCode)) {
+      setJoinError(true);
+      return;
+    }
+    router.push(`/room/${joinCode}`);
+  };
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+    <main className="relative flex-1 overflow-hidden">
+      {/* Fluid orbs */}
+      <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
+        <div className="fluid-orb absolute -top-24 -left-24 h-96 w-96 rounded-full bg-accent/20 blur-3xl" />
+        <div className="fluid-orb--slow fluid-orb absolute top-1/3 -right-32 h-[28rem] w-[28rem] rounded-full bg-partner/20 blur-3xl" />
+        <div className="fluid-orb absolute bottom-0 left-1/4 h-80 w-80 rounded-full bg-warning/10 blur-3xl" />
+      </div>
+
+      <div className="mx-auto flex min-h-dvh w-full max-w-5xl flex-col items-center justify-center gap-10 px-6 py-16 lg:flex-row lg:gap-16">
+        {/* Hero copy + actions */}
+        <div className="flex max-w-md flex-col items-center text-center lg:items-start lg:text-left">
+          <p className="hero-animate hero-animate-delay-1 mb-3 text-sm font-medium tracking-widest text-accent uppercase">
+            Zuychin Photobooth
           </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+          <h1
+            className="hero-animate hero-animate-delay-2 text-5xl leading-tight font-semibold sm:text-6xl"
+            style={{ fontFamily: "var(--font-fraunces)" }}
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+            A booth for two,
+            <br />
+            any distance.
+          </h1>
+          <p className="hero-animate hero-animate-delay-3 mt-4 text-muted-foreground">
+            Snap photo strips together from anywhere: same countdown, same
+            strip, two cameras. Your photos never touch a server.
+          </p>
+
+          <div className="hero-animate hero-animate-delay-4 mt-8 flex w-full flex-col gap-3">
+            <button
+              onClick={() => router.push("/booth")}
+              className="group flex min-h-14 items-center justify-between rounded-2xl bg-accent px-5 text-accent-foreground shadow-lg shadow-accent/25 transition hover:brightness-105 active:scale-[0.99]"
+            >
+              <span className="flex items-center gap-3 font-semibold">
+                <Camera size={20} /> Solo booth
+              </span>
+              <ArrowRight size={18} className="transition group-hover:translate-x-0.5" />
+            </button>
+
+            <button
+              onClick={createRoom}
+              className="group glass-card flex min-h-14 items-center justify-between rounded-2xl px-5 transition hover:border-accent/40 active:scale-[0.99]"
+            >
+              <span className="flex items-center gap-3 font-semibold">
+                <Heart size={20} className="text-accent" /> Create a room
+              </span>
+              <ArrowRight size={18} className="transition group-hover:translate-x-0.5" />
+            </button>
+
+            <div className="glass-card flex min-h-14 items-center gap-2 rounded-2xl px-4">
+              <Users size={20} className="shrink-0 text-partner" />
+              <input
+                value={joinCode}
+                onChange={(e) => {
+                  setJoinCode(normalizeRoomCode(e.target.value));
+                  setJoinError(false);
+                }}
+                onKeyDown={(e) => e.key === "Enter" && joinRoom()}
+                placeholder="Room code"
+                aria-label="Room code"
+                className={`min-w-0 flex-1 bg-transparent font-mono text-lg tracking-[0.3em] uppercase outline-none placeholder:font-sans placeholder:text-base placeholder:tracking-normal placeholder:text-muted-foreground ${
+                  joinError ? "text-destructive" : ""
+                }`}
+              />
+              <button
+                onClick={joinRoom}
+                className="min-h-10 rounded-xl bg-partner/15 px-4 font-semibold text-partner transition hover:bg-partner/25"
+              >
+                Join
+              </button>
+            </div>
+            {joinError && (
+              <p className="text-sm text-destructive">
+                Room codes are 6 letters or numbers. Check with your partner.
+              </p>
+            )}
+          </div>
         </div>
-      </main>
-    </div>
+
+        {/* Tilted strip mockups */}
+        <div className="hero-animate hero-animate-delay-3 relative flex items-center justify-center">
+          <StripMockup tilt={-8} className="translate-x-6 translate-y-4" />
+          <StripMockup tilt={4} className="-translate-x-2 -translate-y-2" />
+          <StripMockup tilt={12} className="-translate-x-10 translate-y-6 hidden sm:block" />
+        </div>
+      </div>
+
+      <footer className="absolute bottom-4 w-full text-center text-xs text-muted-foreground">
+        Part of the Zuychin ecosystem
+      </footer>
+    </main>
   );
 }

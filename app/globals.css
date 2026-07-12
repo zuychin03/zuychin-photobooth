@@ -1,26 +1,196 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* ─── Theme Tokens ────────────────────────────────────── */
+/* Same token names as Zuychin Gallery; Photobooth's accent is rose
+   (gallery owns amber). --partner marks the partner's UI in duo rooms. */
+:root, .light {
+  --background: #fafaf9;
+  --foreground: #1c1917;
+  --card: #ffffff;
+  --card-foreground: #1c1917;
+  --muted: #f5f5f4;
+  --muted-foreground: #78716c;
+  --accent: #e11d48;
+  --accent-foreground: #ffffff;
+  --partner: #7c3aed;
+  --border: #e7e5e4;
+  --ring: #e11d48;
+  --destructive: #ef4444;
+  --success: #10b981;
+  --warning: #f59e0b;
+  --info: #38bdf8;
+  --datestamp: #ff9d45;
+}
+
+.dark {
+  --background: #0c0a09;
+  --foreground: #fafaf9;
+  --card: #1c1917;
+  --card-foreground: #fafaf9;
+  --muted: #292524;
+  --muted-foreground: #a8a29e;
+  --accent: #fb7185;
+  --accent-foreground: #0c0a09;
+  --partner: #a78bfa;
+  --border: #292524;
+  --ring: #fb7185;
+  --success: #34d399;
+  --warning: #fbbf24;
+  --info: #7dd3fc;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not(.light) {
+    --background: #0c0a09;
+    --foreground: #fafaf9;
+    --card: #1c1917;
+    --card-foreground: #fafaf9;
+    --muted: #292524;
+    --muted-foreground: #a8a29e;
+    --accent: #fb7185;
+    --accent-foreground: #0c0a09;
+    --partner: #a78bfa;
+    --border: #292524;
+    --ring: #fb7185;
+    --success: #34d399;
+    --warning: #fbbf24;
+    --info: #7dd3fc;
+  }
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-partner: var(--partner);
+  --color-border: var(--border);
+  --color-ring: var(--ring);
+  --color-destructive: var(--destructive);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-info: var(--info);
+  --color-datestamp: var(--datestamp);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --font-display: var(--font-fraunces);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* ─── Base Styles ─────────────────────────────────────── */
+html {
+  scrollbar-gutter: stable;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans, system-ui, sans-serif);
+}
+
+/* ─── Booth Mode ──────────────────────────────────────── */
+/* Capture/room screens force near-black regardless of theme so the
+   camera feed is the star; UI glow must not pollute skin tones. */
+.booth-mode {
+  --background: #0a0a0a;
+  --foreground: #fafaf9;
+  --card: #171412;
+  --card-foreground: #fafaf9;
+  --muted: #201c1a;
+  --muted-foreground: #a8a29e;
+  --border: #2e2a26;
+  background: var(--background);
+  color: var(--foreground);
+}
+
+/* ─── Glass Morphism ─────────────────────────────────── */
+.glass-card {
+  background: color-mix(in srgb, var(--card) 78%, transparent);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid color-mix(in srgb, var(--border) 55%, transparent);
+}
+
+/* ─── Fluid Background Animations ───────────────────── */
+@keyframes fluid-drift {
+  0%, 100% { transform: translate(0px, 0px) scale(1); }
+  25%       { transform: translate(40px, -60px) scale(1.07); }
+  50%       { transform: translate(-30px, -20px) scale(0.94); }
+  75%       { transform: translate(25px, 45px) scale(1.04); }
+}
+
+@keyframes fluid-drift-slow {
+  0%, 100% { transform: translate(0px, 0px) scale(1); }
+  33%       { transform: translate(-55px, 35px) scale(1.05); }
+  66%       { transform: translate(35px, -45px) scale(0.96); }
+}
+
+.fluid-orb {
+  animation: fluid-drift 24s ease-in-out infinite;
+  will-change: transform;
+}
+.fluid-orb--slow {
+  animation-name: fluid-drift-slow;
+  animation-duration: 32s;
+}
+
+/* ─── Hero Text Reveal ───────────────────────────────── */
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.hero-animate {
+  opacity: 0;
+  animation: fade-up 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+.hero-animate-delay-1 { animation-delay: 0.05s; }
+.hero-animate-delay-2 { animation-delay: 0.18s; }
+.hero-animate-delay-3 { animation-delay: 0.32s; }
+.hero-animate-delay-4 { animation-delay: 0.48s; }
+
+/* ─── Booth-specific motion ──────────────────────────── */
+@keyframes countdown-pulse {
+  0%   { transform: scale(1.35); opacity: 0; }
+  20%  { transform: scale(1);    opacity: 1; }
+  80%  { transform: scale(1);    opacity: 1; }
+  100% { transform: scale(0.9);  opacity: 0; }
+}
+.countdown-pulse {
+  animation: countdown-pulse 1s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes capture-flash {
+  0%   { opacity: 1; }
+  100% { opacity: 0; }
+}
+.capture-flash {
+  animation: capture-flash 0.45s ease-out forwards;
+}
+
+@keyframes strip-print {
+  from { transform: translateY(-24px); opacity: 0; clip-path: inset(0 0 100% 0); }
+  to   { transform: translateY(0);     opacity: 1; clip-path: inset(0 0 0% 0); }
+}
+.strip-print {
+  animation: strip-print 0.9s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* ─── Scrollbar ───────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: var(--muted-foreground);
+  border-radius: 3px;
+}
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+.scrollbar-hide { scrollbar-width: none; -ms-overflow-style: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .fluid-orb { animation: none; }
+  .hero-animate { animation: none; opacity: 1; }
+  .countdown-pulse, .capture-flash, .strip-print { animation-duration: 0.01s; }
 }

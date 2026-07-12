@@ -39,3 +39,26 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# coding agents and AI tooling
+CLAUDE.md
+AGENTS.md
+.claude/
+.cursor/
+.cursorrules
+.aider*
+
+# editors and OS cruft
+.vscode/
+.idea/
+Thumbs.db
+desktop.ini
+
+# local notes and external documents
+*.local.md
+CHANGELOG.md
+/notes/
+/external/
+
+# keep the setup sample despite .env*
+!.env.example

@@ -1,36 +1,104 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Zuychin Photobooth
 
-## Getting Started
+A photobooth for two, any distance. Snap Life4Cuts-style photo strips together from anywhere: one room code, one synchronized countdown, two cameras, one strip. Built for long-distance couples and small groups of friends.
 
-First, run the development server:
+Photos never touch a server. Everything is captured, composed, and exported in the browser; in a shared room, frames travel only peer to peer.
+
+## Features
+
+- **Solo booth**: pick a layout, pose through a 3-2-1 countdown with flash and shutter sound, and get a strip of 3 or 4 shots. No retakes per shot, that's the booth way.
+- **Live duo room**: create a room, send the code, and shoot together. Either side can press the shutter; a clock-synchronized countdown fires both cameras at the same instant (typically within a few tens of milliseconds).
+- **Full-resolution exchange**: each device captures its own camera at native resolution and sends the frame over the WebRTC data channel, so nobody's half of the strip is a compressed video screenshot.
+- **Pose prompt roulette**: both screens roll the same random prompt for every cut ("mirror each other's pose", "both make half a heart").
+- **Strip editor**: 7 frame colors, 6 live-preview filters (applied losslessly after capture), captions, a film-style orange datestamp, and draggable stickers.
+- **Sticker library**: 8 packs of 8 stickers in three rendering styles: Flat and 3D (bundled Fluent Emoji assets, consistent on every device) and Ink (monochrome glyphs tinted to the frame color).
+- **Layouts**: classic 4-strip, 2x2 grid, and tall three for solo; taking turns, side-by-side split cells, and twin strips for duos.
+- **Export**: 2x-resolution PNG download and native share sheet on mobile. Camera denied? Build a strip from uploaded photos instead.
+
+## Tech stack
+
+| Layer | Choice |
+| --- | --- |
+| Framework | Next.js 16 (App Router), React 19, TypeScript |
+| Styling | Tailwind CSS v4 with CSS-variable design tokens |
+| Fonts | Geist, Fraunces, Noto Emoji (monochrome) via next/font |
+| Realtime signaling | Supabase Realtime broadcast channels |
+| Media | WebRTC peer-to-peer, getUserMedia, Canvas 2D |
+| Icons | lucide-react |
+| Sticker assets | Microsoft Fluent Emoji (bundled SVG/PNG) |
+
+## Getting started
+
+Requires Node.js 20.9 or later.
 
 ```bash
+npm install
+cp .env.example .env.local   # then fill in the values below
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open http://localhost:3000.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Environment variables
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+All variables are optional for local development. See `.env.example` for the template.
 
-## Learn More
+| Variable | Purpose |
+| --- | --- |
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL, used only for WebRTC signaling (no data is stored) |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon key for the Realtime channel |
+| `NEXT_PUBLIC_TURN_URL` | TURN relay URL for networks where direct peer-to-peer fails |
+| `NEXT_PUBLIC_TURN_USERNAME` | TURN credential |
+| `NEXT_PUBLIC_TURN_CREDENTIAL` | TURN credential |
 
-To learn more about Next.js, take a look at the following resources:
+Without Supabase configured, rooms fall back to a BroadcastChannel: two tabs in the same browser can pair (handy for development), but two devices cannot. Without TURN, some mobile and cross-country connections will fail to establish; free credentials are available from providers such as metered.ca.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Scripts
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+| Script | What it does |
+| --- | --- |
+| `npm run dev` | Start the dev server |
+| `npm run build` | Production build |
+| `npm run start` | Serve the production build |
+| `npm run lint` | ESLint |
+| `npm run typecheck` | TypeScript, no emit |
 
-## Deploy on Vercel
+## How a shared room works
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+1. One partner creates a room (a 6-character code) and shares the link.
+2. Supabase Realtime carries the WebRTC offer/answer/ICE handshake; the browsers then connect directly.
+3. When someone presses the shutter, the leader schedules a fire time and both sides estimate their clock offset over the data channel, so both cameras capture at the same moment.
+4. Each side sends its full-resolution JPEG to the other over the data channel. Both partners end up with every original and can edit and export the identical strip.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Project structure
+
+```
+app/
+  page.tsx            landing: solo booth, create room, join room
+  booth/              solo capture flow
+  room/[code]/        live shared room
+  customize/          strip editor and export
+components/           camera preview, countdown, filter bar, strip mockup
+hooks/useCamera.ts    getUserMedia lifecycle and device switching
+lib/
+  layouts.ts          strip geometry definitions
+  compose.ts          canvas strip composition (preview and export)
+  filters.ts          filter definitions (CSS and canvas parity)
+  capture.ts          frame capture and blob helpers
+  decor.ts            frames, sticker packs, sticker styles
+  prompts.ts          pose prompt packs and seeded roulette
+  rtc/                signaling, peer engine, clock sync
+public/stickers/      bundled Fluent Emoji assets (flat SVG, 3D PNG)
+```
+
+## Roadmap
+
+- Together mode: segment both people out of their backgrounds and composite them into one shared scene per cut.
+- Async relay strips: one partner shoots their half, the other completes it later.
+- Accounts, strip history, and couple rituals (scheduled photo dates, monthly strips).
+- Zuychin ecosystem integration.
+
+## Credits
+
+- Sticker artwork from [Fluent Emoji](https://github.com/microsoft/fluentui-emoji) by Microsoft, MIT license.
+- Ink-style glyphs rendered with [Noto Emoji](https://fonts.google.com/noto/specimen/Noto+Emoji), SIL Open Font License.
