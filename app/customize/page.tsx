@@ -95,7 +95,8 @@ export default function CustomizePage() {
     if (session.mode === "duo") preloadSegmenter();
   }, [session.mode]);
 
-  const selectScene = async (id: string | null) => {
+  const autoSceneApplied = useRef(false);
+  const selectScene = useCallback(async (id: string | null) => {
     setSceneId(id);
     setSegFailed(false);
     if (!id || cutouts || segmenting) return;
@@ -114,7 +115,15 @@ export default function CustomizePage() {
     } finally {
       setSegmenting(false);
     }
-  };
+  }, [cutouts, segmenting, session.shots.A, session.shots.B]);
+
+  // scene agreed in the room applies automatically on arrival
+  useEffect(() => {
+    if (!autoSceneApplied.current && session.mode === "duo" && session.sceneId && hasShots) {
+      autoSceneApplied.current = true;
+      void selectScene(session.sceneId);
+    }
+  }, [session.mode, session.sceneId, hasShots, selectScene]);
 
   // canvas composition needs the style's assets ready; re-render when they land
   useEffect(() => {

@@ -18,6 +18,9 @@ import { getFilter } from "@/lib/filters";
 import { LAYOUTS, getLayout } from "@/lib/layouts";
 import { newPromptSeed, rollPrompts } from "@/lib/prompts";
 import { isValidRoomCode } from "@/lib/room-code";
+import { LiveScenePainter } from "@/lib/live-preview";
+import { SCENES, getScene } from "@/lib/scenes";
+import { preloadSegmenter } from "@/lib/segmentation";
 import { useBoothSession } from "@/lib/session";
 import { playShutter, playTick } from "@/lib/sound";
 import { RoomEngine, RoomStatus, ShotPlan } from "@/lib/rtc/engine";
@@ -50,6 +53,9 @@ function RoomInner() {
   const [shotProgress, setShotProgress] = useState(0);
   const [prompt, setPrompt] = useState<string | null>(null);
   const [skewMs, setSkewMs] = useState<number | null>(null);
+  const [roomScene, setRoomScene] = useState<string | null>(null);
+  const previewCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const painterRef = useRef<LiveScenePainter | null>(null);
 
   const cancelled = useRef(false);
   const myCaptureTimes = useRef<Record<number, number>>({});
@@ -61,6 +67,35 @@ function RoomInner() {
   const filter = getFilter(session.filterId);
   const duoLayouts = LAYOUTS.filter((l) => l.mode === "duo");
   const mirror = facing === "user";
+
+  // shared scene: applies locally and (optionally) broadcasts to the partner
+  const applyScene = useCallback(
+    (id: string | null, broadcast: boolean) => {
+      setRoomScene(id);
+      update({ sceneId: id });
+      if (broadcast) engineRef.current?.sendScene(id);
+      const video = videoRef.current;
+      const canvas = previewCanvasRef.current;
+      if (!video || !canvas) return;
+      const scene = id ? getScene(id) : null;
+      if (scene) {
+        painterRef.current ??= new LiveScenePainter(video, canvas, facing === "user");
+        painterRef.current.start(scene);
+      } else {
+        painterRef.current?.stop();
+      }
+    },
+    [update, videoRef, facing],
+  );
+
+  useEffect(() => {
+    return () => painterRef.current?.stop();
+  }, []);
+
+  // warm the video-mode segmenter once connected so the preview starts fast
+  useEffect(() => {
+    if (status === "connected") preloadSegmenter("VIDEO");
+  }, [status]);
 
   const maybeFinish = useCallback(() => {
     const plan = planRef.current;
@@ -89,6 +124,7 @@ function RoomInner() {
         promptSeed: plan.seed,
         roomCode: code,
         shots: { A: [], B: [] },
+        sceneId: plan.sceneId,
       });
       const prompts = rollPrompts("couple", plan.shots, plan.seed);
 
@@ -135,9 +171,11 @@ function RoomInner() {
   );
 
   const runPlanRef = useRef(runPlan);
+  const applySceneRef = useRef(applyScene);
   useEffect(() => {
     runPlanRef.current = runPlan;
-  }, [runPlan]);
+    applySceneRef.current = applyScene;
+  }, [runPlan, applyScene]);
 
   useEffect(() => {
     if (!isValidRoomCode(code)) {
@@ -152,6 +190,7 @@ function RoomInner() {
           void remoteVideoRef.current.play().catch(() => {});
         }
       },
+      onScene: (id) => applySceneRef.current(id, false),
       onArm: (plan) => void runPlanRef.current(plan),
       onRemoteFrame: (shot, blob, capturedAtLocal) => {
         void blobToCanvas(blob).then((canvas) => {
@@ -194,6 +233,7 @@ function RoomInner() {
       t0: Date.now() + LEAD_IN_MS + COUNTDOWN_MS,
       intervalMs: INTERVAL_MS,
       shots: 4,
+      sceneId: roomScene,
     });
   };
 
@@ -237,6 +277,13 @@ function RoomInner() {
           ) : (
             <CameraPreview videoRef={attachVideo} mirror={mirror} filterCss={filter.css} />
           )}
+          <canvas
+            ref={previewCanvasRef}
+            className={`pointer-events-none absolute inset-0 h-full w-full object-cover ${
+              roomScene ? "" : "hidden"
+            }`}
+            style={{ filter: filter.css !== "none" ? filter.css : undefined }}
+          />
           <span className="absolute bottom-2 left-3 z-10 rounded-full bg-accent/85 px-3 py-1 text-xs font-semibold text-accent-foreground">
             You
           </span>
@@ -340,6 +387,33 @@ function RoomInner() {
               value={session.filterId}
               onChange={(id) => update({ filterId: id })}
             />
+            {connected && (
+              <div className="scrollbar-hide flex items-center gap-2 overflow-x-auto">
+                <span className="shrink-0 text-xs font-medium text-muted-foreground">
+                  Scene
+                </span>
+                <button
+                  onClick={() => applyScene(null, true)}
+                  className={`min-h-9 shrink-0 rounded-xl border-2 px-3 text-xs font-medium ${
+                    roomScene === null ? "border-accent" : "border-border"
+                  }`}
+                >
+                  None
+                </button>
+                {SCENES.map((s) => (
+                  <button
+                    key={s.id}
+                    onClick={() => applyScene(s.id, true)}
+                    title={s.name}
+                    aria-label={s.name}
+                    className={`h-9 w-14 shrink-0 rounded-xl border-2 ${
+                      roomScene === s.id ? "border-accent" : "border-border"
+                    }`}
+                    style={{ background: s.previewCss }}
+                  />
+                ))}
+              </div>
+            )}
             <button
               onClick={armShoot}
               disabled={!connected || !ready}

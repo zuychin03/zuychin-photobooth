@@ -14,11 +14,13 @@ export interface ShotPlan {
   t0: number;
   intervalMs: number;
   shots: number;
+  sceneId: string | null;
 }
 
 type Control =
   | { t: "ping"; a: number }
   | { t: "pong"; a: number; b: number }
+  | { t: "scene"; id: string | null }
   | { t: "arm"; plan: ShotPlan }
   | { t: "frame"; shot: number; size: number; capturedAt: number };
 
@@ -33,6 +35,8 @@ export type RoomStatus =
 export interface RoomEngineEvents {
   onStatus(status: RoomStatus): void;
   onRemoteStream(stream: MediaStream): void;
+  /** partner changed the shared Together scene */
+  onScene(id: string | null): void;
   /** plan with t0 already converted to this machine's clock */
   onArm(plan: ShotPlan): void;
   /** capturedAtLocal: the remote capture moment converted to this machine's clock */
@@ -217,6 +221,9 @@ export class RoomEngine {
       case "pong":
         this.clock.addSample(msg.a, msg.b, Date.now());
         return;
+      case "scene":
+        this.events.onScene(msg.id);
+        return;
       case "arm": {
         const plan = { ...msg.plan, t0: this.clock.toLocal(msg.plan.t0) };
         this.events.onArm(plan);
@@ -232,6 +239,10 @@ export class RoomEngine {
         };
         return;
     }
+  }
+
+  sendScene(id: string | null): void {
+    this.sendControl({ t: "scene", id });
   }
 
   /** Leader side: broadcast the plan (t0 in our clock) and run it locally too. */

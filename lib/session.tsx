@@ -16,6 +16,8 @@ export interface BoothSession {
   shots: ShotStore;
   promptSeed: number | null;
   roomCode: string | null;
+  /** Together scene agreed in the room, applied automatically in the editor */
+  sceneId: string | null;
 }
 
 const EMPTY: BoothSession = {
@@ -26,6 +28,7 @@ const EMPTY: BoothSession = {
   shots: { A: [], B: [] },
   promptSeed: null,
   roomCode: null,
+  sceneId: null,
 };
 
 interface SessionContextValue {
