@@ -10,6 +10,7 @@ import {
 import { getFilter, supportsCanvasFilter } from "./filters";
 import { StickerStyle, monochromeGlyph } from "./decor";
 import { getStickerImage } from "./sticker-assets";
+import { getScene } from "./scenes";
 
 export interface StickerInstance {
   key: number;
@@ -36,11 +37,27 @@ export interface StripStyle {
 
 export type ShotSet = Partial<Record<"A" | "B", (HTMLCanvasElement | null)[]>>;
 
+/** Per-side adjustment in Together mode; dx/dy are cell fractions. */
+export interface TogetherPlacement {
+  dx: number;
+  dy: number;
+  scale: number;
+}
+
+export interface TogetherOptions {
+  sceneId: string;
+  placeA: TogetherPlacement;
+  placeB: TogetherPlacement;
+}
+
 export interface ComposeInput {
   layout: StripLayout;
   shots: ShotSet;
   style: StripStyle;
   stickers: StickerInstance[];
+  /** person cutouts parallel to shots, required for Together mode cells */
+  cutouts?: ShotSet;
+  together?: TogetherOptions | null;
 }
 
 const STICKER_BASE = 96;
@@ -90,7 +107,8 @@ export function composeStrip(
   input: ComposeInput,
   scale = 1,
 ): void {
-  const { layout, shots, style, stickers } = input;
+  const { layout, shots, style, stickers, cutouts, together } = input;
+  const scene = together ? getScene(together.sceneId) : null;
   const { width, height } = stripSize(layout);
   canvas.width = Math.round(width * scale);
   canvas.height = Math.round(height * scale);
@@ -117,6 +135,10 @@ export function composeStrip(
     const shotA = shots.A?.[shotIdx] ?? null;
     const shotB = shots.B?.[shotIdx] ?? null;
 
+    const cutA = cutouts?.A?.[shotIdx] ?? null;
+    const cutB = cutouts?.B?.[shotIdx] ?? null;
+    const togetherCell = !!scene && !!together && !!(cutA || cutB);
+
     ctx.save();
     ctx.beginPath();
     ctx.rect(x, y, CELL_W, cellH);
@@ -125,7 +147,23 @@ export function composeStrip(
     ctx.fillRect(x, y, CELL_W, cellH);
     if (canFilter && filter.css !== "none") ctx.filter = filter.css;
 
-    if (owner === "AB") {
+    if (togetherCell) {
+      scene.draw(ctx, x, y, CELL_W, cellH);
+      const drawPerson = (
+        cut: HTMLCanvasElement | null,
+        anchorX: number,
+        place: TogetherPlacement,
+      ) => {
+        if (!cut) return;
+        const ph = cellH * 0.92 * place.scale;
+        const pw = (cut.width / cut.height) * ph;
+        const cx = x + CELL_W * (anchorX + place.dx);
+        const bottom = y + cellH + cellH * place.dy;
+        ctx.drawImage(cut, cx - pw / 2, bottom - ph, pw, ph);
+      };
+      drawPerson(cutA, 0.34, together.placeA);
+      drawPerson(cutB, 0.66, together.placeB);
+    } else if (owner === "AB") {
       if (shotA) drawCover(ctx, shotA, x, y, CELL_W / 2, cellH, [0.25, 0.75]);
       if (shotB)
         drawCover(ctx, shotB, x + CELL_W / 2, y, CELL_W / 2, cellH, [0.25, 0.75]);

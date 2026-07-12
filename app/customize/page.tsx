@@ -5,6 +5,10 @@ import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
   Calendar,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  ChevronUp,
   Download,
   RotateCcw,
   RotateCw,
@@ -25,9 +29,13 @@ import {
   stickerAssetUrl,
 } from "@/lib/decor";
 import { ensureNotoFont, preloadStickers } from "@/lib/sticker-assets";
+import { SCENES } from "@/lib/scenes";
+import { cutout, preloadSegmenter } from "@/lib/segmentation";
 import {
   ComposeInput,
+  ShotSet,
   StickerInstance,
+  TogetherPlacement,
   composeStrip,
   stripToBlob,
 } from "@/lib/compose";
@@ -50,6 +58,12 @@ export default function CustomizePage() {
   const [stickerStyle, setStickerStyle] = useState<StickerStyle>("flat");
   const [assetsTick, setAssetsTick] = useState(0);
   const [saving, setSaving] = useState(false);
+  const [sceneId, setSceneId] = useState<string | null>(null);
+  const [cutouts, setCutouts] = useState<ShotSet | null>(null);
+  const [segmenting, setSegmenting] = useState(false);
+  const [segFailed, setSegFailed] = useState(false);
+  const [placeA, setPlaceA] = useState<TogetherPlacement>({ dx: 0, dy: 0, scale: 1 });
+  const [placeB, setPlaceB] = useState<TogetherPlacement>({ dx: 0, dy: 0, scale: 1 });
   const dragRef = useRef<{ key: number; dx: number; dy: number } | null>(null);
   const nextKey = useRef(1);
 
@@ -70,9 +84,37 @@ export default function CustomizePage() {
         stickerStyle,
       },
       stickers,
+      cutouts: cutouts ?? undefined,
+      together: sceneId ? { sceneId, placeA, placeB } : null,
     }),
-    [layout, session.shots, session.filterId, frame, caption, showDate, stickers, stickerStyle],
+    [layout, session.shots, session.filterId, frame, caption, showDate, stickers, stickerStyle, cutouts, sceneId, placeA, placeB],
   );
+
+  // warm the segmenter for duo sessions so picking a scene is fast
+  useEffect(() => {
+    if (session.mode === "duo") preloadSegmenter();
+  }, [session.mode]);
+
+  const selectScene = async (id: string | null) => {
+    setSceneId(id);
+    setSegFailed(false);
+    if (!id || cutouts || segmenting) return;
+    setSegmenting(true);
+    try {
+      const segSide = (arr: (HTMLCanvasElement | null)[]) =>
+        Promise.all(arr.map((s) => (s ? cutout(s) : Promise.resolve(null))));
+      const [A, B] = await Promise.all([
+        segSide(session.shots.A),
+        segSide(session.shots.B),
+      ]);
+      setCutouts({ A, B });
+    } catch {
+      setSegFailed(true);
+      setSceneId(null);
+    } finally {
+      setSegmenting(false);
+    }
+  };
 
   // canvas composition needs the style's assets ready; re-render when they land
   useEffect(() => {
@@ -291,6 +333,78 @@ export default function CustomizePage() {
             onChange={(id) => update({ filterId: id })}
           />
         </section>
+
+        {session.mode === "duo" && (
+          <section>
+            <h2 className="mb-2 text-sm font-medium text-muted-foreground">
+              Together scene
+            </h2>
+            <div className="scrollbar-hide flex gap-2 overflow-x-auto pb-1">
+              <button
+                onClick={() => void selectScene(null)}
+                className={`min-h-11 shrink-0 rounded-xl border-2 px-3 text-xs font-medium ${
+                  sceneId === null ? "border-accent" : "border-border"
+                }`}
+              >
+                None
+              </button>
+              {SCENES.map((s) => (
+                <button
+                  key={s.id}
+                  onClick={() => void selectScene(s.id)}
+                  title={s.name}
+                  aria-label={s.name}
+                  className={`h-11 w-16 shrink-0 rounded-xl border-2 ${
+                    sceneId === s.id ? "border-accent" : "border-border"
+                  }`}
+                  style={{ background: s.previewCss }}
+                />
+              ))}
+            </div>
+            {segmenting && (
+              <p className="mt-1 text-xs text-muted-foreground">
+                Cutting you both out of your backgrounds…
+              </p>
+            )}
+            {segFailed && (
+              <p className="mt-1 text-xs text-destructive">
+                Couldn&apos;t run the background cutout on this device.
+              </p>
+            )}
+            {sceneId && cutouts && (
+              <div className="mt-2 flex flex-wrap gap-4">
+                {(["A", "B"] as const).map((side) => {
+                  const mine = side === session.role;
+                  const place = side === "A" ? placeA : placeB;
+                  const setPlace = side === "A" ? setPlaceA : setPlaceB;
+                  const nudge = (dx: number, dy: number, ds: number) =>
+                    setPlace({
+                      dx: Math.min(0.5, Math.max(-0.5, place.dx + dx)),
+                      dy: Math.min(0.25, Math.max(-0.25, place.dy + dy)),
+                      scale: Math.min(1.6, Math.max(0.5, place.scale + ds)),
+                    });
+                  return (
+                    <div key={side} className="flex items-center gap-1">
+                      <span
+                        className={`mr-1 text-xs font-semibold ${
+                          mine ? "text-accent" : "text-partner"
+                        }`}
+                      >
+                        {mine ? "You" : "Partner"}
+                      </span>
+                      <button aria-label={`${side} left`} onClick={() => nudge(-0.04, 0, 0)} className="flex h-9 w-9 items-center justify-center rounded-full bg-muted"><ChevronLeft size={16} /></button>
+                      <button aria-label={`${side} right`} onClick={() => nudge(0.04, 0, 0)} className="flex h-9 w-9 items-center justify-center rounded-full bg-muted"><ChevronRight size={16} /></button>
+                      <button aria-label={`${side} up`} onClick={() => nudge(0, -0.03, 0)} className="flex h-9 w-9 items-center justify-center rounded-full bg-muted"><ChevronUp size={16} /></button>
+                      <button aria-label={`${side} down`} onClick={() => nudge(0, 0.03, 0)} className="flex h-9 w-9 items-center justify-center rounded-full bg-muted"><ChevronDown size={16} /></button>
+                      <button aria-label={`${side} smaller`} onClick={() => nudge(0, 0, -0.08)} className="flex h-9 w-9 items-center justify-center rounded-full bg-muted"><ZoomOut size={16} /></button>
+                      <button aria-label={`${side} bigger`} onClick={() => nudge(0, 0, 0.08)} className="flex h-9 w-9 items-center justify-center rounded-full bg-muted"><ZoomIn size={16} /></button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </section>
+        )}
 
         <section>
           <div className="mb-2 flex items-center justify-between">
