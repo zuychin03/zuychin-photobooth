@@ -7,12 +7,13 @@ Photos never touch a server. Everything is captured, composed, and exported in t
 ## Features
 
 - **Solo booth**: pick a layout, pose through a 3-2-1 countdown with flash and shutter sound, and get a strip of 3 or 4 shots. No retakes per shot, that's the booth way.
-- **Live duo room**: create a room, send the code, and shoot together. Either side can press the shutter; a clock-synchronized countdown fires both cameras at the same instant (typically within a few tens of milliseconds).
-- **Full-resolution exchange**: each device captures its own camera at native resolution and sends the frame over the WebRTC data channel, so nobody's half of the strip is a compressed video screenshot.
-- **Pose prompt roulette**: both screens roll the same random prompt for every cut ("mirror each other's pose", "both make half a heart").
+- **Live rooms for up to 4**: create a room, send the code, and shoot together over a WebRTC mesh. Anyone can press the shutter; a clock-synchronized countdown fires every camera at the same instant (typically within a few tens of milliseconds).
+- **Together mode**: pick a scene and MediaPipe segmentation cuts everyone out of their own background and composites them into one shared backdrop, previewed live before the shot.
+- **Full-resolution exchange**: each device captures its own camera at native resolution and sends the frame over the data channel, so nobody's part of the strip is a compressed video screenshot.
+- **Pose prompt roulette**: every screen rolls the same random prompt for each cut ("mirror each other's pose", "everyone point left").
 - **Strip editor**: 7 frame colors, 6 live-preview filters (applied losslessly after capture), captions, a film-style orange datestamp, and draggable stickers.
 - **Sticker library**: 8 packs of 8 stickers in three rendering styles: Flat and 3D (bundled Fluent Emoji assets, consistent on every device) and Ink (monochrome glyphs tinted to the frame color).
-- **Layouts**: classic 4-strip, 2x2 grid, and tall three for solo; taking turns, side-by-side split cells, and twin strips for duos.
+- **Layouts**: classic 4-strip, 2x2 grid, and tall three for solo; taking turns, side-by-side, and twin strips for duos; trio and quad strips for groups.
 - **Export**: 2x-resolution PNG download and native share sheet on mobile. Camera denied? Build a strip from uploaded photos instead.
 
 ## Tech stack
@@ -65,10 +66,10 @@ Without Supabase configured, rooms fall back to a BroadcastChannel: two tabs in 
 
 ## How a shared room works
 
-1. One partner creates a room (a 6-character code) and shares the link.
-2. Supabase Realtime carries the WebRTC offer/answer/ICE handshake; the browsers then connect directly.
-3. When someone presses the shutter, the leader schedules a fire time and both sides estimate their clock offset over the data channel, so both cameras capture at the same moment.
-4. Each side sends its full-resolution JPEG to the other over the data channel. Both partners end up with every original and can edit and export the identical strip.
+1. The host creates a room (a 6-character code) and shares the link; up to 3 more people can join.
+2. Supabase Realtime carries the WebRTC offer/answer/ICE handshake; the browsers then connect directly in a full mesh. The host assigns roles (A-D) in join order and broadcasts the roster.
+3. When someone presses the shutter, the leader schedules a fire time and every peer estimates its clock offset over the data channel, so all cameras capture at the same moment.
+4. Each peer sends its full-resolution JPEG to the others over the data channel. Everyone ends up with every original and can edit and export the identical strip.
 
 ## Project structure
 

@@ -33,13 +33,14 @@ import { SCENES } from "@/lib/scenes";
 import { cutout, preloadSegmenter } from "@/lib/segmentation";
 import {
   ComposeInput,
+  DEFAULT_PLACEMENT,
   ShotSet,
   StickerInstance,
   TogetherPlacement,
   composeStrip,
   stripToBlob,
 } from "@/lib/compose";
-import { getLayout, stripSize } from "@/lib/layouts";
+import { ROLES, Role, getLayout, stripSize } from "@/lib/layouts";
 import { useBoothSession } from "@/lib/session";
 
 const STICKER_HIT_RADIUS = 60;
@@ -62,14 +63,13 @@ export default function CustomizePage() {
   const [cutouts, setCutouts] = useState<ShotSet | null>(null);
   const [segmenting, setSegmenting] = useState(false);
   const [segFailed, setSegFailed] = useState(false);
-  const [placeA, setPlaceA] = useState<TogetherPlacement>({ dx: 0, dy: 0, scale: 1 });
-  const [placeB, setPlaceB] = useState<TogetherPlacement>({ dx: 0, dy: 0, scale: 1 });
+  const [places, setPlaces] = useState<Partial<Record<Role, TogetherPlacement>>>({});
   const dragRef = useRef<{ key: number; dx: number; dy: number } | null>(null);
   const nextKey = useRef(1);
 
   const layout = getLayout(session.layoutId);
   const frame = FRAMES.find((f) => f.id === frameId) ?? FRAMES[0];
-  const hasShots = session.shots.A.some(Boolean) || session.shots.B.some(Boolean);
+  const hasShots = ROLES.some((r) => session.shots[r].some(Boolean));
 
   const input: ComposeInput = useMemo(
     () => ({
@@ -85,15 +85,17 @@ export default function CustomizePage() {
       },
       stickers,
       cutouts: cutouts ?? undefined,
-      together: sceneId ? { sceneId, placeA, placeB } : null,
+      together: sceneId ? { sceneId, places } : null,
     }),
-    [layout, session.shots, session.filterId, frame, caption, showDate, stickers, stickerStyle, cutouts, sceneId, placeA, placeB],
+    [layout, session.shots, session.filterId, frame, caption, showDate, stickers, stickerStyle, cutouts, sceneId, places],
   );
 
-  // warm the segmenter for duo sessions so picking a scene is fast
+  const isShared = session.mode === "duo" || session.mode === "group";
+
+  // warm the segmenter for shared sessions so picking a scene is fast
   useEffect(() => {
-    if (session.mode === "duo") preloadSegmenter();
-  }, [session.mode]);
+    if (isShared) preloadSegmenter();
+  }, [isShared]);
 
   const autoSceneApplied = useRef(false);
   const selectScene = useCallback(async (id: string | null) => {
@@ -104,26 +106,25 @@ export default function CustomizePage() {
     try {
       const segSide = (arr: (HTMLCanvasElement | null)[]) =>
         Promise.all(arr.map((s) => (s ? cutout(s) : Promise.resolve(null))));
-      const [A, B] = await Promise.all([
-        segSide(session.shots.A),
-        segSide(session.shots.B),
-      ]);
-      setCutouts({ A, B });
+      const [A, B, C, D] = await Promise.all(
+        ROLES.map((r) => segSide(session.shots[r])),
+      );
+      setCutouts({ A, B, C, D });
     } catch {
       setSegFailed(true);
       setSceneId(null);
     } finally {
       setSegmenting(false);
     }
-  }, [cutouts, segmenting, session.shots.A, session.shots.B]);
+  }, [cutouts, segmenting, session.shots]);
 
   // scene agreed in the room applies automatically on arrival
   useEffect(() => {
-    if (!autoSceneApplied.current && session.mode === "duo" && session.sceneId && hasShots) {
+    if (!autoSceneApplied.current && isShared && session.sceneId && hasShots) {
       autoSceneApplied.current = true;
       void selectScene(session.sceneId);
     }
-  }, [session.mode, session.sceneId, hasShots, selectScene]);
+  }, [isShared, session.sceneId, hasShots, selectScene]);
 
   // canvas composition needs the style's assets ready; re-render when they land
   useEffect(() => {
@@ -307,7 +308,7 @@ export default function CustomizePage() {
       <div className="flex w-full flex-col gap-5 p-5 lg:max-w-md lg:overflow-y-auto">
         <div className="flex items-center justify-between">
           <button
-            onClick={() => router.push(session.mode === "duo" && session.roomCode ? `/room/${session.roomCode}` : "/booth")}
+            onClick={() => router.push(isShared && session.roomCode ? `/room/${session.roomCode}` : "/booth")}
             className="flex min-h-11 items-center gap-2 rounded-full bg-muted px-4 text-sm font-medium"
           >
             <ArrowLeft size={16} /> Retake
@@ -343,7 +344,7 @@ export default function CustomizePage() {
           />
         </section>
 
-        {session.mode === "duo" && (
+        {isShared && (
           <section>
             <h2 className="mb-2 text-sm font-medium text-muted-foreground">
               Together scene
@@ -382,16 +383,23 @@ export default function CustomizePage() {
             )}
             {sceneId && cutouts && (
               <div className="mt-2 flex flex-wrap gap-4">
-                {(["A", "B"] as const).map((side) => {
+                {session.members.map((side) => {
                   const mine = side === session.role;
-                  const place = side === "A" ? placeA : placeB;
-                  const setPlace = side === "A" ? setPlaceA : setPlaceB;
+                  const place = places[side] ?? DEFAULT_PLACEMENT;
                   const nudge = (dx: number, dy: number, ds: number) =>
-                    setPlace({
-                      dx: Math.min(0.5, Math.max(-0.5, place.dx + dx)),
-                      dy: Math.min(0.25, Math.max(-0.25, place.dy + dy)),
-                      scale: Math.min(1.6, Math.max(0.5, place.scale + ds)),
-                    });
+                    setPlaces((p) => ({
+                      ...p,
+                      [side]: {
+                        dx: Math.min(0.5, Math.max(-0.5, place.dx + dx)),
+                        dy: Math.min(0.25, Math.max(-0.25, place.dy + dy)),
+                        scale: Math.min(1.6, Math.max(0.5, place.scale + ds)),
+                      },
+                    }));
+                  const label = mine
+                    ? "You"
+                    : session.members.length > 2
+                      ? `Friend ${side}`
+                      : "Partner";
                   return (
                     <div key={side} className="flex items-center gap-1">
                       <span
@@ -399,7 +407,7 @@ export default function CustomizePage() {
                           mine ? "text-accent" : "text-partner"
                         }`}
                       >
-                        {mine ? "You" : "Partner"}
+                        {label}
                       </span>
                       <button aria-label={`${side} left`} onClick={() => nudge(-0.04, 0, 0)} className="flex h-9 w-9 items-center justify-center rounded-full bg-muted"><ChevronLeft size={16} /></button>
                       <button aria-label={`${side} right`} onClick={() => nudge(0.04, 0, 0)} className="flex h-9 w-9 items-center justify-center rounded-full bg-muted"><ChevronRight size={16} /></button>

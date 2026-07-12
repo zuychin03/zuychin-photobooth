@@ -1,31 +1,34 @@
 "use client";
 
 import { createContext, useCallback, useContext, useMemo, useState } from "react";
+import { Role } from "./layouts";
 
-export interface ShotStore {
-  A: (HTMLCanvasElement | null)[];
-  B: (HTMLCanvasElement | null)[];
-}
+export type ShotStore = Record<Role, (HTMLCanvasElement | null)[]>;
 
 export interface BoothSession {
-  mode: "solo" | "duo";
-  /** which side this device is in a duo room */
-  role: "A" | "B";
+  mode: "solo" | "duo" | "group";
+  /** which member this device is in a shared room */
+  role: Role;
   layoutId: string;
   filterId: string;
   shots: ShotStore;
+  /** roles present in the room when the shot plan fired */
+  members: Role[];
   promptSeed: number | null;
   roomCode: string | null;
   /** Together scene agreed in the room, applied automatically in the editor */
   sceneId: string | null;
 }
 
+export const EMPTY_SHOTS: ShotStore = { A: [], B: [], C: [], D: [] };
+
 const EMPTY: BoothSession = {
   mode: "solo",
   role: "A",
   layoutId: "strip4",
   filterId: "none",
-  shots: { A: [], B: [] },
+  shots: EMPTY_SHOTS,
+  members: ["A"],
   promptSeed: null,
   roomCode: null,
   sceneId: null,
@@ -34,7 +37,7 @@ const EMPTY: BoothSession = {
 interface SessionContextValue {
   session: BoothSession;
   update: (patch: Partial<BoothSession>) => void;
-  setShot: (owner: "A" | "B", index: number, shot: HTMLCanvasElement) => void;
+  setShot: (owner: Role, index: number, shot: HTMLCanvasElement) => void;
   reset: () => void;
 }
 
@@ -48,7 +51,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const setShot = useCallback(
-    (owner: "A" | "B", index: number, shot: HTMLCanvasElement) => {
+    (owner: Role, index: number, shot: HTMLCanvasElement) => {
       setSession((s) => {
         const arr = [...s.shots[owner]];
         arr[index] = shot;

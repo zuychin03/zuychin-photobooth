@@ -5,22 +5,29 @@ export const STRIP_MARGIN = 28;
 export const CELL_GAP = 18;
 export const FOOTER_H = 132;
 
-export type CellOwner = "A" | "B" | "AB";
+/** Host is A; guests get B, C, D in join order. */
+export type Role = "A" | "B" | "C" | "D";
+
+export const ROLES: Role[] = ["A", "B", "C", "D"];
+
+export type CellOwner = Role | "AB";
 
 export interface StripLayout {
   id: string;
   name: string;
-  mode: "solo" | "duo";
+  mode: "solo" | "duo" | "group";
   cols: number;
   rows: number;
   /** width / height of each photo cell */
   cellAspect: number;
-  /** shots each participant takes (synced fires in duo mode) */
+  /** shots each participant takes (synced fires in duo/group mode) */
   shots: number;
+  /** minimum participants this layout makes sense for */
+  minMembers?: number;
   /**
-   * Duo only, row-major: which side's frame fills each cell.
-   * Cell i always uses shot floor(i / colsPerShot) of that owner;
-   * "AB" splits the cell into left (A) and right (B) halves of the same shot.
+   * Shared rooms only, row-major: which member's frame fills each cell.
+   * Each row is one synced fire; "AB" splits the cell into left (A) and
+   * right (B) halves of the same shot.
    */
   duoPattern?: CellOwner[];
 }
@@ -83,15 +90,45 @@ export const LAYOUTS: StripLayout[] = [
     shots: 4,
     duoPattern: ["A", "B", "A", "B", "A", "B", "A", "B"],
   },
+  {
+    id: "trio",
+    name: "Trio strips",
+    mode: "group",
+    cols: 3,
+    rows: 4,
+    cellAspect: 3 / 2,
+    shots: 4,
+    minMembers: 3,
+    duoPattern: ["A", "B", "C", "A", "B", "C", "A", "B", "C", "A", "B", "C"],
+  },
+  {
+    id: "quad",
+    name: "Quad strips",
+    mode: "group",
+    cols: 4,
+    rows: 3,
+    cellAspect: 3 / 2,
+    shots: 3,
+    minMembers: 4,
+    duoPattern: ["A", "B", "C", "D", "A", "B", "C", "D", "A", "B", "C", "D"],
+  },
 ];
 
 export function getLayout(id: string): StripLayout {
   return LAYOUTS.find((l) => l.id === id) ?? LAYOUTS[0];
 }
 
-/** Which shot a cell displays: duo rows share one synced fire; solo cells map 1:1. */
+/** Which shot a cell displays: shared-room rows are one synced fire each; solo cells map 1:1. */
 export function cellShotIndex(layout: StripLayout, cellIndex: number): number {
-  return layout.mode === "duo" ? Math.floor(cellIndex / layout.cols) : cellIndex;
+  return layout.mode === "solo" ? cellIndex : Math.floor(cellIndex / layout.cols);
+}
+
+/** Layouts available to a shared room of the given size. */
+export function layoutsForMembers(count: number): StripLayout[] {
+  if (count >= 3) {
+    return LAYOUTS.filter((l) => l.mode === "group" && (l.minMembers ?? 0) <= count);
+  }
+  return LAYOUTS.filter((l) => l.mode === "duo");
 }
 
 export function stripSize(layout: StripLayout): { width: number; height: number } {

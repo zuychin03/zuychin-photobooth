@@ -4,7 +4,7 @@
 import { createClient, RealtimeChannel } from "@supabase/supabase-js";
 
 export interface SignalMessage {
-  type: "hello" | "offer" | "answer" | "ice" | "full" | "bye";
+  type: "hello" | "roster" | "offer" | "answer" | "ice" | "full" | "bye";
   from: string;
   to?: string;
   payload?: unknown;
