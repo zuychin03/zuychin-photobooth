@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
+  CalendarHeart,
   Check,
   Clock,
   Copy,
@@ -11,6 +12,7 @@ import {
   Heart,
   Loader2,
   LogOut,
+  Sparkles,
   Trash2,
   Unlink,
 } from "lucide-react";
@@ -24,10 +26,20 @@ import {
   getMyCouple,
   joinCouple,
   listStrips,
+  saveStrip,
   unpair,
 } from "@/lib/couple";
 import { Relay, listRelays, relayIsMyTurn } from "@/lib/relay";
-import { weeklyStreak } from "@/lib/streak";
+import { sameIsoWeek, startOfIsoWeek, weeklyStreak } from "@/lib/streak";
+import {
+  CADENCES,
+  Cadence,
+  PhotoDate,
+  createPhotoDate,
+  deletePhotoDate,
+  listPhotoDates,
+} from "@/lib/photo-dates";
+import { loadImage, recapToBlob } from "@/lib/recap";
 
 export default function TimelinePage() {
   const router = useRouter();
@@ -36,7 +48,10 @@ export default function TimelinePage() {
   const [couple, setCouple] = useState<Couple | null>(null);
   const [strips, setStrips] = useState<TimelineStrip[]>([]);
   const [relays, setRelays] = useState<Relay[]>([]);
+  const [dates, setDates] = useState<PhotoDate[]>([]);
   const [ready, setReady] = useState(false);
+  const [dateForm, setDateForm] = useState<{ title: string; when: string; cadence: Cadence } | null>(null);
+  const [recapBusy, setRecapBusy] = useState(false);
   const [joinInput, setJoinInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -45,14 +60,16 @@ export default function TimelinePage() {
   const refresh = useCallback(async () => {
     if (!user) return;
     setReady(false);
-    const [c, s, r] = await Promise.all([
+    const [c, s, r, d] = await Promise.all([
       getMyCouple(user.id),
       listStrips(user.id),
       listRelays().catch(() => [] as Relay[]),
+      listPhotoDates().catch(() => [] as PhotoDate[]),
     ]);
     setCouple(c);
     setStrips(s);
     setRelays(r);
+    setDates(d);
     setReady(true);
   }, [user]);
 
@@ -68,6 +85,8 @@ export default function TimelinePage() {
   const pending = !!couple && !couple.member_b;
   const streak = weeklyStreak(strips.map((s) => s.created_at));
   const openRelays = relays.filter((r) => r.status === "pending");
+  const now = new Date();
+  const thisWeekCount = strips.filter((s) => sameIsoWeek(new Date(s.created_at), now)).length;
 
   const handleCreate = async () => {
     if (!user) return;
@@ -100,6 +119,49 @@ export default function TimelinePage() {
     await unpair(couple.id);
     setCouple(null);
     await refresh();
+  };
+
+  const addDate = async () => {
+    if (!user || !couple || !dateForm?.title || !dateForm.when) return;
+    await createPhotoDate(user.id, couple.id, {
+      title: dateForm.title,
+      scheduledAt: new Date(dateForm.when).toISOString(),
+      cadence: dateForm.cadence,
+    });
+    setDateForm(null);
+    await refresh();
+  };
+
+  const removeDate = async (id: string) => {
+    await deletePhotoDate(id);
+    setDates((list) => list.filter((d) => d.id !== id));
+  };
+
+  const makeRecap = async () => {
+    if (!user) return;
+    setRecapBusy(true);
+    try {
+      const now = new Date();
+      const weekStrips = strips.filter((s) => sameIsoWeek(new Date(s.created_at), now) && s.url);
+      if (weekStrips.length === 0) return;
+      const imgs = await Promise.all(weekStrips.map((s) => loadImage(s.url!)));
+      const weekOf = startOfIsoWeek(now).toLocaleDateString(undefined, {
+        month: "short",
+        day: "numeric",
+      });
+      const title = `Week of ${weekOf}`;
+      const blob = await recapToBlob(imgs, title);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `zuychin-recap-week-of-${weekOf.replace(/\s+/g, "-").toLowerCase()}.png`;
+      a.click();
+      URL.revokeObjectURL(url);
+      await saveStrip(user.id, couple?.id ?? null, blob, { layoutId: "recap", caption: `${title} recap` });
+      await refresh();
+    } finally {
+      setRecapBusy(false);
+    }
   };
 
   const copyCode = async () => {
@@ -265,6 +327,78 @@ export default function TimelinePage() {
         </section>
       )}
 
+      {/* Photo dates */}
+      {paired && (
+        <section className="flex flex-col gap-2">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-medium text-muted-foreground">Photo dates</h2>
+            <button
+              onClick={() =>
+                setDateForm(dateForm ? null : { title: "", when: "", cadence: "weekly" })
+              }
+              className="flex min-h-9 items-center gap-1.5 rounded-full bg-accent/15 px-3 text-xs font-semibold text-accent"
+            >
+              <CalendarHeart size={14} /> Schedule
+            </button>
+          </div>
+          {dateForm && (
+            <div className="glass-card flex flex-col gap-2 rounded-xl p-3">
+              <input
+                value={dateForm.title}
+                onChange={(e) => setDateForm({ ...dateForm, title: e.target.value })}
+                placeholder="What's the occasion?"
+                className="min-h-11 rounded-lg border border-border bg-card px-3 outline-none focus:border-accent"
+              />
+              <div className="flex gap-2">
+                <input
+                  type="datetime-local"
+                  value={dateForm.when}
+                  onChange={(e) => setDateForm({ ...dateForm, when: e.target.value })}
+                  className="min-h-11 flex-1 rounded-lg border border-border bg-card px-3 text-sm outline-none focus:border-accent"
+                />
+                <select
+                  value={dateForm.cadence}
+                  onChange={(e) => setDateForm({ ...dateForm, cadence: e.target.value as Cadence })}
+                  className="min-h-11 rounded-lg border border-border bg-card px-3 text-sm outline-none focus:border-accent"
+                >
+                  {CADENCES.map((c) => (
+                    <option key={c.id} value={c.id}>{c.label}</option>
+                  ))}
+                </select>
+              </div>
+              <button
+                onClick={addDate}
+                disabled={!dateForm.title || !dateForm.when}
+                className="min-h-10 rounded-lg bg-accent font-semibold text-accent-foreground disabled:opacity-50"
+              >
+                Set reminder
+              </button>
+              <p className="text-xs text-muted-foreground">
+                Both of you get an email when it&apos;s time.
+              </p>
+            </div>
+          )}
+          {ready && dates.length > 0 && (
+            <div className="flex flex-col gap-2">
+              {dates.map((d) => (
+                <div key={d.id} className="flex items-center justify-between rounded-xl border border-border px-4 py-2.5 text-sm">
+                  <div className="flex flex-col">
+                    <span className="font-medium">{d.title}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {new Date(d.scheduled_at).toLocaleString([], { dateStyle: "medium", timeStyle: "short" })}
+                      {d.cadence !== "once" && ` · ${CADENCES.find((c) => c.id === d.cadence)?.label.toLowerCase()}`}
+                    </span>
+                  </div>
+                  <button onClick={() => removeDate(d.id)} aria-label="Delete photo date" className="text-muted-foreground">
+                    <Trash2 size={15} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
+
       {/* Strips */}
       {!ready ? (
         <div className="flex flex-1 items-center justify-center">
@@ -278,7 +412,22 @@ export default function TimelinePage() {
           </button>
         </div>
       ) : (
-        <section className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+        <section className="flex flex-col gap-3">
+          {thisWeekCount > 1 && (
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-medium text-muted-foreground">
+                {strips.length} strip{strips.length > 1 ? "s" : ""}
+              </h2>
+              <button
+                onClick={makeRecap}
+                disabled={recapBusy}
+                className="flex min-h-9 items-center gap-1.5 rounded-full bg-accent/15 px-3 text-xs font-semibold text-accent disabled:opacity-50"
+              >
+                <Sparkles size={14} /> {recapBusy ? "Making…" : "Make this week's recap"}
+              </button>
+            </div>
+          )}
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
           {strips.map((s) => (
             <figure key={s.id} className="group relative">
               {s.url && (
@@ -306,6 +455,7 @@ export default function TimelinePage() {
               </figcaption>
             </figure>
           ))}
+          </div>
         </section>
       )}
     </main>

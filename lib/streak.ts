@@ -1,5 +1,5 @@
 // ISO-week key (year * 100 + week) so consecutive weeks differ by 1 within a year.
-function weekKey(d: Date): number {
+export function weekKey(d: Date): number {
   const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
   const day = date.getUTCDay() || 7;
   date.setUTCDate(date.getUTCDate() + 4 - day);
@@ -33,4 +33,17 @@ export function weeklyStreak(dates: string[]): number {
     cursor = prevWeek(cursor);
   }
   return streak;
+}
+
+/** Monday 00:00 (local) of the ISO week containing `d`. */
+export function startOfIsoWeek(d: Date): Date {
+  const date = new Date(d);
+  const day = date.getDay() || 7;
+  date.setHours(0, 0, 0, 0);
+  date.setDate(date.getDate() - (day - 1));
+  return date;
+}
+
+export function sameIsoWeek(a: Date, b: Date): boolean {
+  return weekKey(a) === weekKey(b);
 }

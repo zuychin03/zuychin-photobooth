@@ -17,6 +17,7 @@ Photos never touch a server. Everything is captured, composed, and exported in t
 - **Export**: 2x-resolution PNG download and native share sheet on mobile. Camera denied? Build a strip from uploaded photos instead.
 - **Accounts and shared timeline** (optional): sign in with your Zuychin account (shared with Zuychin Gallery), pair with your partner via a code, and save strips to one private couple timeline. Without accounts configured, the booth works exactly the same and the account UI stays hidden.
 - **Relay strips** (optional): shoot your half now and your partner finishes the strip whenever they can, no need to be online together. Plus a weekly streak counter on the timeline.
+- **Photo dates and recaps** (optional): schedule recurring photo dates that email both partners a reminder, and compile a week's strips into one shareable recap image.
 
 ## Tech stack
 
@@ -50,11 +51,15 @@ All variables are optional for local development. See `.env.example` for the tem
 | --- | --- |
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL, for WebRTC signaling and (if the schema is installed) accounts + timeline |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon key |
-| `NEXT_PUBLIC_TURN_URL` | TURN relay URL for networks where direct peer-to-peer fails |
+| `NEXT_PUBLIC_TURN_URL` | TURN relay URL(s) for networks where direct peer-to-peer fails. Must start with `turn:`/`turns:`; comma-separate multiple transports |
 | `NEXT_PUBLIC_TURN_USERNAME` | TURN credential |
 | `NEXT_PUBLIC_TURN_CREDENTIAL` | TURN credential |
+| `SUPABASE_SERVICE_ROLE_KEY` | Server-only; used by the reminder cron. Needed only for photo-date reminders |
+| `RESEND_API_KEY` | Resend key for reminder emails (optional) |
+| `REMINDER_FROM` | Verified sender for reminder emails (optional) |
+| `CRON_SECRET` | Shared secret guarding `/api/reminders` (optional) |
 
-Without Supabase configured, rooms fall back to a BroadcastChannel: two tabs in the same browser can pair (handy for development), but two devices cannot, and the account features stay hidden. Without TURN, some mobile and cross-country connections will fail to establish; free credentials are available from providers such as metered.ca.
+Without Supabase configured, rooms fall back to a BroadcastChannel: two tabs in the same browser can pair (handy for development), but two devices cannot, and the account features stay hidden. Without TURN, some mobile and cross-country connections will fail to establish; free credentials are available from providers such as metered.ca or ExpressTURN.
 
 To enable accounts and the shared timeline, point these at the same Supabase project as Zuychin Gallery and follow [`SUPABASE_SETUP.md`](SUPABASE_SETUP.md).
 
