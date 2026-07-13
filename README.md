@@ -16,6 +16,7 @@ Photos never touch a server. Everything is captured, composed, and exported in t
 - **Layouts**: classic 4-strip, 2x2 grid, and tall three for solo; taking turns, side-by-side, and twin strips for duos; trio and quad strips for groups.
 - **Export**: 2x-resolution PNG download and native share sheet on mobile. Camera denied? Build a strip from uploaded photos instead.
 - **Accounts and shared timeline** (optional): sign in with your Zuychin account (shared with Zuychin Gallery), pair with your partner via a code, and save strips to one private couple timeline. Without accounts configured, the booth works exactly the same and the account UI stays hidden.
+- **Relay strips** (optional): shoot your half now and your partner finishes the strip whenever they can, no need to be online together. Plus a weekly streak counter on the timeline.
 
 ## Tech stack
 

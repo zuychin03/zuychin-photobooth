@@ -5,7 +5,9 @@ import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
   Check,
+  Clock,
   Copy,
+  Flame,
   Heart,
   Loader2,
   LogOut,
@@ -24,6 +26,8 @@ import {
   listStrips,
   unpair,
 } from "@/lib/couple";
+import { Relay, listRelays, relayIsMyTurn } from "@/lib/relay";
+import { weeklyStreak } from "@/lib/streak";
 
 export default function TimelinePage() {
   const router = useRouter();
@@ -31,6 +35,7 @@ export default function TimelinePage() {
 
   const [couple, setCouple] = useState<Couple | null>(null);
   const [strips, setStrips] = useState<TimelineStrip[]>([]);
+  const [relays, setRelays] = useState<Relay[]>([]);
   const [ready, setReady] = useState(false);
   const [joinInput, setJoinInput] = useState("");
   const [busy, setBusy] = useState(false);
@@ -40,9 +45,14 @@ export default function TimelinePage() {
   const refresh = useCallback(async () => {
     if (!user) return;
     setReady(false);
-    const [c, s] = await Promise.all([getMyCouple(user.id), listStrips(user.id)]);
+    const [c, s, r] = await Promise.all([
+      getMyCouple(user.id),
+      listStrips(user.id),
+      listRelays().catch(() => [] as Relay[]),
+    ]);
     setCouple(c);
     setStrips(s);
+    setRelays(r);
     setReady(true);
   }, [user]);
 
@@ -56,6 +66,8 @@ export default function TimelinePage() {
 
   const paired = !!couple?.member_b;
   const pending = !!couple && !couple.member_b;
+  const streak = weeklyStreak(strips.map((s) => s.created_at));
+  const openRelays = relays.filter((r) => r.status === "pending");
 
   const handleCreate = async () => {
     if (!user) return;
@@ -203,11 +215,54 @@ export default function TimelinePage() {
         <div className="flex items-center justify-between rounded-2xl bg-muted/60 px-4 py-2 text-sm">
           <span className="flex items-center gap-2 font-medium">
             <Heart size={15} className="text-accent" /> Paired
+            {streak > 0 && (
+              <span className="ml-2 flex items-center gap-1 text-warning">
+                <Flame size={14} /> {streak} week{streak > 1 ? "s" : ""}
+              </span>
+            )}
           </span>
           <button onClick={handleUnpair} className="flex items-center gap-1 text-xs text-muted-foreground">
             <Unlink size={13} /> Unpair
           </button>
         </div>
+      )}
+
+      {/* Relay strips */}
+      {paired && (
+        <section className="flex flex-col gap-2">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-medium text-muted-foreground">Relay strips</h2>
+            <button
+              onClick={() => router.push("/relay/new")}
+              className="flex min-h-9 items-center gap-1.5 rounded-full bg-accent/15 px-3 text-xs font-semibold text-accent"
+            >
+              <Clock size={14} /> Start a relay
+            </button>
+          </div>
+          {ready && openRelays.length > 0 && (
+            <div className="flex flex-col gap-2">
+              {openRelays.map((r) => {
+                const myTurn = relayIsMyTurn(r, user.id);
+                return (
+                  <button
+                    key={r.id}
+                    onClick={() => router.push(`/relay/${r.id}`)}
+                    className={`flex items-center justify-between rounded-xl border px-4 py-3 text-left text-sm ${
+                      myTurn ? "border-accent bg-accent/10" : "border-border"
+                    }`}
+                  >
+                    <span className="font-medium">
+                      {myTurn ? "Your turn to finish a relay" : "Waiting for your partner"}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      {new Date(r.created_at).toLocaleDateString()}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </section>
       )}
 
       {/* Strips */}

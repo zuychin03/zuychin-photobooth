@@ -58,6 +58,7 @@ desktop.ini
 *.local.md
 CHANGELOG.md
 SUPABASE_SETUP.md
+/supabase/
 /notes/
 /external/
 
