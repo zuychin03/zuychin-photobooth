@@ -15,6 +15,7 @@ Photos never touch a server. Everything is captured, composed, and exported in t
 - **Sticker library**: 8 packs of 8 stickers in three rendering styles: Flat and 3D (bundled Fluent Emoji assets, consistent on every device) and Ink (monochrome glyphs tinted to the frame color).
 - **Layouts**: classic 4-strip, 2x2 grid, and tall three for solo; taking turns, side-by-side, and twin strips for duos; trio and quad strips for groups.
 - **Export**: 2x-resolution PNG download and native share sheet on mobile. Camera denied? Build a strip from uploaded photos instead.
+- **Accounts and shared timeline** (optional): sign in with your Zuychin account (shared with Zuychin Gallery), pair with your partner via a code, and save strips to one private couple timeline. Without accounts configured, the booth works exactly the same and the account UI stays hidden.
 
 ## Tech stack
 
@@ -46,13 +47,15 @@ All variables are optional for local development. See `.env.example` for the tem
 
 | Variable | Purpose |
 | --- | --- |
-| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL, used only for WebRTC signaling (no data is stored) |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon key for the Realtime channel |
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL, for WebRTC signaling and (if the schema is installed) accounts + timeline |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon key |
 | `NEXT_PUBLIC_TURN_URL` | TURN relay URL for networks where direct peer-to-peer fails |
 | `NEXT_PUBLIC_TURN_USERNAME` | TURN credential |
 | `NEXT_PUBLIC_TURN_CREDENTIAL` | TURN credential |
 
-Without Supabase configured, rooms fall back to a BroadcastChannel: two tabs in the same browser can pair (handy for development), but two devices cannot. Without TURN, some mobile and cross-country connections will fail to establish; free credentials are available from providers such as metered.ca.
+Without Supabase configured, rooms fall back to a BroadcastChannel: two tabs in the same browser can pair (handy for development), but two devices cannot, and the account features stay hidden. Without TURN, some mobile and cross-country connections will fail to establish; free credentials are available from providers such as metered.ca.
+
+To enable accounts and the shared timeline, point these at the same Supabase project as Zuychin Gallery and follow [`SUPABASE_SETUP.md`](SUPABASE_SETUP.md).
 
 ### Scripts
 

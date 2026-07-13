@@ -5,11 +5,13 @@ import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
   Calendar,
+  Check,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
   ChevronUp,
   Download,
+  Heart,
   RotateCcw,
   RotateCw,
   Share2,
@@ -42,12 +44,15 @@ import {
 } from "@/lib/compose";
 import { ROLES, Role, getLayout, stripSize } from "@/lib/layouts";
 import { useBoothSession } from "@/lib/session";
+import { useAuth } from "@/lib/auth";
+import { getMyCouple, saveStrip } from "@/lib/couple";
 
 const STICKER_HIT_RADIUS = 60;
 
 export default function CustomizePage() {
   const router = useRouter();
   const { session, update } = useBoothSession();
+  const { user, enabled: authEnabled } = useAuth();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   const [frameId, setFrameId] = useState("film");
@@ -64,6 +69,7 @@ export default function CustomizePage() {
   const [segmenting, setSegmenting] = useState(false);
   const [segFailed, setSegFailed] = useState(false);
   const [places, setPlaces] = useState<Partial<Record<Role, TogetherPlacement>>>({});
+  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle");
   const dragRef = useRef<{ key: number; dx: number; dy: number } | null>(null);
   const nextKey = useRef(1);
 
@@ -282,6 +288,25 @@ export default function CustomizePage() {
       // user cancelled the share sheet
     } finally {
       setSaving(false);
+    }
+  };
+
+  const saveToTimeline = async () => {
+    if (!user) {
+      router.push("/login?next=/timeline");
+      return;
+    }
+    setSaveState("saving");
+    try {
+      const couple = await getMyCouple(user.id);
+      const blob = await exportBlob();
+      await saveStrip(user.id, couple?.id ?? null, blob, {
+        layoutId: session.layoutId,
+        caption,
+      });
+      setSaveState("saved");
+    } catch {
+      setSaveState("idle");
     }
   };
 
@@ -518,22 +543,46 @@ export default function CustomizePage() {
           </button>
         </section>
 
-        <div className="mt-auto flex gap-3 pt-2">
-          <button
-            onClick={download}
-            disabled={saving}
-            className="flex min-h-13 flex-1 items-center justify-center gap-2 rounded-2xl bg-accent font-semibold text-accent-foreground shadow-lg shadow-accent/25 transition active:scale-[0.99] disabled:opacity-50"
-          >
-            <Download size={18} /> {saving ? "Saving…" : "Download"}
-          </button>
-          <button
-            onClick={share}
-            disabled={saving}
-            aria-label="Share"
-            className="glass-card flex min-h-13 w-16 items-center justify-center rounded-2xl transition active:scale-[0.99] disabled:opacity-50"
-          >
-            <Share2 size={18} />
-          </button>
+        <div className="mt-auto flex flex-col gap-3 pt-2">
+          <div className="flex gap-3">
+            <button
+              onClick={download}
+              disabled={saving}
+              className="flex min-h-13 flex-1 items-center justify-center gap-2 rounded-2xl bg-accent font-semibold text-accent-foreground shadow-lg shadow-accent/25 transition active:scale-[0.99] disabled:opacity-50"
+            >
+              <Download size={18} /> {saving ? "Saving…" : "Download"}
+            </button>
+            <button
+              onClick={share}
+              disabled={saving}
+              aria-label="Share"
+              className="glass-card flex min-h-13 w-16 items-center justify-center rounded-2xl transition active:scale-[0.99] disabled:opacity-50"
+            >
+              <Share2 size={18} />
+            </button>
+          </div>
+          {authEnabled && (
+            <button
+              onClick={saveToTimeline}
+              disabled={saveState === "saving"}
+              className="flex min-h-12 items-center justify-center gap-2 rounded-2xl border border-border font-semibold transition active:scale-[0.99] disabled:opacity-50"
+            >
+              {saveState === "saved" ? (
+                <>
+                  <Check size={18} className="text-success" /> Saved to timeline
+                </>
+              ) : (
+                <>
+                  <Heart size={18} className="text-accent" />
+                  {saveState === "saving"
+                    ? "Saving…"
+                    : user
+                      ? "Save to our timeline"
+                      : "Sign in to save"}
+                </>
+              )}
+            </button>
+          )}
         </div>
       </div>
     </main>

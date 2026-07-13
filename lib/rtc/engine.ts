@@ -77,10 +77,15 @@ export interface RoomEngineEvents {
 
 function iceServers(): RTCIceServer[] {
   const servers: RTCIceServer[] = [{ urls: "stun:stun.l.google.com:19302" }];
-  const turnUrl = process.env.NEXT_PUBLIC_TURN_URL;
-  if (turnUrl) {
+  // Accept a comma-separated list so a provider's UDP, TCP, and TLS(443)
+  // transports can all be listed; restrictive networks fall back to TCP/TLS.
+  const urls = (process.env.NEXT_PUBLIC_TURN_URL ?? "")
+    .split(",")
+    .map((u) => u.trim())
+    .filter(Boolean);
+  if (urls.length > 0) {
     servers.push({
-      urls: turnUrl,
+      urls,
       username: process.env.NEXT_PUBLIC_TURN_USERNAME ?? "",
       credential: process.env.NEXT_PUBLIC_TURN_CREDENTIAL ?? "",
     });

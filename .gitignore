@@ -57,6 +57,7 @@ desktop.ini
 # local notes and external documents
 *.local.md
 CHANGELOG.md
+SUPABASE_SETUP.md
 /notes/
 /external/
 

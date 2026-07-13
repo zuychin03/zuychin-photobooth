@@ -2,12 +2,14 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Camera, Heart, Users, ArrowRight } from "lucide-react";
+import { Camera, Heart, Users, ArrowRight, Clock, LogIn } from "lucide-react";
 import { StripMockup } from "@/components/StripMockup";
 import { newRoomCode, normalizeRoomCode, isValidRoomCode } from "@/lib/room-code";
+import { useAuth } from "@/lib/auth";
 
 export default function Home() {
   const router = useRouter();
+  const { user, enabled: authEnabled } = useAuth();
   const [joinCode, setJoinCode] = useState("");
   const [joinError, setJoinError] = useState(false);
 
@@ -23,6 +25,25 @@ export default function Home() {
 
   return (
     <main className="relative flex-1 overflow-hidden">
+      {authEnabled && (
+        <div className="absolute top-4 right-4 z-20">
+          <button
+            onClick={() => router.push(user ? "/timeline" : "/login?next=/timeline")}
+            className="glass-card flex min-h-11 items-center gap-2 rounded-full px-4 text-sm font-medium"
+          >
+            {user ? (
+              <>
+                <Clock size={16} className="text-accent" /> Our timeline
+              </>
+            ) : (
+              <>
+                <LogIn size={16} /> Sign in
+              </>
+            )}
+          </button>
+        </div>
+      )}
+
       {/* Fluid orbs */}
       <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
         <div className="fluid-orb absolute -top-24 -left-24 h-96 w-96 rounded-full bg-accent/20 blur-3xl" />
