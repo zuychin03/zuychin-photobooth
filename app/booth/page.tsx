@@ -33,6 +33,9 @@ export default function BoothPage() {
   const filter = getFilter(session.filterId);
   const soloLayouts = LAYOUTS.filter((l) => l.mode === "solo");
   const mirror = facing === "user";
+  // The preview box matches the strip cell's aspect so object-cover shows the
+  // exact center-crop that compose will put on the strip.
+  const cellAspect = layout.cellAspect;
 
   useEffect(() => {
     // entering the solo booth always starts a fresh session
@@ -80,34 +83,23 @@ export default function BoothPage() {
   };
 
   return (
-    <main className="booth-mode relative flex min-h-dvh flex-1 flex-col">
-      {/* Top bar */}
-      <div className="absolute top-0 z-40 flex w-full items-center justify-between p-4">
+    <main className="booth-mode flex h-dvh flex-col overflow-hidden bg-background md:flex-row md:items-stretch md:justify-center">
+      {/* Camera stage: width-capped so the controls stay beside the camera
+          instead of being pushed to the far edge of ultrawide screens. */}
+      <div className="relative flex min-h-0 flex-1 items-center justify-center p-4 pt-16 sm:p-6 sm:pt-16 md:max-w-4xl">
         <button
           onClick={() => {
             cancelled.current = true;
             router.push("/");
           }}
           aria-label="Back"
-          className="glass-card flex h-11 w-11 items-center justify-center rounded-full"
+          className="glass-card absolute top-4 left-4 z-40 flex h-11 w-11 items-center justify-center rounded-full"
         >
           <ArrowLeft size={20} />
         </button>
-        {canFlip && phase === "setup" && (
-          <button
-            onClick={toggleFacing}
-            aria-label="Switch camera"
-            className="glass-card flex h-11 w-11 items-center justify-center rounded-full"
-          >
-            <SwitchCamera size={20} />
-          </button>
-        )}
-      </div>
 
-      {/* Camera stage */}
-      <div className="relative flex-1 overflow-hidden">
         {error ? (
-          <div className="flex h-full flex-col items-center justify-center gap-4 px-8 text-center">
+          <div className="flex flex-col items-center justify-center gap-4 px-8 text-center">
             <p className="text-lg font-semibold">
               {error === "denied"
                 ? "Camera access was blocked"
@@ -140,7 +132,17 @@ export default function BoothPage() {
             </div>
           </div>
         ) : (
-          <>
+          /* Sized by width and capped by the height budget while keeping the
+             cell's exact ratio, so the feed never swallows the viewport. */
+          <div
+            className="relative w-[min(100%,54dvh*var(--cell-ar))] overflow-hidden rounded-2xl bg-black shadow-2xl shadow-black/40 md:w-[min(100%,74dvh*var(--cell-ar))]"
+            style={
+              {
+                aspectRatio: cellAspect,
+                "--cell-ar": cellAspect,
+              } as React.CSSProperties
+            }
+          >
             <CameraPreview videoRef={attachVideo} mirror={mirror} filterCss={filter.css} />
             {!ready && (
               <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">
@@ -149,9 +151,18 @@ export default function BoothPage() {
             )}
             <Countdown value={count} />
             <CaptureFlash trigger={flash} />
+            {canFlip && phase === "setup" && (
+              <button
+                onClick={toggleFacing}
+                aria-label="Switch camera"
+                className="glass-card absolute top-3 right-3 z-40 flex h-11 w-11 items-center justify-center rounded-full"
+              >
+                <SwitchCamera size={20} />
+              </button>
+            )}
             {/* Shot progress */}
             {phase === "shooting" && (
-              <div className="absolute top-4 left-1/2 z-20 flex -translate-x-1/2 gap-2">
+              <div className="absolute top-3 left-1/2 z-20 flex -translate-x-1/2 gap-2">
                 {Array.from({ length: layout.shots }, (_, i) => (
                   <div
                     key={i}
@@ -164,28 +175,28 @@ export default function BoothPage() {
             )}
             {/* Captured thumbnails */}
             {thumbs.length > 0 && (
-              <div className="absolute right-3 top-16 z-20 flex flex-col gap-2">
+              <div className="absolute top-3 right-3 z-20 flex flex-col gap-2">
                 {thumbs.map((src, i) => (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
                     key={i}
                     src={src}
                     alt={`Shot ${i + 1}`}
-                    className="w-16 rounded-md border border-white/20 shadow-lg"
+                    className="w-14 rounded-md border border-white/20 shadow-lg"
                   />
                 ))}
               </div>
             )}
-          </>
+          </div>
         )}
       </div>
 
       {/* Controls */}
       {!error && (
-        <div className="z-40 flex flex-col gap-3 p-4 pb-6">
+        <div className="z-40 flex shrink-0 flex-col gap-3 overflow-y-auto p-4 pb-6 md:w-96 md:justify-center md:gap-5 md:p-6">
           {phase === "setup" && (
             <>
-              <div className="scrollbar-hide flex gap-2 overflow-x-auto">
+              <div className="scrollbar-hide flex gap-2 overflow-x-auto md:flex-wrap md:overflow-visible">
                 {soloLayouts.map((l) => (
                   <button
                     key={l.id}
@@ -203,12 +214,13 @@ export default function BoothPage() {
               <FilterBar
                 value={session.filterId}
                 onChange={(id) => update({ filterId: id })}
+                layoutClass="scrollbar-hide overflow-x-auto md:flex-wrap md:overflow-visible"
               />
               <button
                 onClick={runSequence}
                 disabled={!ready}
                 aria-label="Start shooting"
-                className="mx-auto mt-1 flex h-20 w-20 items-center justify-center rounded-full border-4 border-white/80 bg-accent shadow-lg shadow-accent/40 transition active:scale-95 disabled:opacity-40"
+                className="mx-auto mt-1 flex h-20 w-20 shrink-0 items-center justify-center rounded-full border-4 border-white/80 bg-accent shadow-lg shadow-accent/40 transition active:scale-95 disabled:opacity-40"
               >
                 <span className="h-14 w-14 rounded-full bg-white/90" />
               </button>

@@ -24,7 +24,6 @@ import { preloadSegmenter } from "@/lib/segmentation";
 import { EMPTY_SHOTS, useBoothSession } from "@/lib/session";
 import { playShutter, playTick } from "@/lib/sound";
 import { RoomEngine, RoomStatus, ShotPlan } from "@/lib/rtc/engine";
-import { usingLocalSignaling } from "@/lib/rtc/signaling";
 
 const COUNTDOWN_MS = 3000;
 const INTERVAL_MS = 4600;
@@ -38,16 +37,27 @@ const ROLE_COLORS: Record<Role, string> = {
   D: "bg-success/85 text-white",
 };
 
+/* Pane width: bounded by the column share of the stage and by the height
+   budget (rows must fit the stage), keeping each pane at the exact aspect its
+   occupant gets on the strip. The --c/--r/--g vars are set per breakpoint on
+   the pane grid. */
+const PANE_W =
+  "w-[min(calc((100%_-_var(--gsm))/var(--csm)),calc(50dvh*var(--pane-ar)/var(--rsm)))] md:w-[min(calc((100%_-_var(--gmd))/var(--cmd)),calc(76dvh*var(--pane-ar)/var(--rmd)))]";
+
 function RemotePane({
   role,
   stream,
   filterCss,
   label,
+  halfCell,
+  paneStyle,
 }: {
   role: Role;
   stream: MediaStream;
   filterCss: string;
   label: string;
+  halfCell: boolean;
+  paneStyle: React.CSSProperties;
 }) {
   const attach = useCallback(
     (el: HTMLVideoElement | null) => {
@@ -59,15 +69,20 @@ function RemotePane({
     [stream],
   );
   return (
-    <div className="relative min-h-0 flex-1 basis-[45%] overflow-hidden border border-border/40">
+    <div
+      className={`relative overflow-hidden rounded-xl border border-border/40 bg-black ${PANE_W}`}
+      style={paneStyle}
+    >
       <video
         ref={attach}
         autoPlay
         playsInline
         muted
-        className="h-full w-full object-cover"
+        className={`object-cover ${
+          halfCell ? "absolute inset-y-0 left-1/2 h-full w-[200%] max-w-none" : "h-full w-full"
+        }`}
         style={{
-          transform: "scaleX(-1)",
+          transform: halfCell ? "translateX(-50%) scaleX(-1)" : "scaleX(-1)",
           filter: filterCss !== "none" ? filterCss : undefined,
         }}
       />
@@ -323,103 +338,134 @@ function RoomInner() {
   );
   const activeLayout = getLayout(activeLayoutId);
 
+  // Pane geometry mirrors the strip: split cells give each person half a cell
+  // (portrait), everything else a full cell. A Together scene fills the whole
+  // cell regardless, so the split preview is suspended while one is active.
+  const isSplit = !roomScene && !!activeLayout.duoPattern?.includes("AB");
+  const paneAr = isSplit ? activeLayout.cellAspect / 2 : activeLayout.cellAspect;
+  const paneCount = 1 + Math.max(remotes.length, 1);
+  const colsSm = isSplit || paneCount >= 3 ? 2 : 1;
+  const colsMd = Math.min(paneCount, 2);
+  const paneVars = {
+    "--pane-ar": paneAr,
+    "--csm": colsSm,
+    "--rsm": Math.ceil(paneCount / colsSm),
+    "--gsm": `${(colsSm - 1) * 12}px`,
+    "--cmd": colsMd,
+    "--rmd": Math.ceil(paneCount / colsMd),
+    "--gmd": `${(colsMd - 1) * 12}px`,
+  } as React.CSSProperties;
+
   return (
-    <main className="booth-mode relative flex min-h-dvh flex-1 flex-col">
-      <div className="absolute top-0 z-40 flex w-full items-center justify-between p-4">
-        <button
-          onClick={() => router.push("/")}
-          aria-label="Leave room"
-          className="glass-card flex h-11 w-11 items-center justify-center rounded-full"
-        >
-          <ArrowLeft size={20} />
-        </button>
-        <div className="glass-card flex min-h-11 items-center gap-2 rounded-full px-4 font-mono text-sm tracking-[0.25em]">
-          {code}
-          {memberRoles.length > 1 && (
-            <span className="font-sans text-xs tracking-normal text-muted-foreground">
-              {memberRoles.length}/4
-            </span>
-          )}
-        </div>
-      </div>
-
-      {/* Stage: local pane + one pane per connected member */}
-      <div className="relative flex flex-1 flex-wrap overflow-hidden">
-        <div className="relative min-h-0 flex-1 basis-[45%] overflow-hidden border border-accent/50">
-          {error ? (
-            <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center text-sm text-muted-foreground">
-              <p>Camera unavailable. Allow access to join the booth.</p>
-              <button
-                onClick={retry}
-                className="glass-card min-h-11 rounded-full px-4 font-medium text-foreground"
-              >
-                Try again
-              </button>
-            </div>
-          ) : (
-            <CameraPreview videoRef={attachVideo} mirror={mirror} filterCss={filter.css} />
-          )}
-          <canvas
-            ref={previewCanvasRef}
-            className={`pointer-events-none absolute inset-0 h-full w-full object-cover ${
-              roomScene ? "" : "hidden"
-            }`}
-            style={{ filter: filter.css !== "none" ? filter.css : undefined }}
-          />
-          <span
-            className={`absolute bottom-2 left-3 z-10 rounded-full px-3 py-1 text-xs font-semibold ${ROLE_COLORS[myRole]}`}
+    <main className="booth-mode flex h-dvh flex-col overflow-hidden bg-background md:flex-row md:items-stretch md:justify-center">
+      {/* Stage: local pane + one pane per connected member, each shaped to its
+          strip footprint. Width-capped so controls stay beside the panes. */}
+      <div className="relative flex min-h-0 flex-1 items-center justify-center p-4 pt-16 sm:p-6 sm:pt-16 md:max-w-4xl">
+        <div className="absolute top-0 z-40 flex w-full items-center justify-between p-4">
+          <button
+            onClick={() => router.push("/")}
+            aria-label="Leave room"
+            className="glass-card flex h-11 w-11 items-center justify-center rounded-full"
           >
-            You
-          </span>
-        </div>
-
-        {remotes.map(([role, stream]) => (
-          <RemotePane
-            key={role}
-            role={role}
-            stream={stream}
-            filterCss={filter.css}
-            label={memberRoles.length > 2 ? `Friend ${role}` : "Partner"}
-          />
-        ))}
-
-        {remotes.length === 0 && (
-          <div className="relative flex min-h-0 flex-1 basis-[45%] flex-col items-center justify-center gap-3 border border-border/40 bg-card/60 px-6 text-center">
-            <Heart className="text-partner" size={28} />
-            {status === "waiting" || status === "connecting" ? (
-              <>
-                <p className="font-semibold">Waiting for the others…</p>
-                <button
-                  onClick={copyInvite}
-                  className="glass-card flex min-h-11 items-center gap-2 rounded-full px-4 text-sm font-medium"
-                >
-                  {copied ? <Check size={16} className="text-success" /> : <Copy size={16} />}
-                  {copied ? "Link copied!" : "Copy invite link"}
-                </button>
-                {usingLocalSignaling() && (
-                  <p className="max-w-xs text-xs text-muted-foreground">
-                    Local mode: open this link in more tabs of this browser to
-                    test. Configure Supabase to connect across devices.
-                  </p>
-                )}
-              </>
-            ) : status === "full" ? (
-              <p className="font-semibold">This booth is already full (4 max).</p>
-            ) : status === "failed" ? (
-              <p className="font-semibold">
-                Connection failed. This network may need a TURN relay.
-              </p>
-            ) : (
-              <p className="font-semibold">Everyone left the room.</p>
+            <ArrowLeft size={20} />
+          </button>
+          <div className="glass-card flex min-h-11 items-center gap-2 rounded-full px-4 font-mono text-sm tracking-[0.25em]">
+            {code}
+            {memberRoles.length > 1 && (
+              <span className="font-sans text-xs tracking-normal text-muted-foreground">
+                {memberRoles.length}/4
+              </span>
             )}
           </div>
-        )}
+        </div>
+
+        <div
+          className="flex w-full flex-wrap items-center justify-center gap-3"
+          style={paneVars}
+        >
+          <div
+            className={`relative overflow-hidden rounded-xl border border-accent/50 bg-black ${PANE_W}`}
+            style={{ aspectRatio: paneAr }}
+          >
+            {error ? (
+              <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center text-sm text-muted-foreground">
+                <p>Camera unavailable. Allow access to join the booth.</p>
+                <button
+                  onClick={retry}
+                  className="glass-card min-h-11 rounded-full px-4 font-medium text-foreground"
+                >
+                  Try again
+                </button>
+              </div>
+            ) : (
+              <CameraPreview
+                videoRef={attachVideo}
+                mirror={mirror}
+                filterCss={filter.css}
+                variant={isSplit ? "half-cell" : "cover"}
+              />
+            )}
+            <canvas
+              ref={previewCanvasRef}
+              className={`pointer-events-none absolute inset-0 h-full w-full object-cover ${
+                roomScene ? "" : "hidden"
+              }`}
+              style={{ filter: filter.css !== "none" ? filter.css : undefined }}
+            />
+            <span
+              className={`absolute bottom-2 left-3 z-10 rounded-full px-3 py-1 text-xs font-semibold ${ROLE_COLORS[myRole]}`}
+            >
+              You
+            </span>
+          </div>
+
+          {remotes.map(([role, stream]) => (
+            <RemotePane
+              key={role}
+              role={role}
+              stream={stream}
+              filterCss={filter.css}
+              label={memberRoles.length > 2 ? `Friend ${role}` : "Partner"}
+              halfCell={isSplit}
+              paneStyle={{ aspectRatio: paneAr }}
+            />
+          ))}
+
+          {remotes.length === 0 && (
+            <div
+              className={`relative flex flex-col items-center justify-center gap-3 rounded-xl border border-border/40 bg-card/60 px-6 text-center ${PANE_W}`}
+              style={{ aspectRatio: paneAr }}
+            >
+              <Heart className="text-partner" size={28} />
+              {status === "waiting" || status === "connecting" ? (
+                <>
+                  <p className="font-semibold">Waiting for the others…</p>
+                  <button
+                    onClick={copyInvite}
+                    className="glass-card flex min-h-11 items-center gap-2 rounded-full px-4 text-sm font-medium"
+                  >
+                    {copied ? <Check size={16} className="text-success" /> : <Copy size={16} />}
+                    {copied ? "Link copied!" : "Copy invite link"}
+                  </button>
+                </>
+              ) : status === "full" ? (
+                <p className="font-semibold">This booth is already full (4 max).</p>
+              ) : status === "failed" ? (
+                <p className="font-semibold">
+                  Connection failed. This network may need a TURN relay.
+                </p>
+              ) : (
+                <p className="font-semibold">Everyone left the room.</p>
+              )}
+            </div>
+          )}
+        </div>
 
         <Countdown value={count} />
         <CaptureFlash trigger={flash} />
 
         {prompt && (
-          <div className="pointer-events-none absolute top-16 left-1/2 z-20 -translate-x-1/2">
+          <div className="pointer-events-none absolute top-16 left-1/2 z-20 w-max max-w-[85%] -translate-x-1/2">
             <div className="glass-card rounded-2xl px-5 py-2.5 text-center font-semibold shadow-lg">
               {prompt}
             </div>
@@ -427,7 +473,7 @@ function RoomInner() {
         )}
 
         {shooting && (
-          <div className="absolute top-4 left-1/2 z-20 flex -translate-x-1/2 gap-2">
+          <div className="absolute bottom-4 left-1/2 z-20 flex -translate-x-1/2 gap-2">
             {Array.from({ length: shotTotal }, (_, i) => (
               <div
                 key={i}
@@ -441,10 +487,10 @@ function RoomInner() {
       </div>
 
       {/* Controls */}
-      <div className="z-40 flex flex-col gap-3 p-4 pb-6">
+      <div className="z-40 flex shrink-0 flex-col gap-3 overflow-y-auto p-4 pb-6 md:w-96 md:justify-center md:gap-5 md:p-6">
         {!shooting && (
           <>
-            <div className="scrollbar-hide flex gap-2 overflow-x-auto">
+            <div className="scrollbar-hide flex gap-2 overflow-x-auto md:flex-wrap md:overflow-visible">
               {roomLayouts.map((l) => (
                 <button
                   key={l.id}
@@ -462,9 +508,10 @@ function RoomInner() {
             <FilterBar
               value={session.filterId}
               onChange={(id) => update({ filterId: id })}
+              layoutClass="scrollbar-hide overflow-x-auto md:flex-wrap md:overflow-visible"
             />
             {connected && (
-              <div className="scrollbar-hide flex items-center gap-2 overflow-x-auto">
+              <div className="scrollbar-hide flex items-center gap-2 overflow-x-auto md:flex-wrap md:overflow-visible">
                 <span className="shrink-0 text-xs font-medium text-muted-foreground">
                   Scene
                 </span>
@@ -494,7 +541,7 @@ function RoomInner() {
               onClick={armShoot}
               disabled={!connected || !ready}
               aria-label="Start shooting together"
-              className="mx-auto mt-1 flex h-20 w-20 items-center justify-center rounded-full border-4 border-white/80 bg-accent shadow-lg shadow-accent/40 transition active:scale-95 disabled:opacity-40"
+              className="mx-auto mt-1 flex h-20 w-20 shrink-0 items-center justify-center rounded-full border-4 border-white/80 bg-accent shadow-lg shadow-accent/40 transition active:scale-95 disabled:opacity-40"
             >
               <span className="h-14 w-14 rounded-full bg-white/90" />
             </button>

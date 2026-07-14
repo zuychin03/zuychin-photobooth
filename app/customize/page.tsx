@@ -76,6 +76,7 @@ export default function CustomizePage() {
   const layout = getLayout(session.layoutId);
   const frame = FRAMES.find((f) => f.id === frameId) ?? FRAMES[0];
   const hasShots = ROLES.some((r) => session.shots[r].some(Boolean));
+  const { width: stripW, height: stripH } = stripSize(layout);
 
   const input: ComposeInput = useMemo(
     () => ({
@@ -315,235 +316,250 @@ export default function CustomizePage() {
   const activePack = STICKER_PACKS.find((p) => p.id === pack) ?? STICKER_PACKS[0];
 
   return (
-    <main className="flex min-h-dvh flex-1 flex-col lg:flex-row lg:items-stretch">
-      {/* Strip preview */}
-      <div className="flex flex-1 items-center justify-center bg-muted/40 p-6">
-        <div className="strip-print">
+    <main className="flex h-dvh flex-col overflow-hidden md:flex-row md:items-stretch md:justify-center">
+      {/* Strip preview: the box keeps the strip's exact aspect ratio and its
+          width is capped both directly and by the height budget (45dvh in the
+          stacked layout, 78dvh beside the sidebar), so it can never balloon to
+          dominate the viewport and push the controls out of view. */}
+      <div className="flex shrink-0 items-center justify-center bg-muted/40 p-4 sm:p-6 md:max-w-4xl md:flex-1">
+        <div
+          className="strip-print w-[min(100%,280px,45dvh*var(--strip-ar))] sm:w-[min(100%,320px,45dvh*var(--strip-ar))] md:w-[min(100%,300px,78dvh*var(--strip-ar))] lg:w-[min(100%,360px,78dvh*var(--strip-ar))]"
+          style={
+            {
+              aspectRatio: `${stripW} / ${stripH}`,
+              "--strip-ar": stripW / stripH,
+            } as React.CSSProperties
+          }
+        >
           <canvas
             ref={canvasRef}
             onPointerDown={onPointerDown}
             onPointerMove={onPointerMove}
             onPointerUp={onPointerUp}
-            className="max-h-[70dvh] w-auto max-w-full touch-none rounded-md shadow-2xl shadow-black/25 lg:max-h-[86dvh]"
+            className="h-full w-full touch-none rounded-md shadow-2xl shadow-black/25"
           />
         </div>
       </div>
 
-      {/* Controls */}
-      <div className="flex w-full flex-col gap-5 p-5 lg:max-w-md lg:overflow-y-auto">
-        <div className="flex items-center justify-between">
-          <button
-            onClick={() => router.push(isShared && session.roomCode ? `/room/${session.roomCode}` : "/booth")}
-            className="flex min-h-11 items-center gap-2 rounded-full bg-muted px-4 text-sm font-medium"
-          >
-            <ArrowLeft size={16} /> Retake
-          </button>
-          <h1 className="text-lg font-semibold" style={{ fontFamily: "var(--font-fraunces)" }}>
-            Make it yours
-          </h1>
-        </div>
-
-        <section>
-          <h2 className="mb-2 text-sm font-medium text-muted-foreground">Frame</h2>
-          <div className="flex flex-wrap gap-2">
-            {FRAMES.map((f) => (
-              <button
-                key={f.id}
-                onClick={() => setFrameId(f.id)}
-                aria-label={f.name}
-                title={f.name}
-                className={`h-11 w-11 rounded-full border-2 transition ${
-                  frameId === f.id ? "border-accent scale-110" : "border-border"
-                }`}
-                style={{ background: f.color }}
-              />
-            ))}
+      {/* Controls: its own scroll region so the action buttons stay pinned
+          to the bottom of the screen instead of the whole page scrolling. */}
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto md:max-w-md xl:max-w-lg">
+        <div className="flex flex-1 flex-col gap-5 p-5 pb-3">
+          <div className="flex items-center justify-between">
+            <button
+              onClick={() => router.push(isShared && session.roomCode ? `/room/${session.roomCode}` : "/booth")}
+              className="flex min-h-11 items-center gap-2 rounded-full bg-muted px-4 text-sm font-medium"
+            >
+              <ArrowLeft size={16} /> Retake
+            </button>
+            <h1 className="text-lg font-semibold" style={{ fontFamily: "var(--font-fraunces)" }}>
+              Make it yours
+            </h1>
           </div>
-        </section>
 
-        <section>
-          <h2 className="mb-2 text-sm font-medium text-muted-foreground">Filter</h2>
-          <FilterBar
-            value={session.filterId}
-            onChange={(id) => update({ filterId: id })}
-          />
-        </section>
-
-        {isShared && (
           <section>
-            <h2 className="mb-2 text-sm font-medium text-muted-foreground">
-              Together scene
-            </h2>
-            <div className="scrollbar-hide flex gap-2 overflow-x-auto pb-1">
-              <button
-                onClick={() => void selectScene(null)}
-                className={`min-h-11 shrink-0 rounded-xl border-2 px-3 text-xs font-medium ${
-                  sceneId === null ? "border-accent" : "border-border"
-                }`}
-              >
-                None
-              </button>
-              {SCENES.map((s) => (
+            <h2 className="mb-2 text-sm font-medium text-muted-foreground">Frame</h2>
+            <div className="flex flex-wrap gap-2">
+              {FRAMES.map((f) => (
                 <button
-                  key={s.id}
-                  onClick={() => void selectScene(s.id)}
-                  title={s.name}
-                  aria-label={s.name}
-                  className={`h-11 w-16 shrink-0 rounded-xl border-2 ${
-                    sceneId === s.id ? "border-accent" : "border-border"
+                  key={f.id}
+                  onClick={() => setFrameId(f.id)}
+                  aria-label={f.name}
+                  title={f.name}
+                  className={`h-11 w-11 rounded-full border-2 transition ${
+                    frameId === f.id ? "border-accent scale-110" : "border-border"
                   }`}
-                  style={{ background: s.previewCss }}
+                  style={{ background: f.color }}
                 />
               ))}
             </div>
-            {segmenting && (
-              <p className="mt-1 text-xs text-muted-foreground">
-                Cutting you both out of your backgrounds…
-              </p>
-            )}
-            {segFailed && (
-              <p className="mt-1 text-xs text-destructive">
-                Couldn&apos;t run the background cutout on this device.
-              </p>
-            )}
-            {sceneId && cutouts && (
-              <div className="mt-2 flex flex-wrap gap-4">
-                {session.members.map((side) => {
-                  const mine = side === session.role;
-                  const place = places[side] ?? DEFAULT_PLACEMENT;
-                  const nudge = (dx: number, dy: number, ds: number) =>
-                    setPlaces((p) => ({
-                      ...p,
-                      [side]: {
-                        dx: Math.min(0.5, Math.max(-0.5, place.dx + dx)),
-                        dy: Math.min(0.25, Math.max(-0.25, place.dy + dy)),
-                        scale: Math.min(1.6, Math.max(0.5, place.scale + ds)),
-                      },
-                    }));
-                  const label = mine
-                    ? "You"
-                    : session.members.length > 2
-                      ? `Friend ${side}`
-                      : "Partner";
-                  return (
-                    <div key={side} className="flex items-center gap-1">
-                      <span
-                        className={`mr-1 text-xs font-semibold ${
-                          mine ? "text-accent" : "text-partner"
-                        }`}
-                      >
-                        {label}
-                      </span>
-                      <button aria-label={`${side} left`} onClick={() => nudge(-0.04, 0, 0)} className="flex h-9 w-9 items-center justify-center rounded-full bg-muted"><ChevronLeft size={16} /></button>
-                      <button aria-label={`${side} right`} onClick={() => nudge(0.04, 0, 0)} className="flex h-9 w-9 items-center justify-center rounded-full bg-muted"><ChevronRight size={16} /></button>
-                      <button aria-label={`${side} up`} onClick={() => nudge(0, -0.03, 0)} className="flex h-9 w-9 items-center justify-center rounded-full bg-muted"><ChevronUp size={16} /></button>
-                      <button aria-label={`${side} down`} onClick={() => nudge(0, 0.03, 0)} className="flex h-9 w-9 items-center justify-center rounded-full bg-muted"><ChevronDown size={16} /></button>
-                      <button aria-label={`${side} smaller`} onClick={() => nudge(0, 0, -0.08)} className="flex h-9 w-9 items-center justify-center rounded-full bg-muted"><ZoomOut size={16} /></button>
-                      <button aria-label={`${side} bigger`} onClick={() => nudge(0, 0, 0.08)} className="flex h-9 w-9 items-center justify-center rounded-full bg-muted"><ZoomIn size={16} /></button>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
           </section>
-        )}
 
-        <section>
-          <div className="mb-2 flex items-center justify-between">
-            <h2 className="text-sm font-medium text-muted-foreground">Stickers</h2>
-            {selected !== null && (
-              <div className="flex gap-1">
-                <button aria-label="Smaller" onClick={() => editSelected((s) => ({ ...s, scale: Math.max(0.4, s.scale - 0.15) }))} className="flex h-9 w-9 items-center justify-center rounded-full bg-muted"><ZoomOut size={16} /></button>
-                <button aria-label="Bigger" onClick={() => editSelected((s) => ({ ...s, scale: Math.min(3, s.scale + 0.15) }))} className="flex h-9 w-9 items-center justify-center rounded-full bg-muted"><ZoomIn size={16} /></button>
-                <button aria-label="Rotate left" onClick={() => editSelected((s) => ({ ...s, rotation: s.rotation - Math.PI / 12 }))} className="flex h-9 w-9 items-center justify-center rounded-full bg-muted"><RotateCcw size={16} /></button>
-                <button aria-label="Rotate right" onClick={() => editSelected((s) => ({ ...s, rotation: s.rotation + Math.PI / 12 }))} className="flex h-9 w-9 items-center justify-center rounded-full bg-muted"><RotateCw size={16} /></button>
-                <button aria-label="Delete sticker" onClick={deleteSelected} className="flex h-9 w-9 items-center justify-center rounded-full bg-destructive/15 text-destructive"><Trash2 size={16} /></button>
-              </div>
-            )}
-          </div>
-          <div className="mb-2 flex items-center gap-2">
-            <div className="scrollbar-hide flex min-w-0 flex-1 gap-2 overflow-x-auto">
-              {STICKER_PACKS.map((p) => (
+          <section>
+            <h2 className="mb-2 text-sm font-medium text-muted-foreground">Filter</h2>
+            <FilterBar
+              value={session.filterId}
+              onChange={(id) => update({ filterId: id })}
+              layoutClass="flex-wrap"
+            />
+          </section>
+
+          {isShared && (
+            <section>
+              <h2 className="mb-2 text-sm font-medium text-muted-foreground">
+                Together scene
+              </h2>
+              <div className="flex flex-wrap gap-2 pb-1">
                 <button
-                  key={p.id}
-                  onClick={() => setPack(p.id)}
-                  className={`min-h-9 shrink-0 rounded-full px-3 text-xs font-medium ${
-                    pack === p.id ? "bg-foreground text-background" : "bg-muted text-muted-foreground"
+                  onClick={() => void selectScene(null)}
+                  className={`min-h-11 shrink-0 rounded-xl border-2 px-3 text-xs font-medium ${
+                    sceneId === null ? "border-accent" : "border-border"
                   }`}
                 >
-                  {p.name}
+                  None
                 </button>
-              ))}
-            </div>
-            <div className="flex shrink-0 rounded-full bg-muted p-0.5">
-              {STICKER_STYLES.map((s) => (
-                <button
-                  key={s.id}
-                  onClick={() => setStickerStyle(s.id)}
-                  className={`min-h-8 rounded-full px-3 text-xs font-medium transition ${
-                    stickerStyle === s.id
-                      ? "bg-card text-foreground shadow-sm"
-                      : "text-muted-foreground"
-                  }`}
-                >
-                  {s.name}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="flex flex-wrap gap-1">
-            {activePack.stickers.map((def) => (
-              <button
-                key={def.slug}
-                onClick={() => addSticker(def)}
-                aria-label={def.slug.replaceAll("_", " ")}
-                className="flex h-11 w-11 items-center justify-center rounded-xl transition hover:bg-muted"
-              >
-                {stickerStyle === "noto" ? (
-                  <span
-                    className="text-2xl"
-                    style={{ fontFamily: "var(--font-noto-emoji)", color: frame.ink }}
-                  >
-                    {monochromeGlyph(def.emoji)}
-                  </span>
-                ) : (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={stickerAssetUrl(stickerStyle, def.slug)}
-                    alt=""
-                    className="h-8 w-8"
+                {SCENES.map((s) => (
+                  <button
+                    key={s.id}
+                    onClick={() => void selectScene(s.id)}
+                    title={s.name}
+                    aria-label={s.name}
+                    className={`h-11 w-16 shrink-0 rounded-xl border-2 ${
+                      sceneId === s.id ? "border-accent" : "border-border"
+                    }`}
+                    style={{ background: s.previewCss }}
                   />
-                )}
-              </button>
-            ))}
-          </div>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Tap a sticker on the strip to select it, then drag to move.
-          </p>
-        </section>
+                ))}
+              </div>
+              {segmenting && (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Cutting you both out of your backgrounds…
+                </p>
+              )}
+              {segFailed && (
+                <p className="mt-1 text-xs text-destructive">
+                  Couldn&apos;t run the background cutout on this device.
+                </p>
+              )}
+              {sceneId && cutouts && (
+                <div className="mt-2 flex flex-wrap gap-4">
+                  {session.members.map((side) => {
+                    const mine = side === session.role;
+                    const place = places[side] ?? DEFAULT_PLACEMENT;
+                    const nudge = (dx: number, dy: number, ds: number) =>
+                      setPlaces((p) => ({
+                        ...p,
+                        [side]: {
+                          dx: Math.min(0.5, Math.max(-0.5, place.dx + dx)),
+                          dy: Math.min(0.25, Math.max(-0.25, place.dy + dy)),
+                          scale: Math.min(1.6, Math.max(0.5, place.scale + ds)),
+                        },
+                      }));
+                    const label = mine
+                      ? "You"
+                      : session.members.length > 2
+                        ? `Friend ${side}`
+                        : "Partner";
+                    return (
+                      <div key={side} className="flex items-center gap-1">
+                        <span
+                          className={`mr-1 text-xs font-semibold ${
+                            mine ? "text-accent" : "text-partner"
+                          }`}
+                        >
+                          {label}
+                        </span>
+                        <button aria-label={`${side} left`} onClick={() => nudge(-0.04, 0, 0)} className="flex h-9 w-9 items-center justify-center rounded-full bg-muted"><ChevronLeft size={16} /></button>
+                        <button aria-label={`${side} right`} onClick={() => nudge(0.04, 0, 0)} className="flex h-9 w-9 items-center justify-center rounded-full bg-muted"><ChevronRight size={16} /></button>
+                        <button aria-label={`${side} up`} onClick={() => nudge(0, -0.03, 0)} className="flex h-9 w-9 items-center justify-center rounded-full bg-muted"><ChevronUp size={16} /></button>
+                        <button aria-label={`${side} down`} onClick={() => nudge(0, 0.03, 0)} className="flex h-9 w-9 items-center justify-center rounded-full bg-muted"><ChevronDown size={16} /></button>
+                        <button aria-label={`${side} smaller`} onClick={() => nudge(0, 0, -0.08)} className="flex h-9 w-9 items-center justify-center rounded-full bg-muted"><ZoomOut size={16} /></button>
+                        <button aria-label={`${side} bigger`} onClick={() => nudge(0, 0, 0.08)} className="flex h-9 w-9 items-center justify-center rounded-full bg-muted"><ZoomIn size={16} /></button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </section>
+          )}
 
-        <section className="flex items-center gap-3">
-          <input
-            value={caption}
-            onChange={(e) => setCaption(e.target.value.slice(0, 30))}
-            placeholder="Add a caption…"
-            className="min-h-11 flex-1 rounded-xl border border-border bg-card px-4 outline-none focus:border-accent"
-          />
-          <button
-            onClick={() => setShowDate((d) => !d)}
-            aria-pressed={showDate}
-            aria-label="Toggle datestamp"
-            className={`flex h-11 w-11 items-center justify-center rounded-xl border transition ${
-              showDate
-                ? "border-datestamp bg-datestamp/15 text-datestamp"
-                : "border-border bg-card text-muted-foreground"
-            }`}
-          >
-            <Calendar size={18} />
-          </button>
-        </section>
+          <section>
+            <div className="mb-2 flex items-center justify-between">
+              <h2 className="text-sm font-medium text-muted-foreground">Stickers</h2>
+              {selected !== null && (
+                <div className="flex gap-1">
+                  <button aria-label="Smaller" onClick={() => editSelected((s) => ({ ...s, scale: Math.max(0.4, s.scale - 0.15) }))} className="flex h-9 w-9 items-center justify-center rounded-full bg-muted"><ZoomOut size={16} /></button>
+                  <button aria-label="Bigger" onClick={() => editSelected((s) => ({ ...s, scale: Math.min(3, s.scale + 0.15) }))} className="flex h-9 w-9 items-center justify-center rounded-full bg-muted"><ZoomIn size={16} /></button>
+                  <button aria-label="Rotate left" onClick={() => editSelected((s) => ({ ...s, rotation: s.rotation - Math.PI / 12 }))} className="flex h-9 w-9 items-center justify-center rounded-full bg-muted"><RotateCcw size={16} /></button>
+                  <button aria-label="Rotate right" onClick={() => editSelected((s) => ({ ...s, rotation: s.rotation + Math.PI / 12 }))} className="flex h-9 w-9 items-center justify-center rounded-full bg-muted"><RotateCw size={16} /></button>
+                  <button aria-label="Delete sticker" onClick={deleteSelected} className="flex h-9 w-9 items-center justify-center rounded-full bg-destructive/15 text-destructive"><Trash2 size={16} /></button>
+                </div>
+              )}
+            </div>
+            <div className="mb-2 flex items-start gap-2">
+              <div className="flex min-w-0 flex-1 flex-wrap gap-2">
+                {STICKER_PACKS.map((p) => (
+                  <button
+                    key={p.id}
+                    onClick={() => setPack(p.id)}
+                    className={`min-h-9 shrink-0 rounded-full px-3 text-xs font-medium ${
+                      pack === p.id ? "bg-foreground text-background" : "bg-muted text-muted-foreground"
+                    }`}
+                  >
+                    {p.name}
+                  </button>
+                ))}
+              </div>
+              <div className="flex shrink-0 rounded-full bg-muted p-0.5">
+                {STICKER_STYLES.map((s) => (
+                  <button
+                    key={s.id}
+                    onClick={() => setStickerStyle(s.id)}
+                    className={`min-h-8 rounded-full px-3 text-xs font-medium transition ${
+                      stickerStyle === s.id
+                        ? "bg-card text-foreground shadow-sm"
+                        : "text-muted-foreground"
+                    }`}
+                  >
+                    {s.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-1">
+              {activePack.stickers.map((def) => (
+                <button
+                  key={def.slug}
+                  onClick={() => addSticker(def)}
+                  aria-label={def.slug.replaceAll("_", " ")}
+                  className="flex h-11 w-11 items-center justify-center rounded-xl transition hover:bg-muted"
+                >
+                  {stickerStyle === "noto" ? (
+                    <span
+                      className="text-2xl"
+                      style={{ fontFamily: "var(--font-noto-emoji)", color: frame.ink }}
+                    >
+                      {monochromeGlyph(def.emoji)}
+                    </span>
+                  ) : (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={stickerAssetUrl(stickerStyle, def.slug)}
+                      alt=""
+                      className="h-8 w-8"
+                    />
+                  )}
+                </button>
+              ))}
+            </div>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Tap a sticker on the strip to select it, then drag to move.
+            </p>
+          </section>
 
-        <div className="mt-auto flex flex-col gap-3 pt-2">
+          <section className="flex items-center gap-3">
+            <input
+              value={caption}
+              onChange={(e) => setCaption(e.target.value.slice(0, 30))}
+              placeholder="Add a caption…"
+              className="min-h-11 flex-1 rounded-xl border border-border bg-card px-4 outline-none focus:border-accent"
+            />
+            <button
+              onClick={() => setShowDate((d) => !d)}
+              aria-pressed={showDate}
+              aria-label="Toggle datestamp"
+              className={`flex h-11 w-11 items-center justify-center rounded-xl border transition ${
+                showDate
+                  ? "border-datestamp bg-datestamp/15 text-datestamp"
+                  : "border-border bg-card text-muted-foreground"
+              }`}
+            >
+              <Calendar size={18} />
+            </button>
+          </section>
+        </div>
+
+        <div className="sticky bottom-0 flex flex-col gap-3 border-t border-border bg-background/95 px-5 pt-3 pb-5 backdrop-blur">
           <div className="flex gap-3">
             <button
               onClick={download}

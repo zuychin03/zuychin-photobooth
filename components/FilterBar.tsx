@@ -6,13 +6,16 @@ export function FilterBar({
   value,
   onChange,
   disabled = false,
+  layoutClass = "scrollbar-hide overflow-x-auto",
 }: {
   value: string;
   onChange: (id: string) => void;
   disabled?: boolean;
+  /** overflow behavior: horizontal scroll by default, pass "flex-wrap" to wrap */
+  layoutClass?: string;
 }) {
   return (
-    <div className="scrollbar-hide flex gap-2 overflow-x-auto px-1 py-1">
+    <div className={`flex gap-2 px-1 py-1 ${layoutClass}`}>
       {FILTERS.map((f) => (
         <button
           key={f.id}

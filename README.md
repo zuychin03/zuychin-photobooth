@@ -2,7 +2,7 @@
 
 A photobooth for two, any distance. Snap Life4Cuts-style photo strips together from anywhere: one room code, one synchronized countdown, two cameras, one strip. Built for long-distance couples and small groups of friends.
 
-Photos never touch a server. Everything is captured, composed, and exported in the browser; in a shared room, frames travel only peer to peer.
+Strips are captured, composed, and exported right in the browser, and in a shared room the frames travel only peer to peer. Anything you choose to save is stored privately, just for the two of you.
 
 ## Features
 

@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Fraunces, Noto_Emoji } from "next/font/google";
 import { SessionProvider } from "@/lib/session";
 import { AuthProvider } from "@/lib/auth";
+import AuthCookieMigration from "@/components/AuthCookieMigration";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -30,6 +31,9 @@ export const metadata: Metadata = {
   title: "Zuychin Photobooth",
   description:
     "Take photobooth strips together from anywhere: a booth for two, no matter the distance.",
+  icons: {
+    icon: "/favicon.svg",
+  },
 };
 
 export const viewport: Viewport = {
@@ -47,6 +51,7 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} ${fraunces.variable} ${notoEmoji.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
+        <AuthCookieMigration />
         <AuthProvider>
           <SessionProvider>{children}</SessionProvider>
         </AuthProvider>

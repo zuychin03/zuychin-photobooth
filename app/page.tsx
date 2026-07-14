@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Camera, Heart, Users, ArrowRight, Clock, LogIn } from "lucide-react";
 import { StripMockup } from "@/components/StripMockup";
+import { Logo } from "@/components/Logo";
 import { newRoomCode, normalizeRoomCode, isValidRoomCode } from "@/lib/room-code";
 import { useAuth } from "@/lib/auth";
 
@@ -24,12 +25,21 @@ export default function Home() {
   };
 
   return (
-    <main className="relative flex-1 overflow-hidden">
-      {authEnabled && (
-        <div className="absolute top-4 right-4 z-20">
+    <main className="relative flex min-h-dvh flex-1 flex-col overflow-hidden">
+      {/* Fluid orbs */}
+      <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
+        <div className="fluid-orb absolute -top-24 -left-24 h-96 w-96 rounded-full bg-accent/20 blur-3xl" />
+        <div className="fluid-orb--slow fluid-orb absolute top-1/3 -right-32 h-[28rem] w-[28rem] rounded-full bg-partner/20 blur-3xl" />
+        <div className="fluid-orb absolute bottom-0 left-1/4 h-80 w-80 rounded-full bg-warning/10 blur-3xl" />
+      </div>
+
+      {/* Brand header */}
+      <header className="relative z-20 flex flex-col items-center gap-5 px-6 pt-10 pb-2">
+        <Logo className="hero-animate h-12 w-auto text-accent sm:h-14" />
+        {authEnabled && (
           <button
             onClick={() => router.push(user ? "/timeline" : "/login?next=/timeline")}
-            className="glass-card flex min-h-11 items-center gap-2 rounded-full px-4 text-sm font-medium"
+            className="glass-card hero-animate hero-animate-delay-1 flex min-h-11 items-center gap-2 rounded-full px-4 text-sm font-medium"
           >
             {user ? (
               <>
@@ -41,17 +51,10 @@ export default function Home() {
               </>
             )}
           </button>
-        </div>
-      )}
+        )}
+      </header>
 
-      {/* Fluid orbs */}
-      <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
-        <div className="fluid-orb absolute -top-24 -left-24 h-96 w-96 rounded-full bg-accent/20 blur-3xl" />
-        <div className="fluid-orb--slow fluid-orb absolute top-1/3 -right-32 h-[28rem] w-[28rem] rounded-full bg-partner/20 blur-3xl" />
-        <div className="fluid-orb absolute bottom-0 left-1/4 h-80 w-80 rounded-full bg-warning/10 blur-3xl" />
-      </div>
-
-      <div className="mx-auto flex min-h-dvh w-full max-w-5xl flex-col items-center justify-center gap-10 px-6 py-16 lg:flex-row lg:gap-16">
+      <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col items-center justify-center gap-10 px-6 py-12 lg:flex-row lg:gap-16">
         {/* Hero copy + actions */}
         <div className="flex max-w-md flex-col items-center text-center lg:items-start lg:text-left">
           <p className="hero-animate hero-animate-delay-1 mb-3 text-sm font-medium tracking-widest text-accent uppercase">
@@ -67,7 +70,8 @@ export default function Home() {
           </h1>
           <p className="hero-animate hero-animate-delay-3 mt-4 text-muted-foreground">
             Snap photo strips together from anywhere: same countdown, same
-            strip, two cameras. Your photos never touch a server.
+            strip, two cameras. However far apart you are, you are in the
+            same booth.
           </p>
 
           <div className="hero-animate hero-animate-delay-4 mt-8 flex w-full flex-col gap-3">
