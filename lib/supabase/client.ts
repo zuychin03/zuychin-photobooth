@@ -1,5 +1,6 @@
 import { createBrowserClient } from "@supabase/ssr";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
+import { authCookieOptions } from "./cookie-options";
 
 // Shares the same Supabase project (and auth.users/profiles) as zuychin-gallery,
 // so a Gallery account signs into Photobooth as the same identity.
@@ -13,7 +14,7 @@ export function createClient() {
       "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.placeholder",
     );
   }
-  return createBrowserClient(url, anonKey);
+  return createBrowserClient(url, anonKey, { cookieOptions: authCookieOptions() });
 }
 
 export function hasSupabase(): boolean {

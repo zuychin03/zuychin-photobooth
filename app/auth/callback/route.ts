@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { authCookieOptions } from "@/lib/supabase/cookie-options";
 
 // Handles redirects from magic-link and email confirmations (PKCE code or token_hash).
 export async function GET(request: Request) {
@@ -15,6 +16,7 @@ export async function GET(request: Request) {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
+      cookieOptions: authCookieOptions(),
       cookies: {
         getAll() {
           return cookieStore.getAll();

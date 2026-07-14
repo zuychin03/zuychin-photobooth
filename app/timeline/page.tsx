@@ -4,6 +4,8 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
+  Bookmark,
+  BookmarkCheck,
   CalendarHeart,
   Check,
   Clock,
@@ -27,8 +29,10 @@ import {
   joinCouple,
   listStrips,
   saveStrip,
+  setStripKept,
   unpair,
 } from "@/lib/couple";
+import { daysUntilPurge, isRetained } from "@/lib/retention";
 import { Relay, listRelays, relayIsMyTurn } from "@/lib/relay";
 import { sameIsoWeek, startOfIsoWeek, weeklyStreak } from "@/lib/streak";
 import {
@@ -87,6 +91,17 @@ export default function TimelinePage() {
   const openRelays = relays.filter((r) => r.status === "pending");
   const now = new Date();
   const thisWeekCount = strips.filter((s) => sameIsoWeek(new Date(s.created_at), now)).length;
+  const expiringCount = strips.filter((s) => s.mine && !isRetained(s)).length;
+
+  const toggleKeep = async (strip: TimelineStrip) => {
+    const kept = !strip.kept;
+    setStrips((list) => list.map((x) => (x.id === strip.id ? { ...x, kept } : x)));
+    try {
+      await setStripKept(strip.id, kept);
+    } catch {
+      setStrips((list) => list.map((x) => (x.id === strip.id ? { ...x, kept: !kept } : x)));
+    }
+  };
 
   const handleCreate = async () => {
     if (!user) return;
@@ -427,6 +442,12 @@ export default function TimelinePage() {
               </button>
             </div>
           )}
+          {expiringCount > 0 && (
+            <p className="rounded-xl bg-muted/60 px-3 py-2 text-xs text-muted-foreground">
+              Strips clear from here a week after they&apos;re taken. Bookmark one to
+              keep it.
+            </p>
+          )}
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
           {strips.map((s) => (
             <figure key={s.id} className="group relative">
@@ -438,8 +459,31 @@ export default function TimelinePage() {
                   className="w-full rounded-lg border border-border shadow-sm"
                 />
               )}
+              {s.mine && s.layout_id !== "recap" && (
+                <button
+                  onClick={() => toggleKeep(s)}
+                  aria-label={s.kept ? "Kept, tap to release" : "Keep this strip"}
+                  aria-pressed={s.kept}
+                  className={`glass-card absolute right-1.5 top-1.5 flex h-8 w-8 items-center justify-center rounded-full transition ${
+                    s.kept ? "text-accent" : "text-muted-foreground opacity-0 group-hover:opacity-100"
+                  }`}
+                >
+                  {s.kept ? <BookmarkCheck size={15} /> : <Bookmark size={15} />}
+                </button>
+              )}
               <figcaption className="mt-1 flex items-center justify-between text-xs text-muted-foreground">
-                <span>{new Date(s.created_at).toLocaleDateString()}</span>
+                <span className="flex items-center gap-1.5">
+                  {new Date(s.created_at).toLocaleDateString()}
+                  {(() => {
+                    const d = daysUntilPurge(s);
+                    if (d === null || d > 2) return null;
+                    return (
+                      <span className="text-warning">
+                        {d === 0 ? "expiring" : `${d}d left`}
+                      </span>
+                    );
+                  })()}
+                </span>
                 {s.mine && (
                   <button
                     onClick={async () => {

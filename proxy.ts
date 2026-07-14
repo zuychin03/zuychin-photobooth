@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { authCookieOptions } from "@/lib/supabase/cookie-options";
 
 // Refreshes the Supabase session cookie on every request so Server Components
 // read a valid session. Next.js 16 renamed the `middleware` convention to `proxy`.
@@ -17,6 +18,7 @@ export async function proxy(request: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_URL,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
     {
+      cookieOptions: authCookieOptions(),
       cookies: {
         getAll() {
           return request.cookies.getAll();

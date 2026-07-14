@@ -18,6 +18,7 @@ Photos never touch a server. Everything is captured, composed, and exported in t
 - **Accounts and shared timeline** (optional): sign in with your Zuychin account (shared with Zuychin Gallery), pair with your partner via a code, and save strips to one private couple timeline. Without accounts configured, the booth works exactly the same and the account UI stays hidden.
 - **Relay strips** (optional): shoot your half now and your partner finishes the strip whenever they can, no need to be online together. Plus a weekly streak counter on the timeline.
 - **Photo dates and recaps** (optional): schedule recurring photo dates that email both partners a reminder, and compile a week's strips into one shareable recap image.
+- **One-week storage, kept forever in Gallery** (optional): strips clear from Supabase after a week to keep storage small; bookmark one to push it to Zuychin Gallery (shared Cloudinary), where a Photobooth view keeps it for good.
 
 ## Tech stack
 
@@ -54,7 +55,10 @@ All variables are optional for local development. See `.env.example` for the tem
 | `NEXT_PUBLIC_TURN_URL` | TURN relay URL(s) for networks where direct peer-to-peer fails. Must start with `turn:`/`turns:`; comma-separate multiple transports |
 | `NEXT_PUBLIC_TURN_USERNAME` | TURN credential |
 | `NEXT_PUBLIC_TURN_CREDENTIAL` | TURN credential |
-| `SUPABASE_SERVICE_ROLE_KEY` | Server-only; used by the reminder cron. Needed only for photo-date reminders |
+| `SUPABASE_SERVICE_ROLE_KEY` | Server-only; used by the reminder and retention crons |
+| `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME` | Same Cloudinary account as Zuychin Gallery; lets kept strips live in Gallery. Optional |
+| `CLOUDINARY_API_KEY` | Cloudinary key (server-only) |
+| `CLOUDINARY_API_SECRET` | Cloudinary secret (server-only) |
 | `RESEND_API_KEY` | Resend key for reminder emails (optional) |
 | `REMINDER_FROM` | Verified sender for reminder emails (optional) |
 | `CRON_SECRET` | Shared secret guarding `/api/reminders` (optional) |

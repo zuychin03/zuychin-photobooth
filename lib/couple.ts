@@ -15,6 +15,10 @@ export interface StripRow {
   storage_path: string;
   layout_id: string | null;
   caption: string | null;
+  kept: boolean;
+  cloudinary_public_id: string | null;
+  cloudinary_url: string | null;
+  purged: boolean;
   created_at: string;
 }
 
@@ -95,6 +99,7 @@ export async function listStrips(userId: string): Promise<TimelineStrip[]> {
   const { data, error } = await supabase
     .from("pb_strips")
     .select("*")
+    .eq("purged", false)
     .order("created_at", { ascending: false });
   if (error) throw error;
   const rows = (data as StripRow[]) ?? [];
@@ -106,6 +111,17 @@ export async function listStrips(userId: string): Promise<TimelineStrip[]> {
       return { ...row, url: signed.data?.signedUrl ?? null, mine: row.owner === userId };
     }),
   );
+}
+
+/** Keep a strip (exempt from the purge, pushed to Gallery/Cloudinary) or release
+ *  it. The push runs server-side where the Cloudinary secret lives. */
+export async function setStripKept(id: string, kept: boolean): Promise<void> {
+  const res = await fetch("/api/keep", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ id, kept }),
+  });
+  if (!res.ok) throw new Error("keep failed");
 }
 
 export async function deleteStrip(strip: StripRow): Promise<void> {
