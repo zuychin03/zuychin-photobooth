@@ -585,7 +585,7 @@ export default function CustomizePage() {
             >
               {saveState === "saved" ? (
                 <>
-                  <Check size={18} className="text-success" /> Saved to timeline
+                  <Check size={18} className="text-success" /> Saved to shared album
                 </>
               ) : (
                 <>
@@ -593,7 +593,7 @@ export default function CustomizePage() {
                   {saveState === "saving"
                     ? "Saving…"
                     : user
-                      ? "Save to our timeline"
+                      ? "Save to our shared album"
                       : "Sign in to save"}
                 </>
               )}

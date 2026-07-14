@@ -59,22 +59,30 @@ export default function TimelinePage() {
   const [joinInput, setJoinInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [loadErr, setLoadErr] = useState(false);
   const [copied, setCopied] = useState(false);
 
   const refresh = useCallback(async () => {
     if (!user) return;
     setReady(false);
-    const [c, s, r, d] = await Promise.all([
-      getMyCouple(user.id),
-      listStrips(user.id),
-      listRelays().catch(() => [] as Relay[]),
-      listPhotoDates().catch(() => [] as PhotoDate[]),
-    ]);
-    setCouple(c);
-    setStrips(s);
-    setRelays(r);
-    setDates(d);
-    setReady(true);
+    setLoadErr(false);
+    try {
+      const [c, s, r, d] = await Promise.all([
+        getMyCouple(user.id),
+        listStrips(user.id),
+        listRelays().catch(() => [] as Relay[]),
+        listPhotoDates().catch(() => [] as PhotoDate[]),
+      ]);
+      setCouple(c);
+      setStrips(s);
+      setRelays(r);
+      setDates(d);
+    } catch (e) {
+      console.error("[album] load failed", e);
+      setLoadErr(true);
+    } finally {
+      setReady(true);
+    }
   }, [user]);
 
   useEffect(() => {
@@ -189,7 +197,7 @@ export default function TimelinePage() {
   if (!enabled) {
     return (
       <main className="flex min-h-dvh flex-1 flex-col items-center justify-center gap-4 px-6 text-center">
-        <p className="text-lg font-semibold">Timeline isn&apos;t available here</p>
+        <p className="text-lg font-semibold">The shared album isn&apos;t available here</p>
         <p className="max-w-sm text-sm text-muted-foreground">
           This deployment has no account backend configured. The booth still works
           without an account.
@@ -219,7 +227,7 @@ export default function TimelinePage() {
           <ArrowLeft size={16} /> Booth
         </button>
         <h1 className="text-xl font-semibold" style={{ fontFamily: "var(--font-fraunces)" }}>
-          Our timeline
+          Shared album
         </h1>
         <button
           onClick={signOut}
@@ -240,7 +248,7 @@ export default function TimelinePage() {
             <div className="flex flex-col gap-3">
               <p className="text-sm text-muted-foreground">
                 Share this code with your partner so your strips land in one shared
-                timeline.
+                album.
               </p>
               <div className="flex items-center gap-2">
                 <span className="rounded-xl bg-muted px-4 py-2 font-mono text-lg tracking-[0.3em]">
@@ -418,6 +426,16 @@ export default function TimelinePage() {
       {!ready ? (
         <div className="flex flex-1 items-center justify-center">
           <Loader2 className="animate-spin text-muted-foreground" />
+        </div>
+      ) : loadErr ? (
+        <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center text-muted-foreground">
+          <p>Couldn&apos;t load your shared album.</p>
+          <button
+            onClick={() => void refresh()}
+            className="rounded-full bg-accent px-5 py-2.5 font-semibold text-accent-foreground"
+          >
+            Try again
+          </button>
         </div>
       ) : strips.length === 0 ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center text-muted-foreground">

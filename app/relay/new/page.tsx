@@ -65,11 +65,11 @@ export default function NewRelayPage() {
       <main className="flex min-h-dvh flex-1 flex-col items-center justify-center gap-4 px-6 text-center">
         <p className="text-lg font-semibold">Pair with your partner first</p>
         <p className="max-w-sm text-sm text-muted-foreground">
-          Relay strips need a paired partner to finish your half. Set that up on
-          your timeline.
+          Relay strips need a paired partner to finish your half. Set that up in
+          your shared album.
         </p>
         <button onClick={() => router.push("/timeline")} className="rounded-full bg-accent px-5 py-2.5 font-semibold text-accent-foreground">
-          Go to timeline
+          Go to the album
         </button>
       </main>
     );
@@ -115,8 +115,8 @@ export default function NewRelayPage() {
           Your half is saved
         </p>
         <p className="max-w-sm text-sm text-muted-foreground">
-          Tell your partner to open Photobooth. It&apos;s waiting on their timeline
-          to finish.
+          Tell your partner to open Photobooth. It&apos;s waiting in their shared
+          album to finish.
         </p>
         <div className="flex gap-3">
           <button

@@ -92,7 +92,7 @@ export default function RelayPage() {
       <main className="flex min-h-dvh flex-1 flex-col items-center justify-center gap-4 px-6 text-center">
         <p className="text-lg font-semibold">Relay not found</p>
         <button onClick={() => router.push("/timeline")} className="rounded-full bg-accent px-5 py-2.5 font-semibold text-accent-foreground">
-          Back to timeline
+          Back to the album
         </button>
       </main>
     );
@@ -135,7 +135,7 @@ export default function RelayPage() {
             Open in editor
           </button>
           <button onClick={() => router.push("/timeline")} className="text-sm text-muted-foreground underline">
-            Back to timeline
+            Back to the album
           </button>
         </>
       ) : (

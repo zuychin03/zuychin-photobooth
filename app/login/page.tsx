@@ -71,7 +71,7 @@ function LoginInner() {
           Sign in
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Use your Zuychin account to save strips to your timeline.
+          Use your Zuychin account to save strips to your shared album.
         </p>
 
         {!enabled ? (
