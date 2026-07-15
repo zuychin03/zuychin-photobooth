@@ -43,7 +43,7 @@ export default function Home() {
           >
             {user ? (
               <>
-                <Clock size={16} className="text-accent" /> Shared album
+                <Clock size={16} className="text-accent" /> Shared Vault
               </>
             ) : (
               <>

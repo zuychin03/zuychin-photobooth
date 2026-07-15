@@ -1,13 +1,26 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { RETENTION_DAYS, retentionCutoffIso } from "@/lib/retention";
+import { weeklyResetCutoffIso } from "@/lib/retention";
+import { hasCloudinary, uploadStrip } from "@/lib/cloudinary";
 
-// Called on a schedule (same CRON_SECRET as the reminder route). Purges strips
-// older than the retention window unless they are kept or a weekly recap.
+// Called on a schedule (same CRON_SECRET as the reminder route). Clears the
+// shared vault at the ISO-week boundary: strips from an earlier week are
+// removed, but kept strips and weekly recaps are first archived to
+// Cloudinary so they survive. Run it at least once after each week
+// rollover (e.g. daily) for the vault to empty on the new week.
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const BUCKET = "photobooth-strips";
+
+interface Row {
+  id: string;
+  owner: string;
+  storage_path: string;
+  layout_id: string | null;
+  kept: boolean;
+  cloudinary_public_id: string | null;
+}
 
 export async function GET(request: NextRequest) {
   const secret = process.env.CRON_SECRET;
@@ -22,44 +35,70 @@ export async function GET(request: NextRequest) {
   }
 
   const supabase = createAdminClient();
-  const cutoff = retentionCutoffIso();
+  const cutoff = weeklyResetCutoffIso();
 
-  // 1. Expired and not kept: drop the Storage object and the row. Recaps are the
-  // week's keepsake; skip them. (Filtered in JS, not SQL, so a NULL layout_id
-  // does not slip through a `<> 'recap'` compare.)
-  const { data: expirable, error } = await supabase
+  // Everything from an earlier ISO week that still has a Storage object.
+  const { data, error } = await supabase
     .from("pb_strips")
-    .select("id, storage_path, layout_id")
-    .eq("kept", false)
+    .select("id, owner, storage_path, layout_id, kept, cloudinary_public_id")
+    .eq("purged", false)
     .lt("created_at", cutoff);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  const drop = (expirable ?? []).filter((r) => r.layout_id !== "recap");
+  const rows = (data ?? []) as Row[];
+  // Kept strips and recaps are the week's keepsakes: archive, don't delete.
+  const keep = rows.filter((r) => r.kept || r.layout_id === "recap");
+  const drop = rows.filter((r) => !(r.kept || r.layout_id === "recap"));
+
+  // 1. Non-kept, non-recap: drop the Storage object and the row.
   await removePaths(supabase, drop.map((r) => r.storage_path));
   if (drop.length > 0) {
     await supabase.from("pb_strips").delete().in("id", drop.map((r) => r.id));
   }
 
-  // 2. Expired but kept and pushed to Cloudinary: drop only the Storage object;
-  // keep the row (now served from Gallery/Cloudinary) and mark it purged.
-  const { data: archivable } = await supabase
-    .from("pb_strips")
-    .select("id, storage_path")
-    .eq("kept", true)
-    .eq("purged", false)
-    .not("cloudinary_public_id", "is", null)
-    .lt("created_at", cutoff);
+  // 2. Keepsakes: ensure a Cloudinary copy exists (companion views read those),
+  // then drop only the Storage object and mark the row purged. A keepsake we
+  // cannot archive (Cloudinary not configured) is left intact rather than lost.
+  let archived = 0;
+  let skipped = 0;
+  const purge: string[] = [];
+  const purgeIds: string[] = [];
 
-  const archive = archivable ?? [];
-  await removePaths(supabase, archive.map((r) => r.storage_path));
-  if (archive.length > 0) {
-    await supabase.from("pb_strips").update({ purged: true }).in("id", archive.map((r) => r.id));
+  for (const r of keep) {
+    let publicId = r.cloudinary_public_id;
+    if (!publicId) {
+      if (!hasCloudinary()) {
+        skipped++;
+        continue;
+      }
+      const dl = await supabase.storage.from(BUCKET).download(r.storage_path);
+      if (dl.error || !dl.data) {
+        skipped++;
+        continue;
+      }
+      const bytes = Buffer.from(await dl.data.arrayBuffer());
+      const up = await uploadStrip(bytes, r.owner, r.id);
+      publicId = up.publicId;
+      await supabase
+        .from("pb_strips")
+        .update({ kept: true, cloudinary_public_id: up.publicId, cloudinary_url: up.url })
+        .eq("id", r.id);
+    }
+    purge.push(r.storage_path);
+    purgeIds.push(r.id);
+    archived++;
+  }
+
+  await removePaths(supabase, purge);
+  if (purgeIds.length > 0) {
+    await supabase.from("pb_strips").update({ purged: true }).in("id", purgeIds);
   }
 
   return NextResponse.json({
-    purged: drop.length,
-    archived: archive.length,
-    retentionDays: RETENTION_DAYS,
+    cleared: drop.length,
+    archived,
+    skipped,
+    weekStart: cutoff,
   });
 }
 

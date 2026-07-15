@@ -71,7 +71,7 @@ function LoginInner() {
           Sign in
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Use your Zuychin account to save strips to your shared album.
+          Use your Zuychin account to save strips to your Shared Vault.
         </p>
 
         {!enabled ? (

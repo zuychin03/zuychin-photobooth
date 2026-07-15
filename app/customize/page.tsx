@@ -16,6 +16,7 @@ import {
   RotateCw,
   Share2,
   Trash2,
+  X,
   ZoomIn,
   ZoomOut,
 } from "lucide-react";
@@ -45,7 +46,9 @@ import {
 import { ROLES, Role, getLayout, stripSize } from "@/lib/layouts";
 import { useBoothSession } from "@/lib/session";
 import { useAuth } from "@/lib/auth";
-import { getMyCouple, saveStrip } from "@/lib/couple";
+import { TimelineStrip, deleteStrip, getMyCouple, listStrips, saveStrip } from "@/lib/couple";
+import { WEEKLY_STRIP_CAP } from "@/lib/retention";
+import { sameIsoWeek } from "@/lib/streak";
 
 const STICKER_HIT_RADIUS = 60;
 
@@ -70,6 +73,8 @@ export default function CustomizePage() {
   const [segFailed, setSegFailed] = useState(false);
   const [places, setPlaces] = useState<Partial<Record<Role, TogetherPlacement>>>({});
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle");
+  // This week's strips offered for discard when the vault is at its weekly cap.
+  const [capChoices, setCapChoices] = useState<TimelineStrip[] | null>(null);
   const dragRef = useRef<{ key: number; dx: number; dy: number } | null>(null);
   const nextKey = useRef(1);
 
@@ -292,11 +297,8 @@ export default function CustomizePage() {
     }
   };
 
-  const saveToTimeline = async () => {
-    if (!user) {
-      router.push("/login?next=/timeline");
-      return;
-    }
+  const persistStrip = async () => {
+    if (!user) return;
     setSaveState("saving");
     try {
       const couple = await getMyCouple(user.id);
@@ -309,6 +311,37 @@ export default function CustomizePage() {
     } catch {
       setSaveState("idle");
     }
+  };
+
+  const saveToTimeline = async () => {
+    if (!user) {
+      router.push("/login?next=/timeline");
+      return;
+    }
+    // The vault holds at most WEEKLY_STRIP_CAP non-recap strips per ISO week. At
+    // the cap, let the couple discard one to make room instead of blocking.
+    try {
+      const week = (await listStrips(user.id)).filter(
+        (s) => s.layout_id !== "recap" && sameIsoWeek(new Date(s.created_at), new Date()),
+      );
+      if (week.length >= WEEKLY_STRIP_CAP) {
+        setCapChoices(week);
+        return;
+      }
+    } catch {
+      // If the check fails, fall through and try to save anyway.
+    }
+    await persistStrip();
+  };
+
+  const discardAndSave = async (strip: TimelineStrip) => {
+    setCapChoices(null);
+    try {
+      await deleteStrip(strip);
+    } catch {
+      // Best effort; still attempt the save.
+    }
+    await persistStrip();
   };
 
   if (!hasShots) return null;
@@ -585,7 +618,7 @@ export default function CustomizePage() {
             >
               {saveState === "saved" ? (
                 <>
-                  <Check size={18} className="text-success" /> Saved to shared album
+                  <Check size={18} className="text-success" /> Saved to Shared Vault
                 </>
               ) : (
                 <>
@@ -593,7 +626,7 @@ export default function CustomizePage() {
                   {saveState === "saving"
                     ? "Saving…"
                     : user
-                      ? "Save to our shared album"
+                      ? "Save to our Shared Vault"
                       : "Sign in to save"}
                 </>
               )}
@@ -601,6 +634,59 @@ export default function CustomizePage() {
           )}
         </div>
       </div>
+
+      {capChoices !== null && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="glass-card flex max-h-[85dvh] w-full max-w-md flex-col gap-4 overflow-hidden rounded-2xl p-5">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-semibold" style={{ fontFamily: "var(--font-fraunces)" }}>
+                  This week&apos;s vault is full
+                </h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  You&apos;ve saved {WEEKLY_STRIP_CAP} strips this week. Discard one
+                  to make room, or keep them all and save this next week.
+                </p>
+              </div>
+              <button
+                onClick={() => setCapChoices(null)}
+                aria-label="Cancel"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {capChoices.some((s) => s.mine) ? (
+              <div className="grid grid-cols-3 gap-3 overflow-y-auto">
+                {capChoices
+                  .filter((s) => s.mine)
+                  .map((s) => (
+                    <button
+                      key={s.id}
+                      onClick={() => discardAndSave(s)}
+                      className="group relative overflow-hidden rounded-lg border border-border"
+                      aria-label="Discard this strip and save the new one"
+                    >
+                      {s.url && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={s.url} alt={s.caption ?? "Photo strip"} className="aspect-[3/4] w-full object-cover" />
+                      )}
+                      <span className="absolute inset-0 flex items-center justify-center bg-destructive/0 opacity-0 transition group-hover:bg-destructive/70 group-hover:opacity-100">
+                        <Trash2 size={20} className="text-white" />
+                      </span>
+                    </button>
+                  ))}
+              </div>
+            ) : (
+              <p className="rounded-xl bg-muted/60 px-3 py-2 text-sm text-muted-foreground">
+                All {WEEKLY_STRIP_CAP} strips this week are your partner&apos;s. Ask
+                them to remove one, or wait for the weekly reset.
+              </p>
+            )}
+          </div>
+        </div>
+      )}
     </main>
   );
 }

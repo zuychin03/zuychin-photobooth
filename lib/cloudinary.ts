@@ -1,7 +1,7 @@
 import { v2 as cloudinary } from "cloudinary";
 
-// Server-only. Uses the SAME Cloudinary account as zuychin-gallery, so kept
-// strips land in one media library that the Gallery Photobooth view reads.
+// Server-only. Kept strips land in one Cloudinary media library that any
+// companion app with the same credentials can read.
 // Never import from a client component.
 
 cloudinary.config({
@@ -27,7 +27,7 @@ export interface UploadedStrip {
 }
 
 /** Upload a strip PNG under zuychin-photobooth/<uid>/, authenticated delivery
- *  (private, matching Gallery's private albums; served via signed URLs there). */
+ *  (private; companion views serve it via signed URLs). */
 export async function uploadStrip(
   bytes: Buffer,
   userId: string,

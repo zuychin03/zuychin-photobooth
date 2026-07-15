@@ -32,7 +32,7 @@ import {
   setStripKept,
   unpair,
 } from "@/lib/couple";
-import { daysUntilPurge, isRetained } from "@/lib/retention";
+import { WEEKLY_STRIP_CAP, daysUntilPurge, isRetained } from "@/lib/retention";
 import { Relay, listRelays, relayIsMyTurn } from "@/lib/relay";
 import { sameIsoWeek, startOfIsoWeek, weeklyStreak } from "@/lib/streak";
 import {
@@ -61,6 +61,7 @@ export default function TimelinePage() {
   const [err, setErr] = useState<string | null>(null);
   const [loadErr, setLoadErr] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [keepNote, setKeepNote] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     if (!user) return;
@@ -99,13 +100,22 @@ export default function TimelinePage() {
   const openRelays = relays.filter((r) => r.status === "pending");
   const now = new Date();
   const thisWeekCount = strips.filter((s) => sameIsoWeek(new Date(s.created_at), now)).length;
+  const weekSaved = strips.filter(
+    (s) => s.layout_id !== "recap" && sameIsoWeek(new Date(s.created_at), now),
+  ).length;
   const expiringCount = strips.filter((s) => s.mine && !isRetained(s)).length;
 
   const toggleKeep = async (strip: TimelineStrip) => {
     const kept = !strip.kept;
     setStrips((list) => list.map((x) => (x.id === strip.id ? { ...x, kept } : x)));
+    setKeepNote(null);
     try {
-      await setStripKept(strip.id, kept);
+      const { pushed } = await setStripKept(strip.id, kept);
+      if (kept && !pushed) {
+        setKeepNote(
+          "Bookmarked here, but this deployment isn't set up to keep strips past the weekly reset yet — configure Cloudinary to archive them.",
+        );
+      }
     } catch {
       setStrips((list) => list.map((x) => (x.id === strip.id ? { ...x, kept: !kept } : x)));
     }
@@ -197,7 +207,7 @@ export default function TimelinePage() {
   if (!enabled) {
     return (
       <main className="flex min-h-dvh flex-1 flex-col items-center justify-center gap-4 px-6 text-center">
-        <p className="text-lg font-semibold">The shared album isn&apos;t available here</p>
+        <p className="text-lg font-semibold">The Shared Vault isn&apos;t available here</p>
         <p className="max-w-sm text-sm text-muted-foreground">
           This deployment has no account backend configured. The booth still works
           without an account.
@@ -227,7 +237,7 @@ export default function TimelinePage() {
           <ArrowLeft size={16} /> Booth
         </button>
         <h1 className="text-xl font-semibold" style={{ fontFamily: "var(--font-fraunces)" }}>
-          Shared album
+          Shared Vault
         </h1>
         <button
           onClick={signOut}
@@ -247,8 +257,8 @@ export default function TimelinePage() {
           {pending ? (
             <div className="flex flex-col gap-3">
               <p className="text-sm text-muted-foreground">
-                Share this code with your partner so your strips land in one shared
-                album.
+                Share this code with your partner so your strips land in one Shared
+                Vault.
               </p>
               <div className="flex items-center gap-2">
                 <span className="rounded-xl bg-muted px-4 py-2 font-mono text-lg tracking-[0.3em]">
@@ -429,7 +439,7 @@ export default function TimelinePage() {
         </div>
       ) : loadErr ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center text-muted-foreground">
-          <p>Couldn&apos;t load your shared album.</p>
+          <p>Couldn&apos;t load your Shared Vault.</p>
           <button
             onClick={() => void refresh()}
             className="rounded-full bg-accent px-5 py-2.5 font-semibold text-accent-foreground"
@@ -446,11 +456,11 @@ export default function TimelinePage() {
         </div>
       ) : (
         <section className="flex flex-col gap-3">
-          {thisWeekCount > 1 && (
-            <div className="flex items-center justify-between">
-              <h2 className="text-sm font-medium text-muted-foreground">
-                {strips.length} strip{strips.length > 1 ? "s" : ""}
-              </h2>
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-medium text-muted-foreground">
+              {weekSaved}/{WEEKLY_STRIP_CAP} this week
+            </h2>
+            {thisWeekCount > 1 && (
               <button
                 onClick={makeRecap}
                 disabled={recapBusy}
@@ -458,12 +468,15 @@ export default function TimelinePage() {
               >
                 <Sparkles size={14} /> {recapBusy ? "Making…" : "Make this week's recap"}
               </button>
-            </div>
+            )}
+          </div>
+          {keepNote && (
+            <p className="rounded-xl bg-muted/60 px-3 py-2 text-xs text-warning">{keepNote}</p>
           )}
           {expiringCount > 0 && (
             <p className="rounded-xl bg-muted/60 px-3 py-2 text-xs text-muted-foreground">
-              Strips clear from here a week after they&apos;re taken. Bookmark one to
-              keep it.
+              The vault clears when the week resets. Bookmark a strip to keep it
+              before then.
             </p>
           )}
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">

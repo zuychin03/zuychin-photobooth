@@ -66,10 +66,10 @@ export default function NewRelayPage() {
         <p className="text-lg font-semibold">Pair with your partner first</p>
         <p className="max-w-sm text-sm text-muted-foreground">
           Relay strips need a paired partner to finish your half. Set that up in
-          your shared album.
+          your Shared Vault.
         </p>
         <button onClick={() => router.push("/timeline")} className="rounded-full bg-accent px-5 py-2.5 font-semibold text-accent-foreground">
-          Go to the album
+          Go to the vault
         </button>
       </main>
     );

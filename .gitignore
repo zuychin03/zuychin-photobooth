@@ -57,11 +57,13 @@ desktop.ini
 # local notes and external documents
 *.local.md
 CHANGELOG.md
-SUPABASE_SETUP.md
 ROADMAP.md
-/supabase/
 /notes/
 /external/
+
+# granular Supabase migrations are for local development only; the public repo
+# ships the combined end-to-end script at the root (supabase-setup.sql)
+/supabase/
 
 # keep the setup sample despite .env*
 !.env.example

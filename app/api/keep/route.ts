@@ -2,8 +2,8 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { destroyStrip, hasCloudinary, uploadStrip } from "@/lib/cloudinary";
 
-// Toggle a strip's "kept" state. Keeping pushes the PNG to the shared Cloudinary
-// account so it has a permanent home in Zuychin Gallery; releasing removes it.
+// Toggle a strip's "kept" state. Keeping pushes the PNG to Cloudinary so it
+// keeps a permanent home past the weekly purge; releasing removes it.
 // Runs on photobooth's own domain, so the user's session cookie authenticates it.
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -57,9 +57,12 @@ export async function POST(request: Request) {
   const bytes = Buffer.from(await dl.data.arrayBuffer());
   const { publicId, url } = await uploadStrip(bytes, user.id, id);
 
-  await supabase
+  const { error: upErr } = await supabase
     .from("pb_strips")
     .update({ kept: true, cloudinary_public_id: publicId, cloudinary_url: url })
     .eq("id", id);
+  // If the columns are missing (schema not fully applied) the archive is
+  // orphaned in Cloudinary and companion views never see it, so fail loudly.
+  if (upErr) return NextResponse.json({ error: upErr.message }, { status: 500 });
   return NextResponse.json({ kept: true, pushed: true });
 }

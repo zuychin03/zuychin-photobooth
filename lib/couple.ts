@@ -113,15 +113,22 @@ export async function listStrips(userId: string): Promise<TimelineStrip[]> {
   );
 }
 
-/** Keep a strip (exempt from the purge, pushed to Gallery/Cloudinary) or release
- *  it. The push runs server-side where the Cloudinary secret lives. */
-export async function setStripKept(id: string, kept: boolean): Promise<void> {
+/** Keep a strip (archived to Cloudinary) or release it. The push runs
+ *  server-side where the Cloudinary secret lives. `pushed` is false when the
+ *  strip was flagged locally but not archived (Cloudinary not configured here),
+ *  so the caller can warn that it won't survive the weekly reset. */
+export async function setStripKept(
+  id: string,
+  kept: boolean,
+): Promise<{ pushed: boolean }> {
   const res = await fetch("/api/keep", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ id, kept }),
   });
   if (!res.ok) throw new Error("keep failed");
+  const data = (await res.json().catch(() => ({}))) as { pushed?: boolean };
+  return { pushed: Boolean(data.pushed) };
 }
 
 export async function deleteStrip(strip: StripRow): Promise<void> {

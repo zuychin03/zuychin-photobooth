@@ -1,8 +1,7 @@
 @import "tailwindcss";
 
 /* ─── Theme Tokens ────────────────────────────────────── */
-/* Same token names as Zuychin Gallery; Photobooth's accent is rose
-   (gallery owns amber). --partner marks the partner's UI in duo rooms. */
+/* Photobooth's accent is rose. --partner marks the partner's UI in duo rooms. */
 :root, .light {
   --background: #fafaf9;
   --foreground: #1c1917;
