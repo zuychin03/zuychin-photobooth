@@ -47,6 +47,7 @@ import { ROLES, Role, getLayout, stripSize } from "@/lib/layouts";
 import { useBoothSession } from "@/lib/session";
 import { useAuth } from "@/lib/auth";
 import { TimelineStrip, deleteStrip, getMyCouple, listStrips, saveStrip } from "@/lib/couple";
+import { notifyPartner } from "@/lib/push-client";
 import { WEEKLY_STRIP_CAP } from "@/lib/retention";
 import { sameIsoWeek } from "@/lib/streak";
 
@@ -303,10 +304,11 @@ export default function CustomizePage() {
     try {
       const couple = await getMyCouple(user.id);
       const blob = await exportBlob();
-      await saveStrip(user.id, couple?.id ?? null, blob, {
+      const stripId = await saveStrip(user.id, couple?.id ?? null, blob, {
         layoutId: session.layoutId,
         caption,
       });
+      if (couple?.member_b) notifyPartner("strip", stripId);
       setSaveState("saved");
     } catch {
       setSaveState("idle");

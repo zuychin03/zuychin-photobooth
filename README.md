@@ -20,6 +20,8 @@ Strips are captured, composed, and exported right in the browser, and in a share
 - **Relay strips** (optional): shoot your half now and your partner finishes the strip whenever they can, no need to be online together. Plus a weekly streak counter in the vault.
 - **Photo dates and recaps** (optional): schedule recurring photo dates that email both partners a reminder, and compile a week's strips into one shareable recap image.
 - **Weekly vault with a keep switch** (optional): the Shared Vault holds up to 10 strips per couple each week; when the next week starts it clears out, archiving bookmarked strips and weekly recaps to Cloudinary first (when configured) so they last, and deleting the rest.
+- **Installable PWA**: add it to your home screen (there's an install button on the landing page) and it opens like an app. Build assets are cached on first use, so the solo booth and editor keep working offline once you've visited them.
+- **Push notifications** (optional): enable the bell in the vault and get nudged when it's your turn on a relay strip, when your partner saves a strip, and when a photo date is due. Free web push via your own VAPID keys, no service account.
 
 ## Tech stack
 
@@ -64,6 +66,9 @@ All variables are optional for local development. See `.env.example` for the tem
 | `RESEND_API_KEY` | Resend key for reminder emails (optional) |
 | `REMINDER_FROM` | Verified sender for reminder emails (optional) |
 | `CRON_SECRET` | Shared secret guarding the `/api/reminders` and `/api/retention` cron routes (optional) |
+| `NEXT_PUBLIC_VAPID_PUBLIC_KEY` | Web push: VAPID public key (`npx web-push generate-vapid-keys`). Optional |
+| `VAPID_PRIVATE_KEY` | Web push: VAPID private key (server-only) |
+| `VAPID_SUBJECT` | Web push: `mailto:` contact sent to push services |
 
 Without Supabase configured, rooms fall back to a BroadcastChannel: two tabs in the same browser can pair (handy for development), but two devices cannot, and the account features stay hidden. Without TURN, some mobile and cross-country connections will fail to establish; free credentials are available from providers such as metered.ca or ExpressTURN.
 
@@ -132,9 +137,10 @@ header `Authorization: Bearer <CRON_SECRET>` (or `?secret=<CRON_SECRET>`):
   `{ cleared, archived, skipped, weekStart }`, or
   `{ skipped: "service role not configured" }` until the service role is set, so
   nothing is deleted before you wire it up.
-- `https://<your-app>/api/reminders` — photo-date emails; every 15 minutes is
-  plenty. Needs a [Resend](https://resend.com) key (`RESEND_API_KEY`, and
-  `REMINDER_FROM` on a verified domain for real delivery).
+- `https://<your-app>/api/reminders` — photo-date reminders; every 15 minutes is
+  plenty. Delivers by email with a [Resend](https://resend.com) key
+  (`RESEND_API_KEY`, and `REMINDER_FROM` on a verified domain for real
+  delivery), by push notification when web push is set up (step 7), or both.
 
 Use your exact production host: many schedulers do not follow `www.`/apex
 redirects, which silently breaks the job.
@@ -157,7 +163,23 @@ to you — any app of your own with the same Cloudinary credentials and read
 access to `pb_strips` can sign delivery URLs from `cloudinary_public_id` (RLS
 scopes rows to the owner and their partner).
 
-**7. One login across your own apps (optional).** If you serve several of your
+**7. Push notifications (optional web push).** Generate a VAPID key pair once
+(`npx web-push generate-vapid-keys`) and set:
+
+```
+NEXT_PUBLIC_VAPID_PUBLIC_KEY=...
+VAPID_PRIVATE_KEY=...            # server-only
+VAPID_SUBJECT=mailto:you@example.com
+```
+
+A bell appears in the Shared Vault header; each partner enables notifications
+per browser (on iPhone the app must be installed to the home screen first,
+iOS 16.4+). You'll get a nudge when it's your turn on a relay strip, when your
+partner saves a strip to the vault, and when a photo date is due (alongside or
+instead of the email). Delivery rides the browser vendors' push services — no
+account or fee involved.
+
+**8. One login across your own apps (optional).** If you serve several of your
 own apps under one parent domain (say `booth.example.com` and
 `photos.example.com`) against the same project, set
 `NEXT_PUBLIC_COOKIE_DOMAIN=.example.com` (leading dot, identical in every app)
@@ -182,7 +204,10 @@ app/
   timeline/           the Shared Vault: pairing, strips, relays, photo dates
   relay/              async relay strips (shoot your half, finish theirs)
   login/              email + magic-link sign-in
-  api/                keep, reminders, retention (cron) routes
+  api/                keep, push/notify, reminders, retention (cron) routes
+  manifest.ts         PWA web app manifest
+components/PwaRegister.tsx  service worker registration (production only)
+public/sw.js          service worker: offline caching, push + notification clicks
 components/           camera preview, countdown, filter bar, strip mockup, logo
 hooks/useCamera.ts    getUserMedia lifecycle and device switching
 lib/
@@ -202,7 +227,6 @@ supabase-setup.sql    complete Supabase schema, run once in the SQL editor
 
 - GIF / live-photo cuts: a short synced burst per cut, exported as an animated strip.
 - Print-ready export (4x6 / 2x6 PDF at real Life4Cuts dimensions).
-- PWA install and an offline solo booth.
 - AR face props during the live preview.
 - AI pose prompts and AI-generated Together-scene backdrops.
 - Larger rooms via an SFU (beyond the ~4 the mesh handles comfortably).

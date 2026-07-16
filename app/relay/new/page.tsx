@@ -8,6 +8,7 @@ import { RoleCapture } from "@/components/RoleCapture";
 import { useAuth } from "@/lib/auth";
 import { Couple, getMyCouple } from "@/lib/couple";
 import { createRelay } from "@/lib/relay";
+import { notifyPartner } from "@/lib/push-client";
 import { LAYOUTS, getLayout } from "@/lib/layouts";
 
 const DUO_LAYOUTS = LAYOUTS.filter((l) => l.mode === "duo");
@@ -40,12 +41,13 @@ export default function NewRelayPage() {
       if (!user || !couple) return;
       setStep("saving");
       try {
-        await createRelay(user.id, couple.id, {
+        const relayId = await createRelay(user.id, couple.id, {
           layoutId,
           filterId,
           sceneId: null,
           shots: layout.shots,
         }, frames);
+        notifyPartner("relay", relayId);
         setStep("done");
       } catch {
         setStep("setup");

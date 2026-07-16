@@ -67,13 +67,13 @@ export async function unpair(coupleId: string): Promise<void> {
   await supabase.from("pb_couples").delete().eq("id", coupleId);
 }
 
-/** Upload a strip PNG and record it on the couple's timeline. */
+/** Upload a strip PNG and record it on the couple's timeline. Returns the strip id. */
 export async function saveStrip(
   userId: string,
   coupleId: string | null,
   blob: Blob,
   meta: { layoutId: string; caption: string },
-): Promise<void> {
+): Promise<string> {
   const supabase = createClient();
   const id = crypto.randomUUID();
   const path = `${userId}/${id}.png`;
@@ -91,6 +91,7 @@ export async function saveStrip(
     caption: meta.caption || null,
   });
   if (error) throw error;
+  return id;
 }
 
 /** Couple timeline, newest first, with short-lived signed image URLs. */

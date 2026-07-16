@@ -44,6 +44,7 @@ import {
   listPhotoDates,
 } from "@/lib/photo-dates";
 import { loadImage, recapToBlob } from "@/lib/recap";
+import { PushToggle } from "@/components/PushToggle";
 
 export default function TimelinePage() {
   const router = useRouter();
@@ -239,13 +240,16 @@ export default function TimelinePage() {
         <h1 className="text-xl font-semibold" style={{ fontFamily: "var(--font-fraunces)" }}>
           Shared Vault
         </h1>
-        <button
-          onClick={signOut}
-          aria-label="Sign out"
-          className="flex h-11 w-11 items-center justify-center rounded-full bg-muted"
-        >
-          <LogOut size={18} />
-        </button>
+        <div className="flex items-center gap-2">
+          <PushToggle userId={user.id} />
+          <button
+            onClick={signOut}
+            aria-label="Sign out"
+            className="flex h-11 w-11 items-center justify-center rounded-full bg-muted"
+          >
+            <LogOut size={18} />
+          </button>
+        </div>
       </header>
 
       {/* Pairing */}

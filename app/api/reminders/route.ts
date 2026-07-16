@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { Resend } from "resend";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { Cadence, nextOccurrence } from "@/lib/photo-dates";
+import { hasPush, sendPushToUsers } from "@/lib/push";
 
 // Called on a schedule (cron-job.org, Vercel Cron, etc.). Guarded by
 // CRON_SECRET so only the scheduler can trigger sends.
@@ -39,12 +40,13 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
-  if (!process.env.RESEND_API_KEY || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    return NextResponse.json({ skipped: "email not configured" });
+  const emailEnabled = Boolean(process.env.RESEND_API_KEY);
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY || (!emailEnabled && !hasPush())) {
+    return NextResponse.json({ skipped: "no reminder channel configured" });
   }
 
   const supabase = createAdminClient();
-  const resend = new Resend(process.env.RESEND_API_KEY);
+  const resend = emailEnabled ? new Resend(process.env.RESEND_API_KEY) : null;
   const from = process.env.REMINDER_FROM ?? "Zuychin Photobooth <onboarding@resend.dev>";
   const origin = request.nextUrl.origin;
   const nowIso = new Date().toISOString();
@@ -65,24 +67,38 @@ export async function GET(request: NextRequest) {
     if (!couple) continue;
 
     const ids = [couple.member_a, couple.member_b].filter(Boolean);
-    const { data: profiles } = await supabase
-      .from("profiles")
-      .select("email")
-      .in("id", ids);
-    const to = (profiles ?? []).map((p) => p.email).filter(Boolean);
-    if (to.length === 0) continue;
+    let delivered = false;
 
-    try {
-      await resend.emails.send({
-        from,
-        to,
-        subject: `Photo date: ${d.title}`,
-        html: reminderHtml(d.title, origin),
-      });
-      sent++;
-    } catch {
-      continue; // leave it due; next run retries
+    if (resend) {
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("email")
+        .in("id", ids);
+      const to = (profiles ?? []).map((p) => p.email).filter(Boolean);
+      if (to.length > 0) {
+        try {
+          await resend.emails.send({
+            from,
+            to,
+            subject: `Photo date: ${d.title}`,
+            html: reminderHtml(d.title, origin),
+          });
+          delivered = true;
+        } catch {
+          continue; // leave it due; next run retries (before any push, to avoid double-pushing)
+        }
+      }
     }
+
+    const pushed = await sendPushToUsers(ids, {
+      title: "It's time for your photo date",
+      body: d.title,
+      url: "/timeline",
+    });
+    if (pushed > 0) delivered = true;
+
+    if (!delivered) continue; // reached nobody on any channel; retry next run
+    sent++;
 
     const next = nextOccurrence(d.scheduled_at, d.cadence);
     await supabase

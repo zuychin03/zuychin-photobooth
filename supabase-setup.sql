@@ -309,8 +309,32 @@ CREATE POLICY "Owner can delete strips"
   );
 
 
+-- ─── 8. Web push subscriptions ──────────────────────────
+-- One row per browser a user enabled notifications in. Sends run as the
+-- service role; users manage only their own subscriptions.
+CREATE TABLE IF NOT EXISTS pb_push_subscriptions (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  owner uuid NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  endpoint text NOT NULL UNIQUE,
+  p256dh text NOT NULL,
+  auth text NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_pb_push_subscriptions_owner
+  ON pb_push_subscriptions (owner);
+
+ALTER TABLE pb_push_subscriptions ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Owner manages their push subscriptions" ON pb_push_subscriptions;
+CREATE POLICY "Owner manages their push subscriptions"
+  ON pb_push_subscriptions FOR ALL
+  USING (owner = auth.uid())
+  WITH CHECK (owner = auth.uid());
+
+
 -- ═══════════════════════════════════════════════════════════
 -- DONE. Point the app at this project via NEXT_PUBLIC_SUPABASE_URL /
--- NEXT_PUBLIC_SUPABASE_ANON_KEY. Crons (weekly clear, reminders) and the
--- Cloudinary archive are optional — see the README.
+-- NEXT_PUBLIC_SUPABASE_ANON_KEY. Crons (weekly clear, reminders), the
+-- Cloudinary archive and web push are optional — see the README.
 -- ═══════════════════════════════════════════════════════════

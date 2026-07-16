@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Camera, Heart, Users, ArrowRight, Clock, LogIn } from "lucide-react";
 import { StripMockup } from "@/components/StripMockup";
 import { Logo } from "@/components/Logo";
+import { InstallPrompt } from "@/components/InstallPrompt";
 import { newRoomCode, normalizeRoomCode, isValidRoomCode } from "@/lib/room-code";
 import { useAuth } from "@/lib/auth";
 
@@ -133,7 +134,8 @@ export default function Home() {
         </div>
       </div>
 
-      <footer className="absolute bottom-4 w-full text-center text-xs text-muted-foreground">
+      <footer className="relative z-10 flex w-full flex-col items-center gap-3 px-6 pb-4 text-center text-xs text-muted-foreground">
+        <InstallPrompt />
         Part of the Zuychin ecosystem
       </footer>
     </main>
