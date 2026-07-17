@@ -28,7 +28,7 @@ export function StripMockup({
       ))}
       <div className="flex items-center justify-center pb-1 pt-0.5">
         <span className="text-[9px] italic font-bold tracking-widest text-[#ff9d45]">
-          12·07·2026
+        26·12·2025
         </span>
       </div>
     </div>
