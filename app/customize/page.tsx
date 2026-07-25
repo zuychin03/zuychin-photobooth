@@ -31,6 +31,8 @@ import {
   monochromeGlyph,
   stickerAssetUrl,
 } from "@/lib/decor";
+import { PATTERNS, getPattern } from "@/lib/patterns";
+import { THEMES, getTheme } from "@/lib/themes";
 import { ensureNotoFont, preloadStickers } from "@/lib/sticker-assets";
 import { SCENES } from "@/lib/scenes";
 import { cutout, preloadSegmenter } from "@/lib/segmentation";
@@ -66,6 +68,8 @@ export default function CustomizePage() {
   const [selected, setSelected] = useState<number | null>(null);
   const [pack, setPack] = useState(STICKER_PACKS[0].id);
   const [stickerStyle, setStickerStyle] = useState<StickerStyle>("flat");
+  const [patternId, setPatternId] = useState("none");
+  const [themeId, setThemeId] = useState<string | null>(null);
   const [assetsTick, setAssetsTick] = useState(0);
   const [saving, setSaving] = useState(false);
   const [sceneId, setSceneId] = useState<string | null>(null);
@@ -81,6 +85,7 @@ export default function CustomizePage() {
 
   const layout = getLayout(session.layoutId);
   const frame = FRAMES.find((f) => f.id === frameId) ?? FRAMES[0];
+  const theme = getTheme(themeId);
   const hasShots = ROLES.some((r) => session.shots[r].some(Boolean));
   const { width: stripW, height: stripH } = stripSize(layout);
 
@@ -91,6 +96,7 @@ export default function CustomizePage() {
       style: {
         frameColor: frame.color,
         inkColor: frame.ink,
+        patternId,
         filterId: session.filterId,
         caption,
         showDate,
@@ -99,8 +105,9 @@ export default function CustomizePage() {
       stickers,
       cutouts: cutouts ?? undefined,
       together: sceneId ? { sceneId, places } : null,
+      theme,
     }),
-    [layout, session.shots, session.filterId, frame, caption, showDate, stickers, stickerStyle, cutouts, sceneId, places],
+    [layout, session.shots, session.filterId, frame, patternId, caption, showDate, stickers, stickerStyle, cutouts, sceneId, places, theme],
   );
 
   const isShared = session.mode === "duo" || session.mode === "group";
@@ -152,6 +159,21 @@ export default function CustomizePage() {
       );
     }
   }, [stickerStyle]);
+
+  // theme decor uses its own sticker style; warm those assets too
+  useEffect(() => {
+    if (!theme) return;
+    if (theme.stickerStyle === "noto") {
+      const family = getComputedStyle(document.documentElement)
+        .getPropertyValue("--font-noto-emoji")
+        .trim();
+      void ensureNotoFont(family).then(() => setAssetsTick((t) => t + 1));
+    } else {
+      void preloadStickers(theme.stickerStyle, theme.decor.map((d) => d.slug)).then(() =>
+        setAssetsTick((t) => t + 1),
+      );
+    }
+  }, [theme]);
 
   // No shots means a direct visit; send them to the start
   useEffect(() => {
@@ -259,9 +281,23 @@ export default function CustomizePage() {
     setSelected(null);
   };
 
+  const applyTheme = (id: string | null) => {
+    const prev = getTheme(themeId);
+    setThemeId(id);
+    const t = getTheme(id);
+    if (!t) return;
+    setFrameId(t.frameId);
+    setPatternId(t.patternId);
+    // only swap in the suggested caption while the field is untouched
+    if (!caption || caption === prev?.caption) setCaption(t.caption ?? "");
+  };
+
   const exportBlob = async () => {
     if (stickerStyle !== "noto") {
       await preloadStickers(stickerStyle, stickers.map((s) => s.slug));
+    }
+    if (theme && theme.stickerStyle !== "noto") {
+      await preloadStickers(theme.stickerStyle, theme.decor.map((d) => d.slug));
     }
     return stripToBlob({ ...input, stickers }, 2);
   };
@@ -393,6 +429,49 @@ export default function CustomizePage() {
           </div>
 
           <section>
+            <h2 className="mb-2 text-sm font-medium text-muted-foreground">Theme</h2>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => applyTheme(null)}
+                className={`flex h-[5.5rem] w-14 flex-col items-center justify-center rounded-xl border-2 text-[10px] font-medium transition ${
+                  themeId === null ? "border-accent" : "border-border"
+                }`}
+              >
+                None
+              </button>
+              {THEMES.map((t) => {
+                const f = FRAMES.find((fr) => fr.id === t.frameId) ?? FRAMES[0];
+                return (
+                  <button
+                    key={t.id}
+                    onClick={() => applyTheme(t.id)}
+                    title={t.name}
+                    aria-label={t.name}
+                    className={`w-14 overflow-hidden rounded-xl border-2 transition ${
+                      themeId === t.id ? "border-accent scale-105" : "border-border"
+                    }`}
+                  >
+                    <span className="relative block h-16">
+                      <PatternPreview
+                        frameColor={f.color}
+                        ink={f.ink}
+                        patternId={t.patternId}
+                        className="absolute inset-0 h-full w-full"
+                      />
+                      <span className="absolute inset-0 flex items-center justify-center text-xl">
+                        {t.decor[0].emoji}
+                      </span>
+                    </span>
+                    <span className="block truncate bg-card px-1 py-1 text-center text-[10px] font-medium">
+                      {t.name}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+
+          <section>
             <h2 className="mb-2 text-sm font-medium text-muted-foreground">Frame</h2>
             <div className="flex flex-wrap gap-2">
               {FRAMES.map((f) => (
@@ -406,6 +485,38 @@ export default function CustomizePage() {
                   }`}
                   style={{ background: f.color }}
                 />
+              ))}
+            </div>
+          </section>
+
+          <section>
+            <h2 className="mb-2 text-sm font-medium text-muted-foreground">Pattern</h2>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => setPatternId("none")}
+                className={`flex h-16 w-12 items-center justify-center rounded-lg border-2 text-[10px] font-medium transition ${
+                  patternId === "none" ? "border-accent" : "border-border"
+                }`}
+              >
+                None
+              </button>
+              {PATTERNS.map((p) => (
+                <button
+                  key={p.id}
+                  onClick={() => setPatternId(p.id)}
+                  title={p.name}
+                  aria-label={p.name}
+                  className={`h-16 w-12 overflow-hidden rounded-lg border-2 transition ${
+                    patternId === p.id ? "border-accent scale-105" : "border-border"
+                  }`}
+                >
+                  <PatternPreview
+                    frameColor={frame.color}
+                    ink={frame.ink}
+                    patternId={p.id}
+                    className="h-full w-full"
+                  />
+                </button>
               ))}
             </div>
           </section>
@@ -691,4 +802,34 @@ export default function CustomizePage() {
       )}
     </main>
   );
+}
+
+// Picker swatch that renders the real pattern over a frame color, at strip
+// proportions so previews match the composed output.
+function PatternPreview({
+  frameColor,
+  ink,
+  patternId,
+  className = "",
+}: {
+  frameColor: string;
+  ink: string;
+  patternId: string;
+  className?: string;
+}) {
+  const ref = useRef<HTMLCanvasElement | null>(null);
+  useEffect(() => {
+    const canvas = ref.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d")!;
+    // abstract units: 536 = width of a single-column strip (2*28 + 480)
+    const k = canvas.width / 536;
+    ctx.setTransform(k, 0, 0, k, 0, 0);
+    const w = 536;
+    const h = canvas.height / k;
+    ctx.fillStyle = frameColor;
+    ctx.fillRect(0, 0, w, h);
+    getPattern(patternId)?.draw(ctx, w, h, ink);
+  }, [frameColor, ink, patternId]);
+  return <canvas ref={ref} width={96} height={128} className={className} />;
 }

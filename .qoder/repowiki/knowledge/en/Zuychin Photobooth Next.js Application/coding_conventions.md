@@ -1,0 +1,5 @@
+- Supabase authentication is handled centrally in `proxy.ts` using `@supabase/ssr`'s `createServerClient`, which refreshes the session cookie on every request before any Server Component or API route runs.
+- All database access goes through Supabase RLS policies defined in `supabase-setup.sql`; API routes never bypass these policies and rely on the authenticated `auth.uid()` context.
+- Client-side functionality is organized under `domain_lib` as flat, focused modules (camera, media, cloud, push, session) rather than nested class hierarchies.
+- Shared UI is built from small, composable React client components in `shared_components`, each encapsulating a single interaction pattern (capture, filters, branding, notifications).
+- Static assets and the service worker live under `public/` and are served directly by Next.js, with the service worker registered at `/sw.js` and forced to revalidate via explicit headers.

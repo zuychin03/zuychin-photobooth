@@ -1,0 +1,12 @@
+schema_version: 1
+module_path: domain_lib/shared_utils
+title: Shared Photo Utilities (Dates, Prompts, Recaps, Retention)
+scope:
+    - lib/photo-dates.ts
+    - lib/prompts.ts
+    - lib/recap.ts
+    - lib/retention.ts
+source_files: []
+depends_on: []
+related_to:
+    - path: domain_lib/photobooth_features

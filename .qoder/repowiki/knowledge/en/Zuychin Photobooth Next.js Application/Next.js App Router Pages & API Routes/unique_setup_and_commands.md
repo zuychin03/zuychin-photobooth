@@ -1,0 +1,1 @@
+Cron endpoints (`/api/reminders`, `/api/retention`) require a `CRON_SECRET` environment variable and are intended to be triggered externally (e.g., cron-job.org or Vercel Cron). Push notifications require `hasPush()` to be configured; email reminders require `RESEND_API_KEY`. Cloudinary archival requires `hasCloudinary()` to be enabled.

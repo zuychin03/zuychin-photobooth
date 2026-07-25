@@ -1,0 +1,1 @@
+Wraps browser MediaStream camera access, captures frames from a video element to canvas/Blob, and drives a ~15fps live preview that segments the user and composites them onto a scene backdrop.

@@ -1,0 +1,11 @@
+schema_version: 1
+module_path: domain_lib/media_processing
+title: Media Processing Utilities (Filters, Segmentation & Sound)
+scope:
+    - lib/filters.ts
+    - lib/segmentation.ts
+    - lib/sound.ts
+source_files: []
+depends_on: []
+related_to:
+    - path: public_assets

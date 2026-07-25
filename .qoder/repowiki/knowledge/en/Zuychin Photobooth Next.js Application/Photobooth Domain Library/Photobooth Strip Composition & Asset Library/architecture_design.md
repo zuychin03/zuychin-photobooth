@@ -1,0 +1,10 @@
+The module is a flat collection of independent TypeScript utilities grouped by responsibility:
+- `layouts.ts` declares the canonical geometry constants (`CELL_W`, `STRIP_MARGIN`, `FOOTER_H`) and the `StripLayout` registry (`LAYOUTS`), plus helpers like `stripSize` and `cellShotIndex`. It is the single source of truth for cell dimensions.
+- `compose.ts` is the rendering core: `composeStrip` draws a full strip onto an HTMLCanvasElement using the layout geometry, applies filters from `filters`, overlays stickers via `sticker-assets`, and composes Together-mode cells with cutouts through `scenes`. `stripToBlob` wraps it for export.
+- `decor.ts` owns visual style data: `FRAMES` palette, `STICKER_PACKS` (emoji→slug mappings), and `StickerStyle` types. `stickerAssetUrl` maps a style+slug to a `/stickers/<style>/<slug>.svg|png` path; `monochromeGlyph` strips color-emoji presentation selectors for ink rendering.
+- `sticker-assets.ts` provides a synchronous image cache (`Map<string, HTMLImageElement>`) so `composeStrip` stays sync while callers preload images via `preloadStickers`; it also preloads the Noto Emoji font.
+- `scenes.ts` defines programmatic Canvas-drawn backdrops (`SCENES`) with a `draw(ctx, x, y, w, h)` contract and CSS preview swatches, used only in Together mode.
+- `couple.ts` is the persistence layer: CRUD over `pb_couples` and `pb_strips` tables via Supabase client, signed storage URLs for the `photobooth-strips` bucket, and a server-side `/api/keep` hook for Cloudinary archival.
+- `streak.ts` is a pure utility computing ISO-week keys and consecutive-week streaks from date strings.
+
+Dependency direction is one-way: `compose` → (`layouts`, `filters`, `decor`, `sticker-assets`, `scenes`); `sticker-assets` → `decor`; no file imports another sibling except these declared edges.

@@ -1,0 +1,4 @@
+- Async operations return a result object with both `stream`/data and an `error` field rather than throwing, allowing callers to handle errors uniformly.
+- Optional DOM elements are guarded with optional chaining (`stream?.getTracks()`, `navigator.mediaDevices?.getUserMedia`) before any method call.
+- Mirroring is implemented by translating and scaling the Canvas 2D context (`ctx.translate(width, 0); ctx.scale(-1, 1)`) instead of CSS transforms, applied consistently in both capture and preview paths.
+- The painter uses a `busy` flag plus a monotonically increasing `lastTs` timestamp to prevent concurrent ticks and satisfy the segmentation API's strictly increasing timestamp requirement.

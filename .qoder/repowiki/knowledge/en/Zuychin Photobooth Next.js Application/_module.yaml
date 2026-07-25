@@ -1,0 +1,19 @@
+schema_version: 1
+module_path: ""
+title: Zuychin Photobooth Next.js Application
+scope:
+    - README.md
+    - .gitignore
+    - package.json
+    - package-lock.json
+    - next.config.ts
+    - tsconfig.json
+    - eslint.config.mjs
+    - postcss.config.mjs
+    - proxy.ts
+    - supabase-setup.sql
+    - .env.example
+    - LICENSE
+source_files: []
+depends_on: []
+related_to: []

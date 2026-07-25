@@ -1,0 +1,1 @@
+Cloudinary Node SDK (v2) for authenticated image delivery, web-push library for VAPID-based Web Push, Supabase JS client (anon + service-role/admin) for pb_push_subscriptions storage, and Next.js environment variables (NEXT_PUBLIC_* for browser, plain for server).

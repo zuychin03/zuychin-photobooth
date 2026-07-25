@@ -1,0 +1,4 @@
+- Each module exports a small set of pure functions plus related types/constants, avoiding classes or internal mutable state.
+- Supabase interactions follow a uniform pattern: instantiate `createClient()`, perform the operation, and throw the returned `error` if present.
+- Browser-only APIs (Canvas, `document`, `getComputedStyle`) are guarded with runtime checks or used only in functions explicitly intended for client execution.
+- Deterministic behavior is achieved via seeded PRNGs (mulberry32) rather than `Math.random()` when reproducibility across peers is required.

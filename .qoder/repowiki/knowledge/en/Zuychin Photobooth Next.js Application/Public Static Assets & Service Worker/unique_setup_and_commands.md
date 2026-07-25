@@ -1,0 +1,1 @@
+The service worker uses a versioned cache scheme (`pb-static-v1`, `pb-pages-v1`) controlled by the `VERSION` constant in `sw.js`; bumping it triggers cleanup of old caches on activation. Push notifications require the site to be served over HTTPS and registered via the app's PWA bootstrap.

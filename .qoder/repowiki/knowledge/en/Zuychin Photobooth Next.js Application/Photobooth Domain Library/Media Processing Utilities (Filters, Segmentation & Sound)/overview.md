@@ -1,0 +1,1 @@
+Browser-side utilities for applying CSS-based photo filters, performing MediaPipe person segmentation for cutouts, and synthesizing shutter/tick audio without external assets.

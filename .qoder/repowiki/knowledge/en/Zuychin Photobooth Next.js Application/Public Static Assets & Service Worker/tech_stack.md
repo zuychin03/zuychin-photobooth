@@ -1,0 +1,1 @@
+Service Worker API with Cache Storage for offline-first behavior; MediaPipe WebAssembly (`vision_wasm_internal.js/.wasm`, `vision_wasm_nosimd_internal.*`) for client-side face segmentation; TensorFlow Lite model file (`selfie_segmenter.tflite`).

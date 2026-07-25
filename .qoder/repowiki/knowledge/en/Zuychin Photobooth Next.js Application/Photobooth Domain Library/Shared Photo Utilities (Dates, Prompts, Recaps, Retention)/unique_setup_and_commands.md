@@ -1,0 +1,1 @@
+No build or setup steps — these are plain TypeScript modules consumed directly by the application. The Supabase table name `pb_photo_dates` must exist in the project's Supabase schema.

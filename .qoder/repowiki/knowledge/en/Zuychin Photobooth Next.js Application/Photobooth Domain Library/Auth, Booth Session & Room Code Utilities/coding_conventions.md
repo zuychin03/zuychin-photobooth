@@ -1,0 +1,4 @@
+- Every provider follows the same shape: a `createContext<T | null>(null)` paired with a `*Provider` component that renders `<Context.Provider value={...}>` and a custom `use*()` hook that throws if called outside the provider.
+- Context values are memoized via `useMemo` with explicit dependency arrays listing all derived fields.
+- Mutations of session state are exposed as functions that call `setSession((prev) => ({ ...prev, ...patch }))` rather than mutating state directly.
+- Client-only modules opt into client rendering by placing the `"use client"` directive at the top of the file.

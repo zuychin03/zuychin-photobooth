@@ -1,0 +1,3 @@
+- Each file encapsulates a single feature area with named function exports and no internal class/state unless it's a React provider (.tsx).
+- Supabase client calls are made inline within the module that needs them rather than centralized in a shared data layer.
+- Browser-only APIs (MediaStream, Canvas, MediaPipe) are guarded by runtime checks so the same modules can be imported without server-side errors.

@@ -1,0 +1,5 @@
+- Data registries are exported as plain arrays of objects with an `id` discriminator plus a `get*` lookup function that falls back to a default (e.g. `getLayout`, `getScene`).
+- Canvas drawing functions accept `(ctx, x, y, w, h)` and use `ctx.save()/restore()` around each clipped cell or sticker to isolate transforms and filters.
+- All text fonts are resolved through a `fontVar(name, fallback)` helper that reads CSS custom properties from `:root`, never hard-coding font families directly in draw calls.
+- Async side effects (Supabase queries, storage uploads, font loading) are exposed as top-level async functions returning Promises; synchronous composition stays free of I/O.
+- Sticker assets are keyed by a `${style}:${slug}` string and cached in a `Map` so repeated lookups during composition are O(1) without re-fetching.

@@ -1,0 +1,11 @@
+schema_version: 1
+module_path: domain_lib/auth_session
+title: Auth, Booth Session & Room Code Utilities
+scope:
+    - lib/auth.tsx
+    - lib/session.tsx
+    - lib/room-code.ts
+source_files: []
+depends_on: []
+related_to:
+    - path: app_pages_and_api

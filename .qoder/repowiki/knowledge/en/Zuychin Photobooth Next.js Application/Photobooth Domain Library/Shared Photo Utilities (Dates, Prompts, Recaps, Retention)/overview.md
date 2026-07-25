@@ -1,0 +1,1 @@
+Client-side utility library providing photo date scheduling with Supabase persistence, deterministic prompt generation for photo booths, canvas-based recap collage composition, and ISO-week vault retention logic.

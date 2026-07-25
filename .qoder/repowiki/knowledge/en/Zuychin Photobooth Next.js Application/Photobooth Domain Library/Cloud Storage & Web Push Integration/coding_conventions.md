@@ -1,0 +1,4 @@
+- Each integration exposes a hasX() boolean that checks all required process.env variables before use, so callers can short-circuit gracefully.
+- Browser-side code lives in *-client.ts files and uses createClient(), while server-side code lives in *.ts files and uses createAdminClient() or createSupabaseAdmin().
+- Error handling for external I/O is best-effort: destroyStrip swallows errors silently, notifyPartner catches fetch failures, and sendPushToUsers prunes stale subscriptions without failing the whole batch.
+- Configuration is applied once at module load (cloudinary.config, webpush.setVapidDetails) guarded by a configured flag to avoid re-initialization.

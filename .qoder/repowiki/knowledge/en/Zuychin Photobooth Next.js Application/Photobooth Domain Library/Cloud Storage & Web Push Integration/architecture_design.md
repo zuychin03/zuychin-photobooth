@@ -1,0 +1,5 @@
+Two independent integrations live side-by-side under lib/:
+- cloudinary.ts: server-only module that configures the Cloudinary SDK from env vars, exposes a root folder constant, and provides uploadStrip/destroyStrip helpers operating on authenticated images under zuychin-photobooth/<userId>/.
+- push-client.ts: browser-only client that checks PushManager support, requests Notification permission, creates a VAPID subscription via ServiceWorker, and persists it to pb_push_subscriptions through Supabase RLS; also fires a fire-and-forget POST to /api/push/notify.
+- push.ts: server-side counterpart using web-push with VAPID keys, querying pb_push_subscriptions via Supabase admin client, sending notifications, and pruning expired (404/410) subscriptions.
+Dependency direction is one-way: push-client.ts depends on ./supabase/client, push.ts depends on ./supabase/admin; neither imports the other, keeping browser and server concerns separate.

@@ -1,0 +1,1 @@
+Next.js 16 application that wires client pages, shared UI components, a domain library, and static assets into a photobooth experience backed by Supabase auth/DB/storage and Cloudinary.

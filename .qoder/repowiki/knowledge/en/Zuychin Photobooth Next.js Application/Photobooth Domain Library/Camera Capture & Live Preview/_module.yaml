@@ -1,0 +1,11 @@
+schema_version: 1
+module_path: domain_lib/camera_capture
+title: Camera Capture & Live Preview
+scope:
+    - lib/camera.ts
+    - lib/capture.ts
+    - lib/live-preview.ts
+source_files: []
+depends_on: []
+related_to:
+    - path: shared_components

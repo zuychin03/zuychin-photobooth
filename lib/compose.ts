@@ -13,6 +13,8 @@ import { getFilter, supportsCanvasFilter } from "./filters";
 import { StickerStyle, monochromeGlyph } from "./decor";
 import { getStickerImage } from "./sticker-assets";
 import { getScene } from "./scenes";
+import { getPattern } from "./patterns";
+import { ThemeDef } from "./themes";
 
 export interface StickerInstance {
   key: number;
@@ -31,6 +33,8 @@ export interface StripStyle {
   frameColor: string;
   /** text color that reads on frameColor */
   inkColor: string;
+  /** frame texture from PATTERNS; "none" leaves a plain frame */
+  patternId: string;
   filterId: string;
   caption: string;
   showDate: boolean;
@@ -61,9 +65,43 @@ export interface ComposeInput {
   /** person cutouts parallel to shots, required for Together mode cells */
   cutouts?: ShotSet;
   together?: TogetherOptions | null;
+  /** baked-in theme decor drawn behind the user's own stickers */
+  theme?: ThemeDef | null;
 }
 
 const STICKER_BASE = 96;
+
+/** One placed sticker/decor piece: image asset, ink glyph, or emoji placeholder. */
+function drawSticker(
+  ctx: CanvasRenderingContext2D,
+  s: { emoji: string; slug: string; x: number; y: number; scale: number; rotation: number },
+  stickerStyle: StickerStyle,
+  inkColor: string,
+  width: number,
+  height: number,
+) {
+  const size = STICKER_BASE * s.scale;
+  ctx.save();
+  ctx.translate(s.x * width, s.y * height);
+  ctx.rotate(s.rotation);
+  const img = stickerStyle === "noto" ? null : getStickerImage(stickerStyle, s.slug);
+  if (img) {
+    ctx.drawImage(img, -size / 2, -size / 2, size, size);
+  } else if (stickerStyle === "noto") {
+    ctx.font = `${size}px ${fontVar("--font-noto-emoji", "sans-serif")}`;
+    ctx.fillStyle = inkColor;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(monochromeGlyph(s.emoji), 0, 0);
+  } else {
+    // image not loaded yet: native glyph placeholder until re-render
+    ctx.font = `${size}px sans-serif`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(s.emoji, 0, 0);
+  }
+  ctx.restore();
+}
 
 /** ctx.font cannot resolve CSS variables; read the next/font family off :root. */
 function fontVar(name: string, fallback: string): string {
@@ -110,7 +148,7 @@ export function composeStrip(
   input: ComposeInput,
   scale = 1,
 ): void {
-  const { layout, shots, style, stickers, cutouts, together } = input;
+  const { layout, shots, style, stickers, cutouts, together, theme } = input;
   const scene = together ? getScene(together.sceneId) : null;
   const { width, height } = stripSize(layout);
   canvas.width = Math.round(width * scale);
@@ -121,6 +159,7 @@ export function composeStrip(
 
   ctx.fillStyle = style.frameColor;
   ctx.fillRect(0, 0, width, height);
+  getPattern(style.patternId)?.draw(ctx, width, height, style.inkColor);
 
   const cellH = CELL_W / layout.cellAspect;
   const filter = getFilter(style.filterId);
@@ -209,31 +248,13 @@ export function composeStrip(
     ctx.shadowBlur = 0;
   }
 
-  for (const s of stickers) {
-    const size = STICKER_BASE * s.scale;
-    ctx.save();
-    ctx.translate(s.x * width, s.y * height);
-    ctx.rotate(s.rotation);
-    const img =
-      style.stickerStyle === "noto"
-        ? null
-        : getStickerImage(style.stickerStyle, s.slug);
-    if (img) {
-      ctx.drawImage(img, -size / 2, -size / 2, size, size);
-    } else if (style.stickerStyle === "noto") {
-      ctx.font = `${size}px ${fontVar("--font-noto-emoji", "sans-serif")}`;
-      ctx.fillStyle = style.inkColor;
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.fillText(monochromeGlyph(s.emoji), 0, 0);
-    } else {
-      // image not loaded yet: native glyph placeholder until re-render
-      ctx.font = `${size}px sans-serif`;
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.fillText(s.emoji, 0, 0);
+  if (theme) {
+    for (const d of theme.decor) {
+      drawSticker(ctx, d, theme.stickerStyle, style.inkColor, width, height);
     }
-    ctx.restore();
+  }
+  for (const s of stickers) {
+    drawSticker(ctx, s, style.stickerStyle, style.inkColor, width, height);
   }
 
   ctx.restore();

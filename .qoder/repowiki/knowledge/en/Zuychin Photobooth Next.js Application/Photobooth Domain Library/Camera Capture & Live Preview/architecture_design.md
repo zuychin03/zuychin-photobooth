@@ -1,0 +1,6 @@
+Three focused modules with clear dependency direction:
+- `camera.ts` is a thin wrapper around `navigator.mediaDevices.getUserMedia`, exposing typed error codes (`denied | no-camera | in-use | unknown`) via a `CameraResult` union and helpers like `hasMultipleCameras` and `stopStream`.
+- `capture.ts` is stateless: it draws a video frame onto an offscreen `HTMLCanvasElement` (with optional mirroring), converts canvases to JPEG blobs, and loads blobs/files back into canvases via `createImageBitmap`. Captures are unfiltered at native resolution so filters can be applied later during compose.
+- `live-preview.ts` owns a `LiveScenePainter` class that runs a fixed 15 fps `setInterval` loop, calls `segmentVideoMask` from `./segmentation` to produce a per-frame mask, then composites the masked person over a `SceneDef.draw(...)` background onto a target canvas. It keeps internal state (`busy`, `lastTs`, two offscreen canvases) to avoid re-entrancy and enforce strictly increasing timestamps for segmentation.
+
+Dependency direction: `live-preview.ts` depends on `camera.ts` (for the source `HTMLVideoElement`) and `./segmentation`; `capture.ts` and `camera.ts` have no cross-dependencies within this module.

@@ -1,0 +1,1 @@
+Reusable React client components for the photobooth app, covering camera capture flow, push notifications, PWA install prompts, filters, branding, and decorative UI elements.

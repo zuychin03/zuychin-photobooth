@@ -1,0 +1,1 @@
+Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS 4, Supabase (SSR + JS client + RLS), Cloudinary, web-push, MediaPipe WebAssembly, and a custom service worker for offline-first caching and push notifications.

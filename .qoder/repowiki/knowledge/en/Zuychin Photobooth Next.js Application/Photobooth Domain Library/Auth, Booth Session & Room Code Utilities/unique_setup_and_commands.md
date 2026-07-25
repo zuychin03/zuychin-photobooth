@@ -1,0 +1,1 @@
+Each file begins with the Next.js `'use client'` directive, so these modules must be imported only from client components or pages — server components cannot use them directly.

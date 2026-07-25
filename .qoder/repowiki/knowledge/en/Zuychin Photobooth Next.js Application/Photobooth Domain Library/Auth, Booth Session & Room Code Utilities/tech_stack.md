@@ -1,0 +1,1 @@
+React Context + hooks for state management; Supabase JS client (`@supabase/supabase-js`) for auth; Web Crypto API (`crypto.getRandomValues`) for room code generation.

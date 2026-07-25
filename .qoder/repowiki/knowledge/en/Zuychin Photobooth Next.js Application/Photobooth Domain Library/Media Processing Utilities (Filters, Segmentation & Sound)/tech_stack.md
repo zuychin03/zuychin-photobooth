@@ -1,0 +1,1 @@
+MediaPipe Tasks Vision (`@mediapipe/tasks-vision`) with a local TFLite `selfie_segmenter.tflite` model loaded via `FilesetResolver.forVisionTasks("/mediapipe/wasm")`; Web Audio API oscillators and biquad filters for synthesized sound; Canvas 2D `ctx.filter` for image filters with a Safari fallback.

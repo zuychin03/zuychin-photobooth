@@ -1,0 +1,1 @@
+Supabase for persistence and subscriptions, Cloudinary for image uploads, MediaPipe for person segmentation, WebRTC (via rtc/) for real-time features, and browser Canvas/MediaStream APIs for live preview and composition.

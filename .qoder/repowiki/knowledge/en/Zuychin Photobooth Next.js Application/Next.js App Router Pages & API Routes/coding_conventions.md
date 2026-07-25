@@ -1,0 +1,6 @@
+- Every API route sets `export const runtime = 'nodejs'` and `export const dynamic = 'force-dynamic'` to ensure Node.js execution and dynamic response behavior.
+- API routes validate request bodies early and return typed `NextResponse.json` error responses with explicit HTTP status codes (400 bad request, 401 unauthorized, 404 not found, 500 server error).
+- Authentication is performed per-request via `createClient()` or `createAdminClient()` from `@/lib/supabase/server`, then ownership is enforced by checking `user.id` against the fetched row's owner/initiator field before mutating data.
+- Client pages wrap their content in a `<Suspense fallback={null}>` wrapper when using `useSearchParams` or other router hooks that may throw during SSR.
+- Cron-protected endpoints accept authentication through both an `Authorization: Bearer <token>` header and a `?secret=` query parameter, falling back gracefully when no channel is configured.
+- Optional external services (Cloudinary, push, Resend) are gated behind `hasCloudinary()`, `hasPush()`, and `process.env.*` checks so the app degrades gracefully when those integrations are not configured.

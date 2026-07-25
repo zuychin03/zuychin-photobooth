@@ -1,0 +1,1 @@
+Run `npm run dev` to start the Next.js dev server; `npm run build` and `npm run start` for production. Before running the app, execute `supabase-setup.sql` in the Supabase SQL Editor and manually create the private `photobooth-strips` storage bucket. Copy `.env.example` to `.env` and set `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`.

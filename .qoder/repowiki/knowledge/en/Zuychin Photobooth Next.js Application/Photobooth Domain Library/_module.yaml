@@ -1,0 +1,8 @@
+schema_version: 1
+module_path: domain_lib
+title: Photobooth Domain Library
+scope:
+    - lib/
+source_files: []
+depends_on: []
+related_to: []

@@ -1,0 +1,156 @@
+# 知识卡导出索引文件
+schema_version: 1
+locale: en-US
+branch: main
+nodes_managed: true
+exported_at: "2026-07-25T08:37:50Z"
+modules:
+    "":
+        dir_name: Zuychin Photobooth Next.js Application
+        title: Zuychin Photobooth Next.js Application
+        scope:
+            - README.md
+            - .gitignore
+            - package.json
+            - package-lock.json
+            - next.config.ts
+            - tsconfig.json
+            - eslint.config.mjs
+            - postcss.config.mjs
+            - proxy.ts
+            - supabase-setup.sql
+            - .env.example
+            - LICENSE
+        source_files: []
+        children:
+            - app_pages_and_api
+            - domain_lib
+            - public_assets
+            - shared_components
+        depends_on: []
+        related_to: []
+    app_pages_and_api:
+        dir_name: Next.js App Router Pages & API Routes
+        title: Next.js App Router Pages & API Routes
+        scope:
+            - app/
+        source_files: []
+        children: []
+        depends_on: []
+        related_to:
+            - path: domain_lib/auth_session
+            - path: domain_lib/cloud_storage
+    domain_lib:
+        dir_name: Photobooth Domain Library
+        title: Photobooth Domain Library
+        scope:
+            - lib/
+        source_files: []
+        children:
+            - domain_lib/auth_session
+            - domain_lib/camera_capture
+            - domain_lib/cloud_storage
+            - domain_lib/media_processing
+            - domain_lib/photobooth_features
+            - domain_lib/shared_utils
+        depends_on: []
+        related_to: []
+    domain_lib/auth_session:
+        dir_name: Auth, Booth Session & Room Code Utilities
+        title: Auth, Booth Session & Room Code Utilities
+        scope:
+            - lib/auth.tsx
+            - lib/session.tsx
+            - lib/room-code.ts
+        source_files: []
+        children: []
+        depends_on: []
+        related_to:
+            - path: app_pages_and_api
+    domain_lib/camera_capture:
+        dir_name: Camera Capture & Live Preview
+        title: Camera Capture & Live Preview
+        scope:
+            - lib/camera.ts
+            - lib/capture.ts
+            - lib/live-preview.ts
+        source_files: []
+        children: []
+        depends_on: []
+        related_to:
+            - path: shared_components
+    domain_lib/cloud_storage:
+        dir_name: Cloud Storage & Web Push Integration
+        title: Cloud Storage & Web Push Integration
+        scope:
+            - lib/cloudinary.ts
+            - lib/push-client.ts
+            - lib/push.ts
+        source_files: []
+        children: []
+        depends_on: []
+        related_to:
+            - path: app_pages_and_api
+            - path: public_assets
+    domain_lib/media_processing:
+        dir_name: Media Processing Utilities (Filters, Segmentation & Sound)
+        title: Media Processing Utilities (Filters, Segmentation & Sound)
+        scope:
+            - lib/filters.ts
+            - lib/segmentation.ts
+            - lib/sound.ts
+        source_files: []
+        children: []
+        depends_on: []
+        related_to:
+            - path: public_assets
+    domain_lib/photobooth_features:
+        dir_name: Photobooth Strip Composition & Asset Library
+        title: Photobooth Strip Composition & Asset Library
+        scope:
+            - lib/compose.ts
+            - lib/couple.ts
+            - lib/decor.ts
+            - lib/layouts.ts
+            - lib/scenes.ts
+            - lib/sticker-assets.ts
+            - lib/streak.ts
+        source_files: []
+        children: []
+        depends_on: []
+        related_to:
+            - path: domain_lib/shared_utils
+    domain_lib/shared_utils:
+        dir_name: Shared Photo Utilities (Dates, Prompts, Recaps, Retention)
+        title: Shared Photo Utilities (Dates, Prompts, Recaps, Retention)
+        scope:
+            - lib/photo-dates.ts
+            - lib/prompts.ts
+            - lib/recap.ts
+            - lib/retention.ts
+        source_files: []
+        children: []
+        depends_on: []
+        related_to:
+            - path: domain_lib/photobooth_features
+    public_assets:
+        dir_name: Public Static Assets & Service Worker
+        title: Public Static Assets & Service Worker
+        scope:
+            - public/
+        source_files: []
+        children: []
+        depends_on: []
+        related_to:
+            - path: domain_lib/cloud_storage
+            - path: domain_lib/media_processing
+    shared_components:
+        dir_name: Shared UI Components
+        title: Shared UI Components
+        scope:
+            - components/
+        source_files: []
+        children: []
+        depends_on: []
+        related_to:
+            - path: domain_lib/camera_capture

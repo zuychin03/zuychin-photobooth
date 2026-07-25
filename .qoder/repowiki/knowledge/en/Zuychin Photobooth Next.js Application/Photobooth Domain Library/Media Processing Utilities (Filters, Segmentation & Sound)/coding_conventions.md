@@ -1,0 +1,4 @@
+- Browser-only APIs are guarded with `typeof document === "undefined"` or `typeof window === "undefined"` checks before any DOM/Audio usage, enabling safe SSR imports.
+- Expensive async resources (MediaPipe segmenters) are lazily created once per mode and cached in module-level promises or WeakMaps to avoid repeated initialization.
+- GPU-backed operations fall back gracefully: `createSegmenter` tries `delegate: "GPU"` then retries with `"CPU"`, and `supportsCanvasFilter` returns false when `ctx.filter` is unavailable.
+- Each media operation that produces a MediaPipe result calls `result.close()` in a `finally` block to release native resources.

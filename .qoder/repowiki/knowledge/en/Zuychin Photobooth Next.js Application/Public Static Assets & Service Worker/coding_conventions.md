@@ -1,0 +1,3 @@
+- Static asset paths are referenced as absolute URLs rooted at `/` (e.g. `/offline.html`, `/icon-192.png`) so they resolve consistently regardless of route depth.
+- Cache keys are prefixed with `pb-` and suffixed with a `VERSION` string, enabling atomic cache rotation on service worker activation.
+- Cross-origin requests and dynamic routes (`/api/`, `/auth/`) are explicitly excluded from caching to avoid stale or unauthorized data.

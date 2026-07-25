@@ -1,0 +1,12 @@
+schema_version: 1
+module_path: domain_lib/cloud_storage
+title: Cloud Storage & Web Push Integration
+scope:
+    - lib/cloudinary.ts
+    - lib/push-client.ts
+    - lib/push.ts
+source_files: []
+depends_on: []
+related_to:
+    - path: app_pages_and_api
+    - path: public_assets

@@ -1,0 +1,5 @@
+- Every component file starts with the `"use client"` directive to opt into client-side rendering.
+- Browser API calls are wrapped in `useEffect` hooks with empty dependency arrays, and side effects return cleanup functions where listeners are attached.
+- Components accept configuration via typed JSX props with sensible defaults (e.g. `disabled = false`, `className = ""`, `variant = "cover"`) rather than context or global state.
+- Conditional rendering uses early returns for unsupported states (e.g. `state === "unsupported"` returns null, `value === null` returns null) instead of wrapping content in conditionals.
+- Styling relies on Tailwind utility classes combined with inline `style` props for dynamic values like transforms, filters, and rotation angles.

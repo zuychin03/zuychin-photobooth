@@ -1,0 +1,1 @@
+Sticker images must be served under `public/stickers/<flat|3d>/<slug>.svg|png` matching the slug names in `STICKER_PACKS`; the Noto Emoji font family must be loaded before rendering `noto`-style stickers via `ensureNotoFont`. Export uses `canvas.toBlob(..., "image/png")` at the requested scale factor.

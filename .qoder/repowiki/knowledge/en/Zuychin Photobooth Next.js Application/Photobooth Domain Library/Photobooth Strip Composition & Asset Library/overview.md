@@ -1,0 +1,1 @@
+Defines photobooth strip layouts, canvas composition, sticker/frame assets, shared-scene backdrops, couple timeline persistence via Supabase, and ISO-week streak tracking for the photo booth feature.
