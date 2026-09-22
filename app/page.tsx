@@ -36,7 +36,7 @@ export default function Home() {
 
       {/* Brand header */}
       <header className="relative z-20 flex flex-col items-center gap-5 px-6 pt-10 pb-2">
-        <Logo className="hero-animate h-12 w-auto text-accent sm:h-14" />
+        <Logo className="hero-animate h-12 w-auto text-foreground sm:h-14" />
         {authEnabled && (
           <button
             onClick={() => router.push(user ? "/timeline" : "/login?next=/timeline")}

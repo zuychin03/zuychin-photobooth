@@ -2,7 +2,7 @@
 // cached on first use, so the solo booth and editor work offline after one
 // online visit. Pages fall back to their last cached copy, then /offline.html.
 // Bump VERSION to drop every old cache on the next activate.
-const VERSION = "v1";
+const VERSION = "v2-code-z";
 const STATIC_CACHE = `pb-static-${VERSION}`;
 const PAGE_CACHE = `pb-pages-${VERSION}`;
 const OFFLINE_URL = "/offline.html";
