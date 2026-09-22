@@ -11,8 +11,8 @@ const read = file => fs.readFileSync(path.join(root, file), 'utf8');
 
 test('local master has both approved path layers and no cross-repository dependency', () => {
   assert.equal(mark.viewBox, '320 51 610 557');
-  assert.equal(mark.inkPaths.length, 9);
-  assert.equal(mark.accentPaths.length, 4);
+  assert.equal(mark.inkPaths.length, 6);
+  assert.equal(mark.accentPaths.length, 7);
   assert.equal(validateMark().aspect, 610 / 557);
   assert.doesNotMatch(read('components/Logo.tsx'), /arcade|gallery|aperture/i);
 });
