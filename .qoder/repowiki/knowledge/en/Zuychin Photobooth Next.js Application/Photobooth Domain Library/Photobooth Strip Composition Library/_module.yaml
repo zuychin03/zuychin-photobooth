@@ -1,6 +1,6 @@
 schema_version: 1
 module_path: domain_lib/photobooth_features
-title: Photobooth Strip Composition & Asset Library
+title: Photobooth Strip Composition Library
 scope:
     - lib/compose.ts
     - lib/couple.ts
@@ -11,5 +11,4 @@ scope:
     - lib/streak.ts
 source_files: []
 depends_on: []
-related_to:
-    - path: domain_lib/shared_utils
+related_to: []

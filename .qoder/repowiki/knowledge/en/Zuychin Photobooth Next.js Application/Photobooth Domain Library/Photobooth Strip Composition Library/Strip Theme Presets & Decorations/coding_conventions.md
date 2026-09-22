@@ -1,0 +1,4 @@
+- Each theme entry specifies exactly six decorations placed at predictable positions: top-left (~x=0.08, y≈0.05), top-right (~x=0.92, y≈0.045), mid-left (~x=0.06, y≈0.38), mid-right (~x=0.94, y≈0.55), bottom-left (~x=0.13, y≈0.93), and bottom-right (~x=0.87, y≈0.925).
+- Decoration rotation values are kept within ±D (≈±0.26 rad) to produce organic, slightly tilted placement rather than rigid alignment.
+- Every decoration provides both a `slug` (asset key into STICKER_PACKS) and an `emoji` fallback glyph, ensuring rendering even when assets are unavailable.
+- Theme definitions are pure data objects exported as part of a single `THEMES` array, with lookup performed exclusively through the `getTheme(id)` helper returning null on miss.

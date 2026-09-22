@@ -1,0 +1,1 @@
+No build or setup steps - themes are added by appending a new object to the `THEMES` array following the existing shape.

@@ -1,0 +1,1 @@
+Composes photobooth photo strips by orchestrating layout geometry, procedural frame patterns, theme presets, sticker assets, scene backdrops, and couple/streak persistence into Canvas-rendered images.

@@ -19,7 +19,7 @@ The application uses Next.js's built-in environment variable system as its confi
 **Configuration Sources and Organization**
 - `.env.example` serves as the single source of truth for all required and optional environment variables, documenting each group with comments explaining purpose and dependencies
 - Variables are grouped by service: Supabase (URL, anon key, service role key, cookie domain), Cloudinary (cloud name, API keys), TURN servers (for WebRTC relay), web push VAPID keys, Resend email service, and cron security
-- No runtime configuration loading — variables are accessed directly via `process.env` throughout the codebase
+- No runtime configuration loading - variables are accessed directly via `process.env` throughout the codebase
 
 **Client vs Server Variable Splitting**
 The codebase strictly separates client-accessible and server-only configuration:
@@ -37,9 +37,9 @@ Optional features are enabled/disabled through boolean helper functions that che
 **Security and Access Control**
 - Cron-triggered routes (`/api/reminders`, `/api/retention`) validate requests using `CRON_SECRET` via Authorization header or query parameter
 - Service role keys bypass Row Level Security for scheduled tasks that need database-wide access
-- All external service integrations require explicit configuration — features remain hidden when credentials are missing
+- All external service integrations require explicit configuration - features remain hidden when credentials are missing
 
 **Runtime Configuration**
 - `next.config.ts` contains only static Next.js configuration including service worker cache headers
-- No dynamic runtime configuration loading — all settings must be available at build/start time
+- No dynamic runtime configuration loading - all settings must be available at build/start time
 - The service worker (`sw.js`) is served with aggressive revalidation headers to prevent stale caching issues

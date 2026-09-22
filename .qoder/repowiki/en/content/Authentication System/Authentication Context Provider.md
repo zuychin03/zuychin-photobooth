@@ -296,4 +296,4 @@ Common issues and resolutions:
 - [route.ts](file://app/auth/callback/route.ts)
 
 ## Conclusion
-The authentication context provider centralizes session management, integrates seamlessly with Supabase Auth, and offers a clean API for consuming auth state throughout the application. By following the patterns outlined here—memoization, robust error handling, and proper route protection—you can build secure, performant, and maintainable authentication flows.
+The authentication context provider centralizes session management, integrates seamlessly with Supabase Auth, and offers a clean API for consuming auth state throughout the application. By following the patterns outlined here-memoization, robust error handling, and proper route protection-you can build secure, performant, and maintainable authentication flows.

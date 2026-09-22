@@ -15,7 +15,7 @@ This repository uses the standard Node.js/npm ecosystem for dependency managemen
 
 **Package managers and lockfiles**
 - npm is used as the package manager, with `package-lock.json` committed to version control to pin exact transitive dependency versions.
-- No vendoring strategy (no `vendor/` directory) — all third-party packages are installed into `node_modules` at install time.
+- No vendoring strategy (no `vendor/` directory) - all third-party packages are installed into `node_modules` at install time.
 - No private registry configuration is present; dependencies resolve against the public npm registry.
 
 **Dependency categories**

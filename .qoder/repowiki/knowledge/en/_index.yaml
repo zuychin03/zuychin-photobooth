@@ -3,7 +3,7 @@ schema_version: 1
 locale: en-US
 branch: main
 nodes_managed: true
-exported_at: "2026-07-25T08:37:50Z"
+exported_at: "2026-07-25T09:23:50Z"
 modules:
     "":
         dir_name: Zuychin Photobooth Next.js Application
@@ -38,8 +38,8 @@ modules:
         children: []
         depends_on: []
         related_to:
-            - path: domain_lib/auth_session
             - path: domain_lib/cloud_storage
+            - path: domain_lib/shared_utils
     domain_lib:
         dir_name: Photobooth Domain Library
         title: Photobooth Domain Library
@@ -65,8 +65,7 @@ modules:
         source_files: []
         children: []
         depends_on: []
-        related_to:
-            - path: app_pages_and_api
+        related_to: []
     domain_lib/camera_capture:
         dir_name: Camera Capture & Live Preview
         title: Camera Capture & Live Preview
@@ -91,7 +90,6 @@ modules:
         depends_on: []
         related_to:
             - path: app_pages_and_api
-            - path: public_assets
     domain_lib/media_processing:
         dir_name: Media Processing Utilities (Filters, Segmentation & Sound)
         title: Media Processing Utilities (Filters, Segmentation & Sound)
@@ -104,9 +102,10 @@ modules:
         depends_on: []
         related_to:
             - path: public_assets
+            - path: shared_components
     domain_lib/photobooth_features:
-        dir_name: Photobooth Strip Composition & Asset Library
-        title: Photobooth Strip Composition & Asset Library
+        dir_name: Photobooth Strip Composition Library
+        title: Photobooth Strip Composition Library
         scope:
             - lib/compose.ts
             - lib/couple.ts
@@ -116,10 +115,31 @@ modules:
             - lib/sticker-assets.ts
             - lib/streak.ts
         source_files: []
+        children:
+            - domain_lib/photobooth_features/patterns
+            - domain_lib/photobooth_features/themes
+        depends_on: []
+        related_to: []
+    domain_lib/photobooth_features/patterns:
+        dir_name: Procedural Frame Patterns & Themes
+        title: Procedural Frame Patterns & Themes
+        scope:
+            - lib/patterns.ts
+        source_files: []
         children: []
         depends_on: []
         related_to:
-            - path: domain_lib/shared_utils
+            - path: domain_lib/photobooth_features/themes
+    domain_lib/photobooth_features/themes:
+        dir_name: Strip Theme Presets & Decorations
+        title: Strip Theme Presets & Decorations
+        scope:
+            - lib/themes.ts
+        source_files: []
+        children: []
+        depends_on: []
+        related_to:
+            - path: domain_lib/photobooth_features/patterns
     domain_lib/shared_utils:
         dir_name: Shared Photo Utilities (Dates, Prompts, Recaps, Retention)
         title: Shared Photo Utilities (Dates, Prompts, Recaps, Retention)
@@ -132,7 +152,7 @@ modules:
         children: []
         depends_on: []
         related_to:
-            - path: domain_lib/photobooth_features
+            - path: app_pages_and_api
     public_assets:
         dir_name: Public Static Assets & Service Worker
         title: Public Static Assets & Service Worker
@@ -142,7 +162,6 @@ modules:
         children: []
         depends_on: []
         related_to:
-            - path: domain_lib/cloud_storage
             - path: domain_lib/media_processing
     shared_components:
         dir_name: Shared UI Components
@@ -154,3 +173,4 @@ modules:
         depends_on: []
         related_to:
             - path: domain_lib/camera_capture
+            - path: domain_lib/media_processing

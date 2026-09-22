@@ -1,0 +1,4 @@
+- Each pattern is declared as an object conforming to `PatternDef` with a stable `id` string, a human-readable `name`, and a `draw` callback that receives `(ctx, w, h, ink)`.
+- Procedural drawing functions wrap their work in `ctx.save()` / `ctx.restore()` and set `globalAlpha` once, keeping side effects scoped to the draw call.
+- Scatter-based patterns seed a local `rand` instance from a fixed integer literal so preview and export produce identical layouts.
+- Reusable shape geometry is factored into private helper functions (e.g. `heartPath`, `sparklePath`) rather than duplicated inside each `draw`.

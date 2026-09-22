@@ -121,7 +121,7 @@ Keep-->>Client : 200 OK {session}
 
 ## Detailed Component Analysis
 
-### /api/keep — Session Persistence
+### /api/keep - Session Persistence
 Purpose: Create or update a session record to persist state across requests.
 
 Authentication:
@@ -175,7 +175,7 @@ Security Measures:
 - [lib/session.tsx](file://lib/session.tsx)
 - [lib/auth.tsx](file://lib/auth.tsx)
 
-### /api/push/notify — Push Notification Delivery
+### /api/push/notify - Push Notification Delivery
 Purpose: Deliver push notifications to one or more recipients and track delivery status.
 
 Authentication:
@@ -242,7 +242,7 @@ Security Measures:
 - [lib/push-client.ts](file://lib/push-client.ts)
 - [lib/auth.tsx](file://lib/auth.tsx)
 
-### /api/reminders — Reminder Scheduling and Management
+### /api/reminders - Reminder Scheduling and Management
 Purpose: Schedule, list, update, and cancel reminder notifications.
 
 Authentication:
@@ -320,7 +320,7 @@ Security Measures:
 - [lib/push.ts](file://lib/push.ts)
 - [lib/auth.tsx](file://lib/auth.tsx)
 
-### /api/retention — Analytics and User Retention Tracking
+### /api/retention - Analytics and User Retention Tracking
 Purpose: Record user activity events and compute retention metrics for analytics dashboards.
 
 Authentication:

@@ -9,4 +9,3 @@ source_files: []
 depends_on: []
 related_to:
     - path: app_pages_and_api
-    - path: public_assets

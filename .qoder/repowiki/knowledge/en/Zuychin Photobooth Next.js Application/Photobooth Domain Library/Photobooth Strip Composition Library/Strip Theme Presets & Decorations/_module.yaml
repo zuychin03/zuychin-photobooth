@@ -1,0 +1,9 @@
+schema_version: 1
+module_path: domain_lib/photobooth_features/themes
+title: Strip Theme Presets & Decorations
+scope:
+    - lib/themes.ts
+source_files: []
+depends_on: []
+related_to:
+    - path: domain_lib/photobooth_features/patterns

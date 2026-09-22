@@ -1,0 +1,1 @@
+Plain TypeScript with no runtime dependencies beyond the local `./decor` module's `StickerStyle` type; uses normalized coordinates (0..1) so decorations scale across different strip layouts.

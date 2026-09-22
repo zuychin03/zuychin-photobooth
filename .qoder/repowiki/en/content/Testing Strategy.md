@@ -332,4 +332,4 @@ Common issues and resolutions:
 - [package.json](file://package.json)
 
 ## Conclusion
-By combining ESLint for code quality, PostCSS for styling automation, and TypeScript for type safety, the project establishes a strong foundation for reliable development. A layered testing approach—unit, integration, and end-to-end—ensures correctness across components, hooks, utilities, API routes, and user workflows. Organized test suites, robust mocking strategies, and CI integration keep quality high and regressions low. Adopting these practices will improve maintainability, confidence in releases, and overall product stability.
+By combining ESLint for code quality, PostCSS for styling automation, and TypeScript for type safety, the project establishes a strong foundation for reliable development. A layered testing approach-unit, integration, and end-to-end-ensures correctness across components, hooks, utilities, API routes, and user workflows. Organized test suites, robust mocking strategies, and CI integration keep quality high and regressions low. Adopting these practices will improve maintainability, confidence in releases, and overall product stability.

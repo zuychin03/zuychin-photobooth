@@ -125,14 +125,14 @@ API-->>Client : {status, messageId, error?}
   - title: string (required)
   - body: string (required)
   - type: enum ["reminder", "alert", "update"] (required)
-  - data: object (optional) — custom key-value pairs forwarded to the client
-  - target: object (optional) — audience targeting (e.g., userId, groupId)
-  - options: object (optional) — browser push options (icon, badge, tag, renotify, actions)
+  - data: object (optional) - custom key-value pairs forwarded to the client
+  - target: object (optional) - audience targeting (e.g., userId, groupId)
+  - options: object (optional) - browser push options (icon, badge, tag, renotify, actions)
 - Response Body:
   - status: "success" | "error"
-  - messageId?: string — unique identifier for tracking
-  - delivered?: boolean — whether the provider accepted the message
-  - error?: string — human-readable error description
+  - messageId?: string - unique identifier for tracking
+  - delivered?: boolean - whether the provider accepted the message
+  - error?: string - human-readable error description
 - Status Codes:
   - 200 OK on successful submission
   - 400 Bad Request for invalid payloads

@@ -1,1 +1,1 @@
-Next.js App Router entry points defining the photobooth's client-side pages (home, login, room, relay, timeline, customize) and server-side API routes for keep/push/retention/reminders backed by Supabase and Cloudinary.
+Next.js App Router entry points for the photobooth: client-side pages (home, login, room, relay, timeline, customize) and server-side API routes handling keep/push/retention/reminders backed by Supabase and Cloudinary.

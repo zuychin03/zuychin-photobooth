@@ -2,4 +2,4 @@ Three independent utility modules under lib/ with no cross-imports between them:
 - `filters.ts` defines a `BoothFilter` interface and an exported `FILTERS` array of CSS filter strings, plus `getFilter()` lookup and a `supportsCanvasFilter()` runtime check for Safari compatibility.
 - `segmentation.ts` wraps the MediaPipe `ImageSegmenter` (wasm + TFLite model served from `/mediapipe/wasm` and `/models/selfie_segmenter.tflite`). It lazily creates GPU-first segmenters per running mode (`IMAGE`/`VIDEO`) cached in `segmenterPromises`, caches cutout results per canvas via a `WeakMap`, and exposes `cutout()`, `segmentVideoMask()`, and `preloadSegmenter()`.
 - `sound.ts` holds a singleton `AudioContext` and synthesizes two sounds on the fly: a short oscillator tick and a filtered noise burst shutter click, returning early when `window` is undefined.
-All three modules are pure browser-runtime helpers — they guard against SSR by checking `typeof document` / `typeof window` before accessing DOM or Audio APIs.
+All three modules are pure browser-runtime helpers - they guard against SSR by checking `typeof document` / `typeof window` before accessing DOM or Audio APIs.

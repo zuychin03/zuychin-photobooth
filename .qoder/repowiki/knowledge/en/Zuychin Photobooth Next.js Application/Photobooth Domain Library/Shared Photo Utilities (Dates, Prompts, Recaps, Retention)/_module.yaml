@@ -9,4 +9,4 @@ scope:
 source_files: []
 depends_on: []
 related_to:
-    - path: domain_lib/photobooth_features
+    - path: app_pages_and_api

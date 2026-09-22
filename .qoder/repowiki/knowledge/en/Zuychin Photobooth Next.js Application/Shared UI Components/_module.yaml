@@ -7,3 +7,4 @@ source_files: []
 depends_on: []
 related_to:
     - path: domain_lib/camera_capture
+    - path: domain_lib/media_processing

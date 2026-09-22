@@ -296,4 +296,4 @@ Debugging tips:
 - [route.ts](file://app/api/push/notify/route.ts)
 
 ## Conclusion
-The real-time event system provides a robust foundation for collaborative features through reliable broadcasting, optimistic UI updates, and push notification support. By following the patterns outlined here—custom event creation, filtering, priority handling, and error recovery—you can build responsive and consistent multi-user experiences. Continuously monitor performance and reliability metrics to ensure optimal user experience across devices and network conditions.
+The real-time event system provides a robust foundation for collaborative features through reliable broadcasting, optimistic UI updates, and push notification support. By following the patterns outlined here-custom event creation, filtering, priority handling, and error recovery-you can build responsive and consistent multi-user experiences. Continuously monitor performance and reliability metrics to ensure optimal user experience across devices and network conditions.

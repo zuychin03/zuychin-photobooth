@@ -1,0 +1,1 @@
+Browser Canvas 2D API for raster composition; Supabase JS client for Postgres + Storage access; deterministic Mulberry32 PRNG for scene star placement; Noto Emoji font for monochrome glyph rendering; Next.js-style static asset paths under `/stickers/<style>/<slug>`.

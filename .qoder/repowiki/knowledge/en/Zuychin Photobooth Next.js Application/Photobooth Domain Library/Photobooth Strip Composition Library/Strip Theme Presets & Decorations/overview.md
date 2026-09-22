@@ -1,0 +1,1 @@
+Defines preset strip themes (frame, pattern, sticker style, caption, and baked-in decorative stickers) consumed by the strip composer and theme picker UI.
