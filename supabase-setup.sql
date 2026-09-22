@@ -336,5 +336,5 @@ CREATE POLICY "Owner manages their push subscriptions"
 -- ═══════════════════════════════════════════════════════════
 -- DONE. Point the app at this project via NEXT_PUBLIC_SUPABASE_URL /
 -- NEXT_PUBLIC_SUPABASE_ANON_KEY. Crons (weekly clear, reminders), the
--- Cloudinary archive and web push are optional — see the README.
+-- Cloudinary archive and web push are optional - see the README.
 -- ═══════════════════════════════════════════════════════════

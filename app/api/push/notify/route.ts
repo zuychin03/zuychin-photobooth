@@ -5,7 +5,7 @@ import { hasPush, sendPushToUsers, type PushPayload } from "@/lib/push";
 // Notify the partner about an event the signed-in user just caused. The
 // session client's RLS proves the caller can see the object, and the caller
 // must be its author, so a user can only ever trigger the preset messages
-// about their own actions — never arbitrary content.
+// about their own actions - never arbitrary content.
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 

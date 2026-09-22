@@ -86,7 +86,7 @@ To enable accounts and the Shared Vault, create a free Supabase project and foll
 
 ## Setting up Supabase
 
-Everything here is optional — the booth runs with no backend. Add Supabase to
+Everything here is optional - the booth runs with no backend. Add Supabase to
 enable accounts, pairing, and the **Shared Vault**. Any free project works, and
 everything the script creates is `pb_`-prefixed and additive, so it coexists
 with other apps of your own on the same project.
@@ -102,9 +102,9 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 
 **2. Database.** In **SQL Editor → New Query**, paste and run
 [`supabase-setup.sql`](supabase-setup.sql) once. It is the entire schema
-end-to-end — a `profiles` identity mirror (created only if the project has
+end-to-end - a `profiles` identity mirror (created only if the project has
 none), `pb_couples`, `pb_strips`, relays, photo dates, the weekly-retention and
-Cloudinary-archive columns, every RLS policy, and the Storage policies — and it
+Cloudinary-archive columns, every RLS policy, and the Storage policies - and it
 is safe to re-run.
 
 **3. Storage bucket.** In **Storage → New bucket**, create `photobooth-strips`
@@ -116,7 +116,7 @@ read it, through short-lived signed URLs.
 password and magic link (a magic link creates the account on first sign-in).
 Under **Authentication → URL Configuration**, set **Site URL** to your
 production URL and add `https://<your-app>/auth/callback` (plus
-`http://localhost:3000/**` for development) to **Redirect URLs** — magic links
+`http://localhost:3000/**` for development) to **Redirect URLs** - magic links
 silently fall back to the Site URL when the callback is not allowlisted.
 
 **5. The weekly reset and reminders (optional crons).** The Shared Vault holds
@@ -132,12 +132,12 @@ CRON_SECRET=...                 # any random string
 Point a scheduler ([cron-job.org](https://cron-job.org) is free) at these, with
 header `Authorization: Bearer <CRON_SECRET>` (or `?secret=<CRON_SECRET>`):
 
-- `https://<your-app>/api/retention` — the weekly clear. Run it at least once a
+- `https://<your-app>/api/retention` - the weekly clear. Run it at least once a
   day so the vault empties on the rollover. Returns
   `{ cleared, archived, skipped, weekStart }`, or
   `{ skipped: "service role not configured" }` until the service role is set, so
   nothing is deleted before you wire it up.
-- `https://<your-app>/api/reminders` — photo-date reminders; every 15 minutes is
+- `https://<your-app>/api/reminders` - photo-date reminders; every 15 minutes is
   plenty. Delivers by email with a [Resend](https://resend.com) key
   (`RESEND_API_KEY`, and `REMINDER_FROM` on a verified domain for real
   delivery), by push notification when web push is set up (step 7), or both.
@@ -159,7 +159,7 @@ CLOUDINARY_API_SECRET=...
 
 Without these, bookmarking still spares a strip from the weekly delete, but it
 lives only in Supabase Storage. Where kept strips are displayed afterward is up
-to you — any app of your own with the same Cloudinary credentials and read
+to you - any app of your own with the same Cloudinary credentials and read
 access to `pb_strips` can sign delivery URLs from `cloudinary_public_id` (RLS
 scopes rows to the owner and their partner).
 
@@ -176,7 +176,7 @@ A bell appears in the Shared Vault header; each partner enables notifications
 per browser (on iPhone the app must be installed to the home screen first,
 iOS 16.4+). You'll get a nudge when it's your turn on a relay strip, when your
 partner saves a strip to the vault, and when a photo date is due (alongside or
-instead of the email). Delivery rides the browser vendors' push services — no
+instead of the email). Delivery rides the browser vendors' push services - no
 account or fee involved.
 
 **8. One login across your own apps (optional).** If you serve several of your

@@ -25,7 +25,7 @@ export function isRetained(s: RetainFields): boolean {
 
 /** Whole days until this week's vault clears; null for archived strips (kept or
  *  recap), 0 when the reset is due. Every non-archived strip shares one reset
- *  date — the start of next ISO week — so the count is the same for all. */
+ *  date - the start of next ISO week - so the count is the same for all. */
 export function daysUntilPurge(
   s: RetainFields,
   now: Date = new Date(),

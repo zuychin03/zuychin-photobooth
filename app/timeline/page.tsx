@@ -114,7 +114,7 @@ export default function TimelinePage() {
       const { pushed } = await setStripKept(strip.id, kept);
       if (kept && !pushed) {
         setKeepNote(
-          "Bookmarked here, but this deployment isn't set up to keep strips past the weekly reset yet — configure Cloudinary to archive them.",
+          "Bookmarked here, but this deployment isn't set up to keep strips past the weekly reset yet - configure Cloudinary to archive them.",
         );
       }
     } catch {
