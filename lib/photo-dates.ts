@@ -42,16 +42,32 @@ export async function createPhotoDate(
   userId: string,
   coupleId: string,
   data: { title: string; scheduledAt: string; cadence: Cadence },
+  options: { id?: string; signal?: AbortSignal; client?: ReturnType<typeof createClient> } = {},
 ): Promise<void> {
-  const supabase = createClient();
-  const { error } = await supabase.from("pb_photo_dates").insert({
+  const supabase = options.client ?? createClient(), id = options.id ?? crypto.randomUUID();
+  const desired = {
+    id,
     couple_id: coupleId,
     created_by: userId,
     title: data.title,
     scheduled_at: data.scheduledAt,
     cadence: data.cadence,
-  });
-  if (error) throw error;
+  };
+  const existing = async () => {
+    let query = supabase.from("pb_photo_dates").select("id,couple_id,created_by,title,scheduled_at,cadence").eq("id", id);
+    if (options.signal) query = query.abortSignal(options.signal);
+    const { data: found, error } = await query.maybeSingle();
+    if (error) throw error;
+    if (options.signal?.aborted) throw new Error("The reminder action was cancelled.");
+    if (found && (found.couple_id !== coupleId || found.created_by !== userId || found.title !== data.title || Date.parse(found.scheduled_at) !== Date.parse(data.scheduledAt) || found.cadence !== data.cadence)) throw new Error("This reminder changed. Refresh before trying again.");
+    return Boolean(found);
+  };
+  if (await existing()) return;
+  let query = supabase.from("pb_photo_dates").insert(desired);
+  if (options.signal) query = query.abortSignal(options.signal);
+  const { error } = await query;
+  if (error && !(error.code === "23505" && await existing())) throw error;
+  if (options.signal?.aborted) throw new Error("The reminder action was cancelled. Refresh to check its status.");
 }
 
 export async function listPhotoDates(): Promise<PhotoDate[]> {
@@ -65,7 +81,11 @@ export async function listPhotoDates(): Promise<PhotoDate[]> {
   return (data as PhotoDate[]) ?? [];
 }
 
-export async function deletePhotoDate(id: string): Promise<void> {
-  const supabase = createClient();
-  await supabase.from("pb_photo_dates").delete().eq("id", id);
+export async function deletePhotoDate(id: string, options: { signal?: AbortSignal; client?: ReturnType<typeof createClient> } = {}): Promise<void> {
+  const supabase = options.client ?? createClient();
+  let query = supabase.from("pb_photo_dates").delete().eq("id", id);
+  if (options.signal) query = query.abortSignal(options.signal);
+  const { error } = await query;
+  if (error) throw error;
+  if (options.signal?.aborted) throw new Error("The reminder action was cancelled. Refresh to check its status.");
 }

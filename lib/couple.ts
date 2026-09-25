@@ -1,5 +1,7 @@
 import { createClient } from "./supabase/client";
 import { newRoomCode } from "./room-code";
+import { cloudWriteError, requireUuid, uploadImmutable, withUploadIntent, type UploadIdentity } from "./upload-intent";
+import { LAYOUTS } from "./layouts";
 
 export interface Couple {
   id: string;
@@ -30,15 +32,17 @@ export interface TimelineStrip extends StripRow {
 const BUCKET = "photobooth-strips";
 
 /** The current user's couple: a completed pair, or a pending one they created. */
-export async function getMyCouple(userId: string): Promise<Couple | null> {
+export async function getMyCouple(userId: string, signal?: AbortSignal): Promise<Couple | null> {
   const supabase = createClient();
-  const { data } = await supabase
+  let query = supabase
     .from("pb_couples")
     .select("*")
     .or(`member_a.eq.${userId},member_b.eq.${userId}`)
     .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+    .limit(1);
+  if (signal) query = query.abortSignal(signal);
+  const { data, error } = await query.maybeSingle();
+  if (error) throw cloudWriteError(error);
   return (data as Couple) ?? null;
 }
 
@@ -64,7 +68,8 @@ export async function joinCouple(code: string): Promise<string> {
 
 export async function unpair(coupleId: string): Promise<void> {
   const supabase = createClient();
-  await supabase.from("pb_couples").delete().eq("id", coupleId);
+  const { error } = await supabase.from("pb_couples").delete().eq("id", coupleId);
+  if (error) throw cloudWriteError(error);
 }
 
 /** Upload a strip PNG and record it on the couple's timeline. Returns the strip id. */
@@ -73,25 +78,30 @@ export async function saveStrip(
   coupleId: string | null,
   blob: Blob,
   meta: { layoutId: string; caption: string },
+  identity: UploadIdentity = {},
 ): Promise<string> {
+  requireUuid(userId);
+  if (coupleId) requireUuid(coupleId);
+  if ((!LAYOUTS.some(layout => layout.id === meta.layoutId) && meta.layoutId !== "recap") || meta.caption.length > 2000) {
+    throw new Error("The strip layout or caption is not valid.");
+  }
   const supabase = createClient();
-  const id = crypto.randomUUID();
+  const id = identity.id ?? crypto.randomUUID();
   const path = `${userId}/${id}.png`;
-  const up = await supabase.storage.from(BUCKET).upload(path, blob, {
-    contentType: "image/png",
-    upsert: false,
+  return withUploadIntent(supabase, { requestId: identity.requestId ?? id, sourceId: id, sourceType: "strip", owner: userId, paths: [path] }, async () => {
+    const { data, error } = await supabase.from("pb_strips").select("id,owner,couple_id,storage_path,layout_id,caption").eq("id", id).maybeSingle();
+    if (error) throw cloudWriteError(error);
+    if (!data) return null;
+    if (data.owner !== userId || data.storage_path !== path || data.couple_id !== coupleId || data.layout_id !== meta.layoutId || data.caption !== (meta.caption || null)) {
+      throw new Error("This save ID belongs to a different strip. Start a new save.");
+    }
+    return id;
+  }, async () => {
+    await uploadImmutable(supabase.storage.from(BUCKET), path, blob, "image/png");
+    const { error } = await supabase.from("pb_strips").insert({ id, owner: userId, couple_id: coupleId, storage_path: path, layout_id: meta.layoutId, caption: meta.caption || null });
+    if (error) throw cloudWriteError(error);
+    return id;
   });
-  if (up.error) throw up.error;
-  const { error } = await supabase.from("pb_strips").insert({
-    id,
-    owner: userId,
-    couple_id: coupleId,
-    storage_path: path,
-    layout_id: meta.layoutId,
-    caption: meta.caption || null,
-  });
-  if (error) throw error;
-  return id;
 }
 
 /** Couple timeline, newest first, with short-lived signed image URLs. */
@@ -109,31 +119,37 @@ export async function listStrips(userId: string): Promise<TimelineStrip[]> {
       const signed = await supabase.storage
         .from(BUCKET)
         .createSignedUrl(row.storage_path, 3600);
+      if (signed.error) throw cloudWriteError(signed.error);
       return { ...row, url: signed.data?.signedUrl ?? null, mine: row.owner === userId };
     }),
   );
 }
 
-/** Keep a strip (archived to Cloudinary) or release it. The push runs
- *  server-side where the Cloudinary secret lives. `pushed` is false when the
- *  strip was flagged locally but not archived (Cloudinary not configured here),
- *  so the caller can warn that it won't survive the weekly reset. */
+/** Pending operations must not be displayed as completed archives. */
 export async function setStripKept(
   id: string,
   kept: boolean,
-): Promise<{ pushed: boolean }> {
+  requestId = crypto.randomUUID(),
+): Promise<{ kept: boolean; pushed: boolean; pending: boolean; jobId?: string }> {
   const res = await fetch("/api/keep", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ id, kept }),
+    body: JSON.stringify({ id, kept, requestId }),
   });
-  if (!res.ok) throw new Error("keep failed");
-  const data = (await res.json().catch(() => ({}))) as { pushed?: boolean };
-  return { pushed: Boolean(data.pushed) };
+  if (!res.ok) throw new Error("The archive change could not be confirmed. Please refresh and try again.");
+  const data = await res.json() as { kept?: boolean; pushed?: boolean; pending?: boolean; jobId?: string };
+  if (typeof data.kept !== "boolean" || typeof data.pushed !== "boolean" || typeof data.pending !== "boolean") throw new Error("The archive response could not be confirmed.");
+  return { kept: data.kept, pushed: data.pushed, pending: data.pending, jobId: data.jobId };
 }
 
-export async function deleteStrip(strip: StripRow): Promise<void> {
-  const supabase = createClient();
-  await supabase.storage.from(BUCKET).remove([strip.storage_path]);
-  await supabase.from("pb_strips").delete().eq("id", strip.id);
+export async function deleteStrip(strip: StripRow, requestId = crypto.randomUUID()): Promise<{ pending: boolean }> {
+  requireUuid(strip.id);
+  const response = await fetch(`/api/media/strips/${strip.id}`, {
+    method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ requestId }),
+  });
+  if (!response.ok) throw new Error("Deletion could not be confirmed. Please refresh and try again.");
+  if (response.status !== 200 && response.status !== 202) throw new Error("The deletion response could not be confirmed.");
+  const result = await response.json() as { pending?: boolean; deleted?: boolean };
+  if (result.pending !== (response.status === 202) || (response.status === 200 && result.deleted !== true)) throw new Error("The deletion response could not be confirmed.");
+  return { pending: response.status === 202 };
 }

@@ -1,0 +1,122 @@
+[
+  {
+    "id": "ivory-cotton-paper-v2",
+    "name": "Ivory cotton paper",
+    "category": "material",
+    "file": "materials/ivory-cotton-paper-v2.png",
+    "prompt": "Use case: photorealistic-natural. Asset type: reusable raster material texture for photo-strip frame fill and printable memory-card backgrounds in Zuychin Photobooth V2. Asset ID ivory-cotton-paper-v2. Generate ONE square image ideally 1024x1024 of warm ivory handmade cotton-rag paper, scanned flat and orthographically from directly above, delicate natural fibres, fine matte tooth, occasional tiny embedded cream fibres. Uniform material extends cleanly to all four edges. Very low contrast, gentle warm ivory variation, no strong central marks, no vignette or directional lighting, no folds or cast shadows. The entire image is the material itself, no isolated sheet edges, no tabletop, no object, no mockup, no collage, no border, no text, letters, people, logo or watermark. Tactile editorial quality, clean enough behind small printed captions. Do not draw a flat vector pattern; show actual fine material detail. Avoid grunge, dirt, stains or torn holes. Intended to be cropped inside a frame without covering the photographs.",
+    "sourcePath": "C:\\Users\\kduy1\\.codex\\generated_images\\01a0c93a-39dc-7cf3-8ad0-0f8e4cde9f0b\\exec-eeca6c50-9ee9-40d5-a4ad-8fd1aad744e7.png",
+    "qa": "Accepted: even warm ivory paper, fine grain and no embedded text or objects. Use as an opaque frame fill; check caption contrast at print size.",
+    "focalPoint": [
+      0.5,
+      0.5
+    ],
+    "dimensions": {
+      "width": 1254,
+      "height": 1254
+    },
+    "bytes": 2499286,
+    "sha256": "bad6540f2a5025cca0414d8a1e530d3b1db08a679749d16c1bb0b99a77f21198",
+    "generationMethod": "built-in imagegen"
+  },
+  {
+    "id": "rose-washi-paper-v2",
+    "name": "Rose washi paper",
+    "category": "material",
+    "file": "materials/rose-washi-paper-v2.png",
+    "prompt": "Use case: photorealistic-natural. Asset type: full-bleed reusable material texture for Zuychin Photobooth V2 photo-strip borders and memory cards. Asset ID rose-washi-paper-v2. Generate ONE square image ideally1024x1024 of softly dyed dusty-rose washi paper with fine long translucent fibres and a delicate satin-matte tactile surface. Photographed as a clean orthographic material scan, no perspective. Warm muted blush, not bright pink; gently varied fibres with low overall contrast and no heavy marbling. Even tone and diffuse light across the entire surface, texture continues to all edges. No sheets, paper edges, folds, tabletop, objects, patterns, vignettes or cast shadows. No people, text, letters, logos, watermark, collage, frame, holes or UI. Authored tactile photographic detail, no flat vector fill. Clean enough for dark captions over it. This is a final texture asset for cropping to frame geometry in code.",
+    "sourcePath": "C:\\Users\\kduy1\\.codex\\generated_images\\01a0c93a-39dc-7cf3-8ad0-0f8e4cde9f0b\\exec-2620e8bf-29ae-4beb-9519-049cb76af3cb.png",
+    "qa": "Accepted: dusty rose fibres with visible larger strands. Apply at reduced texture strength beneath captions if needed; not verified as seamlessly tileable.",
+    "focalPoint": [
+      0.5,
+      0.5
+    ],
+    "dimensions": {
+      "width": 1254,
+      "height": 1254
+    },
+    "bytes": 2941794,
+    "sha256": "0930fafa9b10257859c5d4a820b56ffc8ff1d3012447ca64a6bf32cfff6fb355",
+    "generationMethod": "built-in imagegen"
+  },
+  {
+    "id": "indigo-bookcloth-v2",
+    "name": "Indigo bookcloth",
+    "category": "material",
+    "file": "materials/indigo-bookcloth-v2.png",
+    "prompt": "Use case: photorealistic-natural. Asset type: reusable opaque material texture for Zuychin Photobooth V2 strip borders and keepsake covers. Asset ID indigo-bookcloth-v2. Generate ONE square image ideally1024x1024: finely woven midnight-indigo bookbinding cloth with a very subtle blue-violet dye variation, tightly woven small linen fibres, matte finish. Entire canvas a macro orthographic scan of the material, perfectly flat, no folds, wrinkles, stitching, edges, furniture, objects or perspective. Dark ink-blue ground with restrained fibre highlights, low-contrast even illumination; no strong directional shading or vignettes. Real tactile physical surface, not a repeating geometric/vector pattern. Material continues cleanly to every edge, for crop-to-fill use. No text, letters, emblems, people, logo, watermark, border, collage or UI. Premium photographic detail without dirt or artificial scratched grunge. Light captions must remain readable over this dark material.",
+    "sourcePath": "C:\\Users\\kduy1\\.codex\\generated_images\\01a0c93a-39dc-7cf3-8ad0-0f8e4cde9f0b\\exec-a2b9f14a-115b-457a-8337-c5c75f59232b.png",
+    "qa": "Accepted: deep indigo tightly woven cloth with distinct fine weave. Use crop-to-fill and test moire after downsampling.",
+    "focalPoint": [
+      0.5,
+      0.5
+    ],
+    "dimensions": {
+      "width": 1254,
+      "height": 1254
+    },
+    "bytes": 3453849,
+    "sha256": "481768b7601809d61982cafcbbf9ce34e99c8a056d8d5ebd2d6f813a1c804275",
+    "generationMethod": "built-in imagegen"
+  },
+  {
+    "id": "champagne-brushed-metal-v2",
+    "name": "Champagne brushed metal",
+    "category": "material",
+    "file": "materials/champagne-brushed-metal-v2.png",
+    "prompt": "Use case: photorealistic-natural. Asset type: full-bleed raster material texture for Zuychin Photobooth V2 celebration strip borders and keepsake covers. Asset ID champagne-brushed-metal-v2. Generate ONE square image ideally1024x1024, a perfectly flat orthographic macro scan of pale champagne-gold brushed aluminium foil, ultra-fine parallel horizontal brush grain, restrained warm metal sheen and even diffuse illumination. Elegant pale muted gold, not yellow glitter or shiny jewellery. Subtle realistic reflectance with no obvious hotspot, no broad lighting gradient, no vignette. All four edges continue as the same uninterrupted material. No metal sheet edges, folded foil, dents, creases, object, tabletop, border, frame, illustration or collage. No text, letters, people, logos or watermark. Fine microtexture rather than large scratches, clean new material. Low contrast enough to use behind dark small captions, supplied as an opaque reusable photographic texture.",
+    "sourcePath": "C:\\Users\\kduy1\\.codex\\generated_images\\01a0c93a-39dc-7cf3-8ad0-0f8e4cde9f0b\\exec-38879dea-fd91-4509-a99c-721e8b98e4f4.png",
+    "qa": "Accepted: pale champagne brushed surface with directional grain. Keep grain orientation consistent across a strip; no metallic print finish is implied.",
+    "focalPoint": [
+      0.5,
+      0.5
+    ],
+    "dimensions": {
+      "width": 1254,
+      "height": 1254
+    },
+    "bytes": 2217902,
+    "sha256": "2f889712c9fd2f0f13cfe6b5bb5bbdd9fabe762a5a5aca36ed549cbfe70aa1de",
+    "generationMethod": "built-in imagegen"
+  },
+  {
+    "id": "charcoal-photo-paper-v2",
+    "name": "Charcoal photo paper",
+    "category": "material",
+    "file": "materials/charcoal-photo-paper-v2.png",
+    "prompt": "Use case: photorealistic-natural. Asset type: reusable raster material texture for monochrome film-style photo-strip borders and printed keepsakes, Zuychin Photobooth V2. Asset ID charcoal-photo-paper-v2. Generate ONE square image ideally1024x1024 of deep warm charcoal photographic paper with a very fine lustre-pebble finish, tiny evenly distributed silver-grey surface grain and a subtle satin sheen. Full-bleed flat orthographic scan of an actual tactile material, uniform throughout, no vignette or directional light gradient. Refined very-low-contrast detail, charcoal rather than absolute black. Not concrete, leather, cracked paint or scratched film. No dust spots, emulsion damage, perforations, sheet edges, objects, perspective, framing, collage, people, text, letters, watermark or logo. The material fills all four edges with no obvious central motif. Light printed captions should be readable over it. This is a final opaque background texture, not an image of a product.",
+    "sourcePath": "C:\\Users\\kduy1\\.codex\\generated_images\\01a0c93a-39dc-7cf3-8ad0-0f8e4cde9f0b\\exec-37598132-2695-4c8f-9ca2-89be0119bfbf.png",
+    "qa": "Accepted: dark charcoal lustre with restrained grain. Use light captions and preserve adequate contrast.",
+    "focalPoint": [
+      0.5,
+      0.5
+    ],
+    "dimensions": {
+      "width": 1254,
+      "height": 1254
+    },
+    "bytes": 3293180,
+    "sha256": "b8d3f1c660e0008240e76a0d9fcc2f346f4a7906c2caa8c8545399027c2e2da9",
+    "generationMethod": "built-in imagegen"
+  },
+  {
+    "id": "pearl-iridescent-film-v2",
+    "name": "Pearl iridescent film",
+    "category": "material",
+    "file": "materials/pearl-iridescent-film-v2.png",
+    "prompt": "Use case: photorealistic-natural. Asset type: reusable raster material texture for Zuychin Photobooth V2 creative photo-strip borders and keepsake cover backgrounds. Asset ID pearl-iridescent-film-v2. Generate ONE square image ideally1024x1024, a flat orthographic macro material scan of fine pearlescent photographic laminating film. Milky ivory base with very soft irregular blush, lilac and pale sage interference colours, delicate nacre-like grain, subtle pearlescent shimmer embedded in the surface. Refined pastel and very low contrast, not a saturated rainbow or a bright holographic poster. Broad variation restrained enough to crop into a narrow strip without a dominant central feature. Even diffuse illumination without cast shadows, sheet edges, creases, glitter stars or a directional hotspot. Material fills entire canvas to all four edges. No objects, camera, paper stack, product mockup, typography, letters, logos, people, watermarks, frame, collage, holes or UI. The output is an opaque photographic texture, not transparency and not a vector gradient.",
+    "sourcePath": "C:\\Users\\kduy1\\.codex\\generated_images\\01a0c93a-39dc-7cf3-8ad0-0f8e4cde9f0b\\exec-2e3e1755-20a1-4ab4-8a89-fad7de62fc46.png",
+    "qa": "Accepted: soft pearlescent colour variation. Use as an opaque crop-to-fill material; appearance is baked into the image, not dynamic lighting.",
+    "focalPoint": [
+      0.5,
+      0.5
+    ],
+    "dimensions": {
+      "width": 1254,
+      "height": 1254
+    },
+    "bytes": 2146929,
+    "sha256": "41016a9c617e6530dbbe691edb9552db1f1ece0d4ee6a4a90190f07817570d46",
+    "generationMethod": "built-in imagegen"
+  }
+]

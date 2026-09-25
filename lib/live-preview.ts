@@ -2,6 +2,8 @@
 // ~15fps so partners can pose into the shared backdrop before the shot.
 import { SceneDef } from "./scenes";
 import { segmentVideoMask } from "./segmentation";
+import { getAssetCrop } from "./assets/registry";
+import type { ReadyAsset } from "./assets/loader";
 
 const FPS = 15;
 const PREVIEW_W = 480;
@@ -10,18 +12,26 @@ export class LiveScenePainter {
   private timer: ReturnType<typeof setInterval> | null = null;
   private busy = false;
   private lastTs = 0;
-  private maskCanvas = document.createElement("canvas");
-  private frameCanvas = document.createElement("canvas");
+  private maskCanvas: HTMLCanvasElement;
+  private frameCanvas: HTMLCanvasElement;
+  private generation = 0;
+  private resource: ReadyAsset | null = null;
   scene: SceneDef | null = null;
 
   constructor(
     private video: HTMLVideoElement,
     private target: HTMLCanvasElement,
     private mirror: boolean,
-  ) {}
+    private dependencies: { createCanvas?: () => HTMLCanvasElement; segment?: typeof segmentVideoMask } = {},
+  ) {
+    const createCanvas = dependencies.createCanvas ?? (() => document.createElement("canvas"));
+    this.maskCanvas = createCanvas(); this.frameCanvas = createCanvas();
+  }
 
-  start(scene: SceneDef): void {
+  start(scene: SceneDef, resource: ReadyAsset | null = null): void {
+    this.generation++;
     this.scene = scene;
+    this.resource = resource?.asset.id === scene.assetId ? resource : null;
     if (this.timer) return;
     this.timer = setInterval(() => void this.tick(), 1000 / FPS);
   }
@@ -30,21 +40,26 @@ export class LiveScenePainter {
     if (this.timer) clearInterval(this.timer);
     this.timer = null;
     this.scene = null;
+    this.resource = null;
+    this.generation++;
+    this.maskCanvas.width = this.maskCanvas.height = this.frameCanvas.width = this.frameCanvas.height = 0;
+    this.target.getContext("2d")?.clearRect(0, 0, this.target.width, this.target.height);
   }
 
   private async tick(): Promise<void> {
-    const { video, target, scene } = this;
-    if (this.busy || !scene || video.videoWidth === 0) return;
+    const { video, target, scene, resource, generation } = this;
+    if (this.busy || !scene || video.videoWidth === 0 || video.videoHeight === 0) return;
     this.busy = true;
     try {
       // segmentForVideo requires strictly increasing timestamps
       const ts = Math.max(performance.now(), this.lastTs + 1);
       this.lastTs = ts;
-      await segmentVideoMask(video, ts, this.maskCanvas);
+      await (this.dependencies.segment ?? segmentVideoMask)(video, ts, this.maskCanvas);
+      if (generation !== this.generation || !this.scene) return;
 
       const aspect = video.videoWidth / video.videoHeight;
       const w = PREVIEW_W;
-      const h = Math.round(w / aspect);
+      const h = Math.min(960, Math.max(1, Math.round(w / aspect)));
       if (target.width !== w || target.height !== h) {
         target.width = w;
         target.height = h;
@@ -72,12 +87,16 @@ export class LiveScenePainter {
       fctx.globalCompositeOperation = "source-over";
 
       const ctx = target.getContext("2d")!;
-      scene.draw(ctx, 0, 0, w, h);
+      if (resource) {
+        const crop = getAssetCrop(resource.asset, w, h);
+        ctx.drawImage(resource.image, crop.x, crop.y, crop.width, crop.height, 0, 0, w, h);
+      } else scene.draw(ctx, 0, 0, w, h);
       ctx.drawImage(this.frameCanvas, 0, 0);
     } catch {
       // painter is best-effort; capture and compose have their own paths
     } finally {
       this.busy = false;
+      if (!this.scene) this.maskCanvas.width = this.maskCanvas.height = this.frameCanvas.width = this.frameCanvas.height = 0;
     }
   }
 }

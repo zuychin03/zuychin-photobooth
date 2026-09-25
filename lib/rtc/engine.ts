@@ -106,8 +106,9 @@ export class RoomEngine {
     private roomCode: string,
     private isHost: boolean,
     private events: RoomEngineEvents,
+    private developmentLocal = false,
   ) {
-    this.signaling = createSignaling(roomCode);
+    this.signaling = createSignaling(roomCode, developmentLocal);
     this.signaling.onMessage((msg) => void this.onSignal(msg));
     if (isHost) this.roster = [{ id: this.peerId, role: "A" }];
   }
@@ -141,7 +142,7 @@ export class RoomEngine {
   }
 
   private newPeer(id: string, role: Role): Peer {
-    const pc = new RTCPeerConnection({ iceServers: iceServers() });
+    const pc = new RTCPeerConnection({ iceServers: this.developmentLocal ? [] : iceServers() });
     this.localStream?.getTracks().forEach((t) => pc.addTrack(t, this.localStream!));
     const peer: Peer = { id, role, pc, dc: null, clock: new ClockSync(), incoming: null };
     pc.onicecandidate = (e) => {
@@ -382,6 +383,7 @@ export class RoomEngine {
   }
 
   close(): void {
+    if (this.closed) return;
     this.closed = true;
     this.signaling.send({ type: "bye", from: this.peerId });
     this.signaling.close();

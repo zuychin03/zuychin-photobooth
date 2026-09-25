@@ -81,7 +81,11 @@ class LocalSignaling implements Signaling {
   }
 }
 
-export function createSignaling(roomCode: string): Signaling {
+export function createSignaling(roomCode: string, developmentLocal = false): Signaling {
+  if (developmentLocal) {
+    if (process.env.NODE_ENV !== "development") throw new Error("Local rehearsal transport requires development");
+    return new LocalSignaling(roomCode);
+  }
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (url && key) return new SupabaseSignaling(url, key, roomCode);

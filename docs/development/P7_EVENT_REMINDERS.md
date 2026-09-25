@@ -1,0 +1,25 @@
+# Event expiry reminder foundation
+
+Migration021 implements the conditional notification obligation in V2_PLAN174. It is source-only. `PB_EVENTS_ENABLED=true` and the additional `PB_EVENT_REMINDERS_ENABLED=true` are both required; neither is activated by this change. Existing cron authentication, canonical origin, provider configuration and service-role requirements remain mandatory. No real message was sent during development.
+
+Owners explicitly opt into email and/or push for each event. Defaults are off. Targets come only from the owner's verified auth email or existing owned browser subscriptions. Configured channels and actual target availability are distinct response fields. Moderators and guests cannot read or change preferences. The separate POST `/api/events/{id}/reminder` accepts `read` or `save` with expectedRevision/email/push; arbitrary destinations are rejected. CAS retry acknowledges identical immediately preceding choices, otherwise reports conflict.
+
+The reminder becomes due 24 hours before expiry; an opt-in inside that window is eligible at the next cron pass. One current occurrence per event uses an expiry revision, at most five attempts and eleven bounded channel records (one email, up to ten existing push subscriptions). Additional browser subscriptions are not added to an occurrence after its first claim. Preferences toggled after completion do not cause another reminder for that expiry. Changing the expiry invalidates the old lease and resets the bounded occurrence. No unbounded history, addresses, push secrets or message bodies are stored in these tables; channel identifiers and payload hashes are retained to prevent duplicate delivery. Event deletion clears those channel records and disables preferences. Notification failure never changes expiry or blocks media maintenance.
+
+Dispatch rechecks the event, owner-derived destination, current preference and lease. Email retries reuse a provider idempotency key and exact payload hash within 23 hours. A changed payload or ambiguous push is terminal uncertain rather than automatically resent. At the attempt ceiling, an unacknowledged dispatch is also uncertain. The unavoidable interval between the last database fence and provider acceptance does not offer recall of already sent messages.
+
+The existing reminder cron shares its five-occurrence/45-second budget: at most one event occurrence, then ritual/legacy work within the remaining capacity. Push transport accepts only the fixed event reminder title and an authenticated `/events/{UUID}` route, never receipt/invitation tokens. The owner must sign in after following it.
+
+`EventReminderPanel` and its bounded client are integrated into the owner host detail, sharing the runtime account/epoch fence. Preference save retains its exact revision/choices in the mounted page after uncertainty. It exposes busy/dirty callbacks for parent locks. The host rehearsal includes synthetic default-off preferences, lost-save acknowledgement and remove/restore target availability controls. Native checks remain separate.
+
+Validation includes a disposable local PostgreSQL migration-twice suite covering default-off, owner isolation, claim fencing, completed-toggle dedupe, changed expiry, uncertain retries and deletion cleanup; mocked worker/HTTP tests plus existing ritual/legacy regressions. Hosted schema application, actual provider delivery and enabled-channel native acceptance are separate operator gates.
+
+Final local checks: 39 focused tests passed across host runtime/fixture, event reminders and existing ritual/legacy delivery. Whole TypeScript and scoped ESLint passed. The disposable SQL suite passed and removed its unique database. All delivery remains disabled by default.
+
+Independent review follow-up: dispatching intent remains uncertain when its destination disappears or the owner opts out. Push404/410 removes only the exact owner/target recorded by its canonical hash, preserving replacement subscriptions. The worker checks its elapsed budget after lease renewal and immediately before provider calls. The client logically settles cancellation even if a token/fetch/body promise ignores abort and caps response chunks at64. Expanded SQL and36 event/legacy/ritual tests passed; TypeScript and scoped lint passed. No UI behaviour or delivery flags changed in this fix batch.
+
+## Native follow-up, 23/09/2026
+
+The root exercised the integrated owner panel in the host rehearsal. Both preferences began off. Email opt-in was confirmed; push opt-in lost its successful response and reconciled through the exact retained preference request. Removing synthetic recipient targets showed separate unavailable email and browser-subscription messages while preserving preferences. Email could still be explicitly turned off. The walkthrough corrected a stale success notice during a later request or failure.
+
+Desktop light and 390-pixel dark layouts were inspected. These are synthetic transport interactions, with no email, push, permission request or hosted change. Worker/SQL tests separately cover delivery state; no real message delivery is claimed. The fixture was stopped and cleared.

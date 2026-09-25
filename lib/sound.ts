@@ -1,3 +1,4 @@
+import { currentCapturePreferences } from "./capture-preferences";
 // Synthesized tick/shutter so there are no audio assets to load.
 let ctx: AudioContext | null = null;
 
@@ -13,6 +14,7 @@ function audio(): AudioContext | null {
 }
 
 export function playTick(): void {
+  if (!currentCapturePreferences().sound) return;
   const ac = audio();
   if (!ac) return;
   const osc = ac.createOscillator();
@@ -26,6 +28,7 @@ export function playTick(): void {
 }
 
 export function playShutter(): void {
+  if (!currentCapturePreferences().sound) return;
   const ac = audio();
   if (!ac) return;
   // Filtered noise burst reads as a mechanical shutter click

@@ -1,0 +1,51 @@
+import assert from "node:assert/strict";
+import { spawn } from "node:child_process";
+import { randomUUID } from "node:crypto";
+import { readFile } from "node:fs/promises";
+
+const container = process.env.PB_TEST_CONTAINER ?? "pb-v2-p1-postgres";
+if (!/^pb-v2-[a-z0-9-]+$/.test(container)) throw new Error("Use a task-owned pb-v2-* container");
+const database = `pb_v2_event_own_consent_${Date.now()}`;
+const docker = (args, input = "") => new Promise((resolve, reject) => {
+  const child = spawn("docker", ["--context", "desktop-linux", ...args], { windowsHide: true, stdio: ["pipe", "pipe", "pipe"] });
+  let stdout = "", stderr = ""; child.stdout.on("data", value => { stdout += value; }); child.stderr.on("data", value => { stderr += value; }); child.on("error", reject); child.on("close", code => resolve({ code, stdout, stderr })); child.stdin.end(input);
+});
+const sql = async (source, failure = false) => { const result = await docker(["exec", "-i", container, "psql", "-X", "-qAt", "-v", "ON_ERROR_STOP=1", "-U", "postgres", "-d", database], source); if (result.code && !failure) throw new Error(result.stderr); return result; };
+const q = value => `'${String(value).replaceAll("'", "''")}'`, json = value => `${q(JSON.stringify(value))}::jsonb`;
+const service = "SET ROLE service_role; SET request.jwt.claim.role='service_role'; ";
+const call = async expression => JSON.parse((await sql(`${service} SELECT to_jsonb(${expression});`)).stdout.trim() || "null");
+const denied = async (source, expected = /PB_EVENT_DENIED|permission denied/) => { const result = await sql(source, true); assert.notEqual(result.code, 0); assert.match(result.stderr, expected); };
+const owner=randomUUID(), other=randomUUID(), event=randomUUID(), guest=randomUUID(), second=randomUUID(), submission=randomUUID(), request=randomUUID(), token='a'.repeat(64), receipt='b'.repeat(64);
+const made=await docker(["exec",container,"createdb","-U","postgres",database]); assert.equal(made.code,0,made.stderr);
+try {
+ await sql(await readFile(new URL("./bootstrap.sql",import.meta.url),"utf8"));
+ await sql("CREATE TABLE storage.buckets(id text PRIMARY KEY,name text,public boolean,file_size_limit bigint,allowed_mime_types text[]); ALTER TABLE storage.objects ADD COLUMN user_metadata jsonb;");
+ await sql((await readFile(new URL("../../supabase-setup.sql",import.meta.url),"utf8")).split("-- BEGIN PB_LIFECYCLE_V1")[0]);
+ for(const name of ["001_v2_lifecycle.sql","003_v2_rooms.sql","005_v2_events.sql","016_v2_event_transport.sql","017_v2_event_host_settings.sql","018_v2_event_exports.sql","019_v2_event_worker_readiness.sql","020_v2_event_review.sql","022_v2_event_publication.sql","026_v2_event_own_consent.sql","026_v2_event_own_consent.sql"]) await sql(await readFile(new URL(`../migrations/${name}`,import.meta.url),"utf8"));
+ await sql(`INSERT INTO auth.users(id,email) VALUES(${q(owner)},'owner@example.invalid'),(${q(other)},'other@example.invalid');`);
+ await call('public.pb_event_configure(1000000000)');
+ const body={title:'Guestbook',timezone:'Australia/Sydney',startsAt:new Date(Date.now()-60000).toISOString(),closesAt:new Date(Date.now()+3600000).toISOString(),expiresAt:new Date(Date.now()+7200000).toISOString(),maxGuests:25,maxContributions:100,maxBytes:41000000};
+ await call(`public.pb_event_create(${q(owner)},${q(event)},${json(body)})`); await call(`public.pb_event_manage(${q(owner)},${q(event)},'open','{}')`);
+ await sql(`INSERT INTO public.pb_event_guests(id,event_id) VALUES(${q(guest)},${q(event)}),(${q(second)},${q(event)}); INSERT INTO public.pb_event_tokens(hash,event_id,guest_id,kind,expires_at) VALUES(${q(token)},${q(event)},${q(guest)},'contribute',${q(body.closesAt)});`);
+ await call('public.pb_event_worker_verified()');
+ await call(`public.pb_event_reserve(${q(event)},${q(token)},${q(submission)},${q(request)},${q(receipt)},ARRAY[${q(guest)}]::uuid[],'{"submission":true,"gallery":false,"wall":false}')`);
+ await sql(`UPDATE public.pb_event_submissions SET state='ready',gallery_state='private' WHERE id=${q(submission)};`);
+ const read=()=>call(`public.pb_event_own_consent(${q(event)},${q(token)},${q(guest)},${q(submission)})`);
+ const save=(revision,gallery,wall)=>call(`public.pb_event_own_consent(${q(event)},${q(token)},${q(guest)},${q(submission)},${revision},${gallery},${wall})`);
+ assert.deepEqual((await read()).consent,{submission:true,gallery:false,wall:false});
+ const granted=await save(0,true,false); assert.equal(granted.revision,1); assert.equal(granted.receipt.gallery,'awaiting_approval'); assert.equal((await save(0,true,false)).revision,1);
+ await call(`public.pb_event_manage(${q(owner)},${q(event)},'pause','{}')`); const withdrawn=await save(1,false,false); assert.equal(withdrawn.revision,2); assert.equal(withdrawn.receipt.gallery,'private');
+ await denied(`${service} SELECT public.pb_event_own_consent(${q(event)},${q(token)},${q(guest)},${q(submission)},0,true,false);`,/PB_EVENT_CONFLICT/);
+ await denied(`${service} SELECT public.pb_event_consent(${q(event)},${q(token)},${q(submission)},'{"submission":true,"gallery":true,"wall":false}');`,/PB_EVENT_CONFLICT/);
+ await call(`public.pb_event_manage(${q(owner)},${q(event)},'close','{}')`); assert.equal((await save(2,false,true)).consent.wall,true); assert.equal((await save(3,false,false)).consent.wall,false);
+ await denied(`${service} SELECT public.pb_event_own_consent(${q(event)},${q(token)},${q(second)},${q(submission)});`);
+ await denied(`${service} SELECT public.pb_event_own_consent(${q(event)},${q(receipt)},${q(guest)},${q(submission)},4,true,true);`);
+ await denied(`${service} SELECT public.pb_event_consent_before_own_consent(${q(event)},${q(token)},${q(submission)},'{"submission":true,"gallery":true,"wall":true}');`);
+ await sql(`UPDATE public.pb_event_publication_grants SET revision=2147483647,gallery_consent=true WHERE submission_id=${q(submission)};`);
+ assert.equal((await save(2147483647,false,false)).consent.gallery,false);
+ await denied(`${service} SELECT public.pb_event_own_consent(${q(event)},${q(token)},${q(guest)},${q(submission)},2147483647,true,false);`,/PB_EVENT_CAPACITY/);
+ await call(`public.pb_event_consent(${q(event)},${q(token)},${q(submission)},'{"submission":false,"gallery":false,"wall":false}')`);
+ await denied(`${service} SELECT public.pb_event_own_consent(${q(event)},${q(token)},${q(guest)},${q(submission)});`);
+ await denied("SET ROLE authenticated; SELECT * FROM public.pb_event_publication_grants;");
+ console.log('026 passed: actual own grants, CAS, exact retry, stale and legacy restore refusal, paused/closed changes, receipt/foreign denial, saturated revision withdrawal.');
+}finally{const dropped=await docker(["exec",container,"dropdb","-U","postgres","--if-exists","--force",database]);if(dropped.code)throw new Error(dropped.stderr);}

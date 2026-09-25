@@ -82,12 +82,27 @@
 /* ─── Base Styles ─────────────────────────────────────── */
 html {
   scrollbar-gutter: stable;
+  scroll-padding-bottom: var(--app-bottom-nav-height, 0px);
+}
+
+@media (min-width: 768px) {
+  html {
+    scroll-padding-top: 5.5rem;
+  }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans, system-ui, sans-serif);
+}
+
+.app-content {
+  padding-bottom: var(--app-bottom-nav-height, 0px);
+}
+
+.app-content > main[class~="min-h-dvh"] {
+  min-height: calc(100dvh - var(--app-nav-height, 0px) - var(--app-bottom-nav-height, 0px));
 }
 
 /* ─── Booth Mode ──────────────────────────────────────── */

@@ -40,19 +40,31 @@ export async function uploadStrip(
     type: "authenticated",
     resource_type: "image",
     overwrite: true,
+    timeout: 10_000,
   });
   return { publicId: res.public_id, url: res.secure_url };
 }
 
-/** Best-effort removal when a strip is un-kept. */
+/** Missing assets are already removed; provider failures must remain retryable. */
 export async function destroyStrip(publicId: string): Promise<void> {
+  const options = {
+    type: "authenticated",
+    resource_type: "image",
+    invalidate: true,
+    timeout: 10_000,
+  } as const;
+  const result = await cloudinary.uploader.destroy(publicId, options);
+  if (result.result !== "ok" && result.result !== "not found") {
+    throw new Error("Archive deletion was not confirmed");
+  }
+}
+
+export async function verifyStripArchive(publicId: string, url: string): Promise<boolean> {
   try {
-    await cloudinary.uploader.destroy(publicId, {
-      type: "authenticated",
-      resource_type: "image",
-      invalidate: true,
-    });
-  } catch {
-    // Orphaned asset is a cost issue, not a correctness one.
+    const asset = await cloudinary.api.resource(publicId, { type: "authenticated", resource_type: "image", timeout: 10_000 });
+    return asset.public_id === publicId && asset.secure_url === url && asset.type === "authenticated" && asset.resource_type === "image" && asset.bytes > 0;
+  } catch (error) {
+    if (error && typeof error === "object" && "http_code" in error && error.http_code === 404) return false;
+    throw error;
   }
 }

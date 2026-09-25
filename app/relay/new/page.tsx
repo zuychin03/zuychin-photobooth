@@ -1,21 +1,38 @@
 "use client";
 
+import { useAppNavigationGuard } from "@/components/AppNavigation";
+
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Check, Copy, Loader2 } from "lucide-react";
 import { FilterBar } from "@/components/FilterBar";
+import { RelayOriginalRecovery } from "@/components/RelayOriginalRecovery";
+import { loadRelayOriginals, saveRelayOriginals } from "@/lib/relay-recovery";
 import { RoleCapture } from "@/components/RoleCapture";
+import { useRelayPageScope } from "@/hooks/useRelayPageScope";
 import { useAuth } from "@/lib/auth";
 import { Couple, getMyCouple } from "@/lib/couple";
 import { createRelay } from "@/lib/relay";
 import { notifyPartner } from "@/lib/push-client";
 import { LAYOUTS, getLayout } from "@/lib/layouts";
+import { UploadSaveError } from "@/lib/upload-intent";
 
 const DUO_LAYOUTS = LAYOUTS.filter((l) => l.mode === "duo");
 
-type Step = "setup" | "shoot" | "saving" | "done";
+type Step = "setup" | "shoot" | "saving" | "failed" | "done";
 
 export default function NewRelayPage() {
+  const { user, loading, enabled } = useAuth();
+  return <NewRelayAccountPage key={`${user?.id ?? "signed-out"}:${loading}:${enabled}`} />;
+}
+
+function NewRelayAccountPage() {
+  const scope = useRelayPageScope();
+  const [originals, setOriginals] = useState<Blob[]>([]);
+  const [captureId, setCaptureId] = useState<string | null>(null);
+  const [initialOriginals, setInitialOriginals] = useState<Blob[]>([]);
+  const [originalsSaved, setOriginalsSaved] = useState(false);
+  useEffect(() => { if (!originals.length || originalsSaved) return; const warn = (event: BeforeUnloadEvent) => event.preventDefault(); window.addEventListener("beforeunload", warn); return () => window.removeEventListener("beforeunload", warn); }, [originals.length, originalsSaved]);
   const router = useRouter();
   const { user, loading, enabled } = useAuth();
   const [couple, setCouple] = useState<Couple | null>(null);
@@ -24,48 +41,83 @@ export default function NewRelayPage() {
   const [filterId, setFilterId] = useState("none");
   const [step, setStep] = useState<Step>("setup");
   const [copied, setCopied] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  useAppNavigationGuard(() => {
+    if ((originals.length > 0 && !originalsSaved) || step === "saving") { setError("Wait for the current work and save your originals before leaving."); return false; }
+    return true;
+  });
+  const [pendingUpload, setPendingUpload] = useState<{ id: string; frames: HTMLCanvasElement[] } | null>(null);
 
   useEffect(() => {
     if (enabled && !loading && !user) router.replace("/login?next=/relay/new");
   }, [enabled, loading, user, router]);
 
   useEffect(() => {
-    if (user) getMyCouple(user.id).then((c) => { setCouple(c); setChecked(true); });
-  }, [user]);
+    const current = scope.capture(); let cancelled = false;
+    if (user && !loading) void getMyCouple(user.id).then(async c => {
+      if (!current() || cancelled) return; setCouple(c);
+      const draftId = new URL(location.href).searchParams.get("draft");
+      if (draftId && /^[a-f0-9-]{36}$/i.test(draftId)) {
+        const loaded = await loadRelayOriginals({ id: draftId, ownerId: user.id, role: "A", active: current });
+        if (!current() || cancelled) return;
+        setCaptureId(draftId);
+        if (loaded) { setLayoutId(loaded.project.editor.layoutId); setFilterId(loaded.project.editor.filterId); setOriginals(loaded.originals); setInitialOriginals(loaded.originals); setOriginalsSaved(true); setStep("shoot"); }
+      }
+    }).catch(() => { if (current() && !cancelled) setError("Your pairing could not be loaded. Please refresh and try again."); }).finally(() => { if (current() && !cancelled) setChecked(true); });
+    return () => { cancelled = true; };
+  }, [user, loading, scope]);
 
   const layout = getLayout(layoutId);
   const paired = !!couple?.member_b;
 
   const onShot = useCallback(
-    async (frames: HTMLCanvasElement[]) => {
-      if (!user || !couple) return;
+    async (frames: HTMLCanvasElement[], sourceOriginals: Blob[] = originals) => {
+      const current = scope.capture();
+      if (!current() || !user || !couple) { for (const frame of frames) frame.width = frame.height = 0; return; }
+      const id = pendingUpload?.id ?? captureId;
+      if (!id) { for (const frame of frames) frame.width = frame.height = 0; return; }
+      setPendingUpload({ id, frames });
       setStep("saving");
+      setError(null);
+      setOriginals(sourceOriginals);
       try {
+        await saveRelayOriginals({ id, ownerId: user.id, layoutId, filterId, role: "A", shots: layout.shots, originals: sourceOriginals, active: current });
+        if (!current()) return;
+        setOriginalsSaved(true);
         const relayId = await createRelay(user.id, couple.id, {
           layoutId,
           filterId,
           sceneId: null,
           shots: layout.shots,
-        }, frames);
+        }, frames, { id });
+        if (!current()) return;
         notifyPartner("relay", relayId);
         setStep("done");
-      } catch {
-        setStep("setup");
-      }
+        setPendingUpload(null);
+        for (const frame of frames) frame.width = frame.height = 0;
+      } catch (failure) {
+        if (!current()) return;
+        if (failure instanceof UploadSaveError && failure.restartRequired) setPendingUpload({ id: crypto.randomUUID(), frames });
+        setError(failure instanceof Error ? failure.message : "Your half could not be saved. Your photos remain on this page.");
+        setStep("failed");
+      } finally { if (!current()) for (const frame of frames) frame.width = frame.height = 0; }
     },
-    [user, couple, layoutId, filterId, layout.shots],
+    [user, couple, layoutId, filterId, layout.shots, pendingUpload, scope, originals, captureId],
   );
 
   const copyLink = async () => {
+    const current = scope.capture(); if (!current()) return;
     await navigator.clipboard.writeText(`${location.origin}/timeline`);
+    if (!current()) return;
     setCopied(true);
-    setTimeout(() => setCopied(false), 1600);
+    setTimeout(() => { if (current()) setCopied(false); }, 1600);
   };
 
   if (!enabled || (checked && !paired)) {
     return (
       <main className="flex min-h-dvh flex-1 flex-col items-center justify-center gap-4 px-6 text-center">
         <p className="text-lg font-semibold">Pair with your partner first</p>
+        {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
         <p className="max-w-sm text-sm text-muted-foreground">
           Relay strips need a paired partner to finish your half. Set that up in
           your Shared Vault.
@@ -91,6 +143,11 @@ export default function NewRelayPage() {
         <RoleCapture
           shots={layout.shots}
           filterId={filterId}
+          initialOriginals={initialOriginals}
+          onCheckpoint={async blobs => {
+            const current = scope.capture(); if (!current() || !user || !captureId) throw new Error("Your relay page changed.");
+            await saveRelayOriginals({ id: captureId, ownerId: user.id, layoutId, filterId, role: "A", shots: layout.shots, originals: blobs, active: current });
+          }}
           onDone={onShot}
           hint="Shoot your half. Your partner fills the rest later."
         />
@@ -103,6 +160,17 @@ export default function NewRelayPage() {
       <main className="flex min-h-dvh flex-1 flex-col items-center justify-center gap-3">
         <Loader2 className="animate-spin text-muted-foreground" />
         <p className="text-sm text-muted-foreground">Saving your half…</p>
+        {error && <p role="alert" className="max-w-sm px-4 text-sm">{error}</p>}
+      </main>
+    );
+  }
+
+  if (step === "failed" && pendingUpload) {
+    return (
+      <main className="flex min-h-dvh flex-1 flex-col items-center justify-center gap-4 px-6 text-center">
+        <p role="alert" className="max-w-sm text-sm text-destructive">{error}</p>
+        <RelayOriginalRecovery originals={originals} saved={originalsSaved} />
+        <button onClick={() => void onShot(pendingUpload.frames)} className="rounded-full bg-accent px-5 py-2.5 font-semibold text-accent-foreground">Retry saving</button>
       </main>
     );
   }
@@ -148,8 +216,7 @@ export default function NewRelayPage() {
       </header>
 
       <p className="text-sm text-muted-foreground">
-        Take your photos now; your partner finishes the strip whenever they can. No
-        need to be online together.
+        Take your photos now. Your partner can finish the strip later.
       </p>
 
       <section>
@@ -175,7 +242,7 @@ export default function NewRelayPage() {
       </section>
 
       <button
-        onClick={() => setStep("shoot")}
+        onClick={() => { const id = captureId ?? crypto.randomUUID(); setCaptureId(id); const url = new URL(location.href); url.searchParams.set("draft", id); window.history.replaceState(window.history.state, "", url.pathname + url.search); setStep("shoot"); }}
         className="mt-auto min-h-13 rounded-2xl bg-accent font-semibold text-accent-foreground shadow-lg shadow-accent/25"
       >
         Shoot my half

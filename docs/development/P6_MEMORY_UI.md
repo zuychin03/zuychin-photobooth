@@ -1,0 +1,22 @@
+# P6 memory library and annual recap
+
+The `/memories` route extends the existing retained activity and private chapter service. `/timeline` remains available and links to memories and rituals. `PB_MEMORIES_ENABLED` stays disabled until the authorised integration gate.
+
+The library uses an explicit civil year and IANA timezone, descending timestamp/UUID pagination, 20 rows per page, private chapters and occasion labels. It distinguishes available, verified archived, pending archive, expired, deleted, unknown and access-lost records. Dates describe save/verification provenance rather than invented camera timestamps. Own UTC-month totals remain separately labelled and do not follow the chapter or civil-year filter. Bounded activity retention is disclosed; the page does not claim a complete archive.
+
+The read runtime shares one account epoch across activity, retained-strip and project clients. It does not depend on IndexedDB or upload-journal availability. Account changes close all clients and remove account content. Writes use current revisions; an unconfirmed mutation blocks further changes until refresh. Chapter deletion requires an empty chapter and does not delete photographs.
+
+Photo previews are explicit and limited to one reduced image. Up to 12 accessible sources can be selected across pages of the same query. Query/refresh/account/visibility changes clear previews and selections. A preview finishing after visibility loss is aborted and generation-fenced. Annual preparation processes one source at a time, reduces each to at most 640 pixels per edge, and uses the existing recap renderer with bounded geometry. It checks access before fetching and again before publishing, with another check when Download is pressed. Unavailable sources fail explicitly rather than being replaced. Export is a local PNG; it does not silently save to the cloud or count as another memory.
+
+The native decoder/encoder slot stays occupied until late work settles after cancellation or timeout. Final images are bounded to 4096 pixels per edge, 12 megapixels and 32 MiB encoded. Each original is released after reduction. These are allocation bounds, not measurements of browser/GPU memory.
+
+## Current evidence
+
+- Five runtime lifecycle tests and five chronological-browse tests passed. Whole TypeScript and scoped ESLint passed after integration. The static Impeccable detector returned no findings for the four new memory components.
+- The media adapter passed 12 focused tests, including source changes, sequential preparation, large retained PNG reduction, late cancellation and native encode timeout accounting.
+- Disposable migration 013 checks passed for chronological microsecond cursors, civil-year boundaries, private chapters, unpair/re-pair and migration reruns. The database was removed afterwards.
+- The gated real route was rendered at 1280 × 720 and 390 × 844 in the native desktop browser. Its fallback and navigation were readable without horizontal overflow by visual inspection.
+- Five real-client synthetic transport tests passed for multi-page civil-year browsing, exact-account labels, chapter/annotation CAS and lost acknowledgements, verified PNG delivery, revocation and retained UTC totals after unpair. The isolated `/v2-lab/memories` route generates a small local PNG and rejects production rendering. Its fake transport makes no provider requests and does not prove SQL permissions.
+- On 23/09/2026, the parent integration run exercised the native rehearsal: chapter creation with lost acknowledgement and single-copy recovery, rename, annotation, chapter filtering, non-empty deletion refusal, unassign-and-delete, UTC/civil-year boundaries, 37 own UTC source records, Bao account isolation, unpair, one available preview, a three-source annual result selected across pages, and revocation before download clearing that result.
+- The confirmation pass on 23/09/2026 checked compact rows, distinct availability copy, selection navigation and recap focus. Three 256 × 384 thumbnails produced a 920 × 674 PNG. Desktop light and narrow light views were readable without horizontal overflow; the earlier pass covered dark views. The selected-photo link focused the recap section, successful rendering focused its preview heading, and a failed refresh focused the memory heading while clearing media and selection.
+- The full production build and final all-page English copy review remain pending at this checkpoint. Real authentication, provider storage, OS download delivery and physical phones remain unverified.

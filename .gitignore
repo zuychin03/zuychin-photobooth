@@ -60,9 +60,9 @@ CHANGELOG.md
 ROADMAP.md
 /notes/
 /external/
+/.tmp-*
 
-# granular Supabase migrations are for local development only; the public repo
-# ships the combined end-to-end script at the root (supabase-setup.sql)
+# Legacy scratch migrations; reviewed V2 migrations live in database/migrations.
 /supabase/
 
 # keep the setup sample despite .env*

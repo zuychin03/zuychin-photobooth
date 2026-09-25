@@ -1,0 +1,115 @@
+[
+  {
+    "id": "birthday-confetti-v2",
+    "name": "Birthday Confetti",
+    "category": "events",
+    "file": "scenes/birthday-confetti-v2.png",
+    "prompt": "Use case: photorealistic-natural. Asset type: original empty event scene background for a browser photobooth, to composite 2-4 waist-up people later. Create one landscape 3:2 image, ideally 1536 x 1024 pixels. Scene: a sophisticated, playful pastel birthday studio, not a wedding. Eye-level straight-on editorial photograph with real material textures. Warm blush, butter yellow and pale lavender accents, matte painted studio surfaces, a few dimensional party balloons confined to the outer left and right edges, tiny restrained paper confetti only at the outer edges. The central 65% of the image is a large quiet warm cream space, gently lit and completely uncluttered behind future people. Soft flattering daylight, clear centre, subtle authentic shadows. The space should feel celebratory, modern and real, not a glossy 3D render. Keep all decor at the extreme edges or above future heads; no foreground furniture or objects blocking bodies. No people, faces, human figures, letters, words, numbers, logos, watermarks, collage, photo slots, frames around photo holes, interface elements or birthday cake. Deliver one full-bleed photographic background only.",
+    "sourcePath": "C:\\Users\\kduy1\\.codex\\generated_images\\01a0c93e-210a-74c3-b2d5-88b0aae83879\\exec-d2ae7552-1252-4def-91b7-9d780507f40c.png",
+    "qa": "Visually inspected: warm cream central portrait area is open; pastel balloons, tassels and paper accents stay at edges and high overhead; no people, text or logos. Clearly a playful birthday setting. Flat studio lighting should suit later group compositing. Source scene reviewed, no live compositing or layout crop test performed.",
+    "focalPoint": [
+      0.5,
+      0.5
+    ],
+    "dimensions": {
+      "width": 1536,
+      "height": 1024
+    },
+    "bytes": 1760009,
+    "sha256": "daad6b939057525fa8eb2ce23a38dcf465cae8a26ac95a3a2acf80561228a57c",
+    "generationMethod": "built-in imagegen"
+  },
+  {
+    "id": "midnight-disco-v2",
+    "name": "Midnight Disco",
+    "category": "events",
+    "file": "scenes/midnight-disco-v2.png",
+    "prompt": "Use case: photorealistic-natural. Asset type: original empty event scene background for a browser photobooth, to composite 2-4 waist-up people later. Create one landscape 3:2 image, ideally 1536 x 1024 pixels. Scene: a refined midnight disco venue in dusty rose and chrome, an empty real interior photographed at eye level, straight-on. A single small mirror ball hangs near the upper edge, high above future heads. Brushed chrome accents and rose-lit textured wall panels are confined to the outer edges. Gentle side lighting and a few soft reflected disco light flecks near the far edges create a real photographic atmosphere. Keep the central 65% completely open and uncluttered, a luminous muted rose wall with smooth tonal transitions, mid-tone enough for composited people to remain readable. This is a sophisticated dance-party backdrop, neither a wedding set nor a science-fiction room. Editorial realism, real metallic and plaster textures, subtle film grain, no synthetic 3D sheen. Keep foreground entirely free of furniture and props that would block bodies. No people, faces, human figures, letters, words, numbers, logos, watermarks, collage, photo slots, interface elements, laser beams crossing the centre or extremely dark shadows. Deliver one full-bleed photographic background only.",
+    "sourcePath": "C:\\Users\\kduy1\\.codex\\generated_images\\01a0c93e-210a-74c3-b2d5-88b0aae83879\\exec-d2562240-cf56-4d44-b40c-131cae28d580.png",
+    "qa": "Visually inspected: illuminated rose plaster centre remains readable, with reflective chrome side panels and a small mirror ball at the upper edge. Central portrait space and foreground are clear. No people, text or logos. Disco mood differs from the garden/birthday scenes. Source scene reviewed, no live compositing or layout crop test performed.",
+    "focalPoint": [
+      0.5,
+      0.5
+    ],
+    "dimensions": {
+      "width": 1536,
+      "height": 1024
+    },
+    "bytes": 2532046,
+    "sha256": "71d0b0314c4a9d765461134aeaee5b9874206b840444396b5bd1076e4de03b63",
+    "generationMethod": "built-in imagegen"
+  },
+  {
+    "id": "graduation-atelier-v2",
+    "name": "Graduation Atelier",
+    "category": "events",
+    "file": "scenes/graduation-atelier-v2.png",
+    "prompt": "Use case: photorealistic-natural. Asset type: original empty event scene background for a browser photobooth, to composite 2-4 waist-up people later. Create one landscape 3:2 image, ideally 1536 x 1024 pixels. Scene: an editorial graduation celebration atelier with warm cream and deep navy materials, photographed straight-on at eye level. A refined real plaster studio wall and pale floor, sophisticated satin navy ribbons draped vertically only at the far outer edges, with small abstract laurel leaf details in brushed warm gold near the extreme upper corners. Graduation through dignified academic colour and laurel symbolism, not a wedding, not a party balloon wall. The middle 65% of the image must remain entirely uncluttered open warm cream space for future faces and bodies. Soft window-like studio daylight with subtle realistic material shadows, understated celebration, real satin and plaster texture, editorial photographic realism. Keep decorations away from the central composition and no foreground objects blocking people. No people, faces, human figures, mortarboards, graduation hats, diplomas, letters, words, numbers, university insignia, logos, watermarks, collage, photo slots, UI or decorative frame around a photo hole. Deliver one full-bleed photographic background only.",
+    "sourcePath": "C:\\Users\\kduy1\\.codex\\generated_images\\01a0c93e-210a-74c3-b2d5-88b0aae83879\\exec-3e58ec6e-caf8-4d51-8561-c9dcec47afa0.png",
+    "qa": "Visually inspected: navy satin edge drapes, gold laurel details in the top corners and a broad textured cream centre. No hats, university marks, text, people or foreground obstruction. Restrained academic celebration palette. Source scene reviewed, no live compositing or layout crop test performed.",
+    "focalPoint": [
+      0.5,
+      0.5
+    ],
+    "dimensions": {
+      "width": 1536,
+      "height": 1024
+    },
+    "bytes": 2198066,
+    "sha256": "cd6b305fe85fb71aaccaa1404d8af634a79f1d7f2a8464f47ca69160a150fe50",
+    "generationMethod": "built-in imagegen"
+  },
+  {
+    "id": "winter-celebration-v2",
+    "name": "Winter Celebration",
+    "category": "events",
+    "file": "scenes/winter-celebration-v2.png",
+    "prompt": "Use case: photorealistic-natural. Asset type: original empty seasonal event scene background for a browser photobooth, to composite 2-4 waist-up people later. Create one landscape 3:2 image, ideally 1536 x 1024 pixels. Scene: a warm indoor winter celebration set in evergreen and antique gold, photographed straight-on at eye level with real editorial interior photography. A quiet softly illuminated warm ivory plaster wall is centred. Natural evergreen branches, restrained tiny warm lights and a few antique gold ornaments sit only at the extreme left/right edges and upper corners, suggesting an intimate seasonal gathering without a religious symbol. The central 65% remains completely open and uncluttered, an even calm warm neutral background suitable for later portraits. Real spruce needle, brushed metal and plaster textures; soft warm ambient light with natural gentle shadows, inviting but not dark. Keep all foliage and props away from central future bodies and faces, no foreground furniture or branches blocking people. Not a wedding, not an outdoor snow landscape. No people, faces, human figures, letters, words, numbers, logos, watermarks, collage, photo slots, interface elements, religious emblems, fireplace, gifts or large tree in the centre. Deliver one full-bleed photographic background only.",
+    "sourcePath": "C:\\Users\\kduy1\\.codex\\generated_images\\01a0c93e-210a-74c3-b2d5-88b0aae83879\\exec-bedb70a7-47bb-4685-8172-60eb3055c605.png",
+    "qa": "Visually inspected: warm evergreen and antique-gold seasonal decor stays at the edges; calm cream centre is open. Small lanterns sit at the extreme bottom sides, outside the central portrait area. No people, text, logos or religious emblems. Source scene reviewed, no live compositing or layout crop test performed.",
+    "focalPoint": [
+      0.5,
+      0.5
+    ],
+    "dimensions": {
+      "width": 1536,
+      "height": 1024
+    },
+    "bytes": 2202794,
+    "sha256": "10c7e927001d6fbc47eb5743998628dfaec2eb290e9dc47397afb29c6736caaa",
+    "generationMethod": "built-in imagegen"
+  },
+  {
+    "id": "summer-festival-v2",
+    "name": "Summer Festival",
+    "category": "events",
+    "file": "scenes/summer-festival-v2.png",
+    "prompt": "Use case: precise-object-edit. Asset type: empty summer festival scene background for later compositing of 2-4 waist-up people. Refine the attached garden-party background. Preserve its landscape 3:2 composition, daylight, pastel bunting along the very top, green garden palette, realistic cloth and leaf textures, and small colourful flowers at the far edges. Change only the central background softness and visual clutter: make the distant trees and bushes behind the central 65% of the image softly defocused and low contrast, as if photographed through a portrait lens focused on an invisible group in the foreground. Remove any crisp visible trunk or branch shapes through the central face area. Keep the central lawn open and soften distracting grass/shadow texture. The centre must read as calm airy pale-green photographic garden bokeh suitable behind faces, not an artificial blank wall or painted gradient. Keep extreme-edge foliage and upper bunting clearer to retain a believable outdoor summer party. Keep camera at eye level and real photographic lighting. No people, faces, human figures, text, letters, numbers, logos, watermarks, collage, photo slots, UI, new props or foreground objects. Deliver one full-bleed photographic scene, ideally 1536 x 1024.",
+    "sourcePath": "C:\\Users\\kduy1\\.codex\\generated_images\\01a0c93e-210a-74c3-b2d5-88b0aae83879\\exec-adabafd7-b936-419d-afec-5934dea456d9.png",
+    "qa": "Visually inspected after one imagegen refinement: central trees and lawn softened to reduce detail behind faces; clearer edge flowers and high pastel bunting preserve an outdoor party identity. Bright natural daylight, no central props, people, text or logos. Source scene reviewed, no live compositing or layout crop test performed.",
+    "focalPoint": [
+      0.5,
+      0.5
+    ],
+    "generationHistory": [
+      {
+        "prompt": "Use case: photorealistic-natural. Asset type: original empty outdoor event scene background for a browser photobooth, to composite 2-4 waist-up people later. Create one landscape 3:2 image, ideally 1536 x 1024 pixels. Scene: a bright colourful outdoor summer garden party in clear daytime, photographed straight-on from an eye-level camera. A single strand of pastel bunting sits only along the very top edge, high above future heads. Fresh green garden foliage and small restrained coral, butter-yellow and lavender flowers sit at the far left and right edges; the middle distance opens into a softly sunlit, gently defocused garden lawn. Keep the central 65% calm, uncluttered and evenly lit for future waist-up people, with pale green natural background tones and no distracting branches behind faces. Real leaf and cloth textures, authentic dappled daylight at the outer edges, airy editorial realism. Make it distinctly a relaxed summer festival or friends' garden party, not a wedding and not an indoor floral studio. No tables, chairs, stalls, cake, arch, front-stage props or foreground objects blocking bodies. No people, faces, human figures, letters, words, numbers, logos, watermarks, collage, photo slots, UI, fairy lights, dusk or night lighting. Deliver one full-bleed photographic background only.",
+        "sourcePath": "C:\\Users\\kduy1\\.codex\\generated_images\\01a0c93e-210a-74c3-b2d5-88b0aae83879\\exec-e6bad11d-5c8e-440e-aa0b-1f2306b91a5a.png"
+      },
+      {
+        "prompt": "Use case: precise-object-edit. Asset type: empty summer festival scene background for later compositing of 2-4 waist-up people. Refine the attached garden-party background. Preserve its landscape 3:2 composition, daylight, pastel bunting along the very top, green garden palette, realistic cloth and leaf textures, and small colourful flowers at the far edges. Change only the central background softness and visual clutter: make the distant trees and bushes behind the central 65% of the image softly defocused and low contrast, as if photographed through a portrait lens focused on an invisible group in the foreground. Remove any crisp visible trunk or branch shapes through the central face area. Keep the central lawn open and soften distracting grass/shadow texture. The centre must read as calm airy pale-green photographic garden bokeh suitable behind faces, not an artificial blank wall or painted gradient. Keep extreme-edge foliage and upper bunting clearer to retain a believable outdoor summer party. Keep camera at eye level and real photographic lighting. No people, faces, human figures, text, letters, numbers, logos, watermarks, collage, photo slots, UI, new props or foreground objects. Deliver one full-bleed photographic scene, ideally 1536 x 1024.",
+        "sourcePath": "C:\\Users\\kduy1\\.codex\\generated_images\\01a0c93e-210a-74c3-b2d5-88b0aae83879\\exec-adabafd7-b936-419d-afec-5934dea456d9.png",
+        "referencedImagePaths": [
+          "C:\\Users\\kduy1\\.codex\\generated_images\\01a0c93e-210a-74c3-b2d5-88b0aae83879\\exec-e6bad11d-5c8e-440e-aa0b-1f2306b91a5a.png"
+        ]
+      }
+    ],
+    "dimensions": {
+      "width": 1536,
+      "height": 1024
+    },
+    "bytes": 2563538,
+    "sha256": "734cb11d09d48b1afd526191863bcf2cc826c8a58d50f4a5c0c1129d5e173d3b",
+    "generationMethod": "built-in imagegen"
+  }
+]

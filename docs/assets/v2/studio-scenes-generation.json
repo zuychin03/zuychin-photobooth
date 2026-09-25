@@ -1,0 +1,102 @@
+[
+  {
+    "id": "porcelain-sculpture-studio-v2",
+    "name": "Porcelain Sculpture Studio",
+    "category": "create",
+    "file": "scenes/porcelain-sculpture-studio-v2.png",
+    "prompt": "Use case: photorealistic-natural. Asset type: original ready-to-composite empty photographic studio background for a premium browser photobooth, scene porcelain-sculpture-studio-v2. Create ONE standalone landscape 3:2 image, ideally 1536x1024. Editorial ivory photographic studio with a warm off-white seamless plaster cyclorama, subtle architectural material detail, and large tactile ceramic sculptural forms confined strictly to the outermost left and right edges. Sculptures have refined asymmetrical curves and real matte porcelain glaze, not flat graphics. Straight-on eye-level camera with natural undistorted perspective. Keep the centre 65 percent of the entire image and the lower middle completely open and calm for two to four waist-up person cutouts added later; no plinth, vessel, furniture or object crossing the central portrait space. Soft large-source frontal studio light, warm ivory, porcelain, oat and very restrained beige palette. Sophisticated art-direction with realistic texture and gentle shadows, no decorative picture frame, no moon, no folded paper. Composition should remain useful when centre-cropped to portrait. Empty environment only. Absolutely no people, faces, human silhouettes, statues of people, text, letters, numbers, logos, watermarks, photo slots, collages, mockups, UI or borders.",
+    "sourcePath": "C:\\Users\\kduy1\\.codex\\generated_images\\01a0c93d-d9c5-7260-ad63-c378c2e4edb6\\exec-1572bb90-9821-4410-b2d7-a9325839106b.png",
+    "qa": "Visually inspected the generated 1536x1024 source. Large matte ivory ceramic forms stay along the outer edges, with warm plaster texture and a broad empty centre/lower middle suitable for later cutouts. No visible people, text, logos, watermarks, collage, photo slots or UI. Small dry foliage is peripheral on the right. Application composition and crop tests remain pending.",
+    "focalPoint": [
+      0.5,
+      0.5
+    ],
+    "dimensions": {
+      "width": 1536,
+      "height": 1024
+    },
+    "bytes": 2143768,
+    "sha256": "7aaef33c5e4953973a2abc2590abe66331a4025140c74c697820fe983cf690af",
+    "generationMethod": "built-in imagegen"
+  },
+  {
+    "id": "lilac-origami-v2",
+    "name": "Lilac Origami",
+    "category": "create",
+    "file": "scenes/lilac-origami-v2.png",
+    "prompt": "Use case: stylized-concept. Asset type: original ready-to-composite empty creative studio backdrop for a premium browser photobooth, scene lilac-origami-v2. Create ONE standalone landscape 3:2 image, ideally 1536x1024. A sophisticated tactile dimensional set constructed from heavy lilac, muted mauve, pale lavender and warm white folded art paper. Large elegant faceted folds and carefully layered curled paper edges rise along the far left and far right, with a few folded planes overhead at the outer corners; photorealistic paper fibres, convincing thickness, subtle contact shadows and beautifully lit depth. This is a high-end photographed paper installation, not a flat vector graphic, simple gradient, icon pattern or a moon scene. Straight-on eye-level camera with calm level perspective. The centre 65 percent and lower middle remain a smooth, largely unbroken pale lilac studio cyclorama, entirely empty for two to four waist-up cutout people added later. Keep all pronounced folds peripheral and avoid points or shapes intruding into faces. Soft broad frontal light, restrained editorial colour, subtle shadow separation. Useful when centre-cropped to portrait. Absolutely no people, faces, silhouettes, text, letters, numbers, logos, watermarks, stars, moons, photo slots, photo frames, collages, mockups or UI. One continuous full-canvas environment.",
+    "sourcePath": "C:\\Users\\kduy1\\.codex\\generated_images\\01a0c93d-d9c5-7260-ad63-c378c2e4edb6\\exec-81ccf10a-a95b-4229-90bd-0c4c09ef9a66.png",
+    "qa": "Visually inspected the generated 1536x1024 source. Dimensional lilac paper folds with visible material texture frame a calm open centre and clear lower middle. Distinct from the existing moon scene; no moon or simple vector substitute. No visible people, text, logos, watermarks, collage, photo slots or UI. Tight portrait crops will naturally omit much of the outer paper detail. Application composition tests remain pending.",
+    "focalPoint": [
+      0.5,
+      0.5
+    ],
+    "dimensions": {
+      "width": 1536,
+      "height": 1024
+    },
+    "bytes": 1985263,
+    "sha256": "af23e6610aaad81399d77e7ef10ac88ca08b48db1a787d5dac540fa260c398f6",
+    "generationMethod": "built-in imagegen"
+  },
+  {
+    "id": "liquid-chrome-v2",
+    "name": "Liquid Chrome",
+    "category": "create",
+    "file": "scenes/liquid-chrome-v2.png",
+    "prompt": "Use case: photorealistic-natural. Asset type: original ready-to-composite empty editorial studio backdrop for a premium browser photobooth, scene liquid-chrome-v2. Create ONE standalone landscape 3:2 image, ideally 1536x1024. Sculptural polished chrome ribbons occupy only the outer left and outer right margins of a sophisticated photographic studio, fluid twisting metal with convincing reflections of an empty studio, fine highlight gradients and a few brushed-metal transitions. One ribbon may curve high in an outside corner but none crosses the central subject area. Dusty blush reflected edge light, deep ink in peripheral reflections, neutral warm pale-grey seamless background through the centre. Real sculptural metal set photographed with a large softbox, tactile photographic realism, controlled high-end fashion editorial mood. Straight-on eye-level camera, flat-on composition, no extreme wide-angle. Keep the centre 65 percent and lower middle completely clear and calm for two to four waist-up people to be composited later. Central studio floor subtle and uninterrupted. Not an enclosed portal, not a mirrored wall, not a flat vector substitute. Useful when centre-cropped to portrait. No reflections of people, cameras or text. Absolutely no people, faces, silhouettes, mannequins, text, letters, numbers, logos, watermarks, photo slots, collage, UI, mockups or borders. One continuous empty environment.",
+    "sourcePath": "C:\\Users\\kduy1\\.codex\\generated_images\\01a0c93d-d9c5-7260-ad63-c378c2e4edb6\\exec-dfe5655b-5f8b-4abd-9d11-78cd9c988dc5.png",
+    "qa": "Visually inspected the generated 1536x1024 source. Reflective chrome sculptures remain peripheral, with restrained blush highlights and a clear neutral centre/lower middle. No visible reflected people or cameras; no text, logos, watermarks, collage, photo slots or UI. Dark reflective accents differentiate this from the paper and ceramic sets. Application composition and crop tests remain pending.",
+    "focalPoint": [
+      0.5,
+      0.5
+    ],
+    "dimensions": {
+      "width": 1536,
+      "height": 1024
+    },
+    "bytes": 1849009,
+    "sha256": "125300dc3ac7e3f564b45e0819030c6b58df4e17ffc93668ae8993ed58bdadf1",
+    "generationMethod": "built-in imagegen"
+  },
+  {
+    "id": "film-noir-lobby-v2",
+    "name": "Film Noir Lobby",
+    "category": "create",
+    "file": "scenes/film-noir-lobby-v2.png",
+    "prompt": "Use case: photorealistic-natural. Asset type: original ready-to-composite empty cinematic architecture background for a premium browser photobooth, scene film-noir-lobby-v2. Create ONE standalone landscape 3:2 image, ideally 1536x1024. A vintage cinema lobby photographed in warm black-and-white silver-gelatin tones: elegant dark fluted architectural columns at the extreme sides, restrained art-deco wall details, softly glowing frosted-glass sconces high at the side edges, subtle stone floor and deep charcoal shadows. Use architectural forms and real material texture rather than posters or signage. The central wall is broad, calm, softly lit mid-grey with an understated warm luminous wash; the entire centre 65 percent and lower middle stays empty for two to four waist-up portrait cutouts added later. No central door divisions cutting through faces, no desk, counter, rope barrier or furniture in front of subjects. Cinematic photographed realism, refined film grain, gentle vignetting only at the far outside edges. Straight-on eye-level camera, level horizon, flat-on architecture, natural perspective. No harsh spotlight that demands a specific face lighting direction. Useful when centre-cropped to portrait. Absolutely no people, faces, human silhouettes, reflections of people, mannequins, posters, signs, signage, text, letters, numbers, ticket labels, logos, watermarks, photo slots, photo frames, collage, mockups or UI. One continuous empty lobby scene.",
+    "sourcePath": "C:\\Users\\kduy1\\.codex\\generated_images\\01a0c93d-d9c5-7260-ad63-c378c2e4edb6\\exec-7903587c-eceb-448e-9f45-16f6ec1b7b22.png",
+    "qa": "Visually inspected the generated 1536x1024 source. Warm monochrome cinema-lobby architecture, peripheral sconces and fluted columns, central wall illumination, and open floor provide a darker editorial option. No visible signage, letters, people, reflections of people, logos, watermarks, collage, photo slots or UI. Central wall moulding is background architecture and does not obstruct the subject area. Application composition and crop tests remain pending.",
+    "focalPoint": [
+      0.5,
+      0.5
+    ],
+    "dimensions": {
+      "width": 1536,
+      "height": 1024
+    },
+    "bytes": 2302631,
+    "sha256": "93e1d3db9862db2adf96db0335ee8bdfcb7d9d9192463810ab3b7fc4b1fd091e",
+    "generationMethod": "built-in imagegen"
+  },
+  {
+    "id": "candy-cloud-studio-v2",
+    "name": "Candy Cloud Studio",
+    "category": "create",
+    "file": "scenes/candy-cloud-studio-v2.png",
+    "prompt": "Use case: stylized-concept. Asset type: original ready-to-composite empty tactile dream studio background for a premium browser photobooth, scene candy-cloud-studio-v2. Create ONE standalone landscape 3:2 image, ideally 1536x1024. A high-end physical dream set photographed for a sophisticated fashion editorial: large sculptural pastel cloud forms clustered overhead and at the far outside edges, made from softly flocked foam and subtly fuzzy felt with a few satin-smooth forms, in restrained pale blush, creamy peach and misty powder blue. Clouds have convincing material texture, volume and softly diffused studio shadows; they are abstract physical sculptures, not cartoon smiling clouds or childlike repeated icons. The central 65 percent and lower middle are a calm seamless warm cream cyclorama, completely empty for two to four waist-up people composited later. No floor props, platforms or clouds crossing the lower central subject area; overhead clouds must stay high and mostly peripheral. Straight-on eye-level camera, natural level perspective, spacious airy composition, gentle broad frontal light. No moon, stars, rainbow, sugary food, paper folds or flat vector graphics. The image should remain usable when centre-cropped to portrait. Absolutely no people, faces, silhouettes, eyes, text, letters, numbers, logos, watermarks, photo slots, photo frames, collages, mockups, borders or UI. One continuous empty studio environment.",
+    "sourcePath": "C:\\Users\\kduy1\\.codex\\generated_images\\01a0c93d-d9c5-7260-ad63-c378c2e4edb6\\exec-a784d998-91ad-4e16-9959-ba4c4dca351f.png",
+    "qa": "Visually inspected the generated 1536x1024 source. Tactile blush, cream and powder-blue cloud sculptures sit overhead and at the edges, leaving an open cream centre and lower middle. No faces or childlike icon pattern; no visible people, text, logos, watermarks, collage, photo slots or UI. Upper cloud detail calls for careful headroom in final cutout placement. Application composition and crop tests remain pending.",
+    "focalPoint": [
+      0.5,
+      0.5
+    ],
+    "dimensions": {
+      "width": 1536,
+      "height": 1024
+    },
+    "bytes": 1920462,
+    "sha256": "41317b672004827a549af0cdc71a0a1dac9c4b6bb5a61570299c5f362bbc34ff",
+    "generationMethod": "built-in imagegen"
+  }
+]

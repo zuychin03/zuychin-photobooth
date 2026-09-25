@@ -4,6 +4,13 @@ import { SessionProvider } from "@/lib/session";
 import { AuthProvider } from "@/lib/auth";
 import AuthCookieMigration from "@/components/AuthCookieMigration";
 import PwaRegister from "@/components/PwaRegister";
+import EventKioskGuard from "@/components/events/EventKioskGuard";
+import { AppNavigationProvider } from "@/components/AppNavigation";
+import { SiteNav } from "@/components/SiteNav";
+import { Suspense } from "react";
+import { connection } from "next/server";
+import { isLocalRelease } from "@/lib/release-mode";
+import { ReleaseFeatureBoundary, ReleaseModeProvider } from "@/components/ReleaseMode";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -31,10 +38,10 @@ const notoEmoji = Noto_Emoji({
 export const metadata: Metadata = {
   title: "Zuychin Photobooth",
   description:
-    "Take photobooth strips together from anywhere: a booth for two, no matter the distance.",
+    "Create photo strips on your own, capture together from anywhere, and share memories at events.",
   icons: {
-    icon: "/favicon.svg",
-    apple: "/apple-touch-icon.png",
+    icon: "/favicon-v2.svg",
+    apple: "/apple-touch-icon-v2.png",
   },
   appleWebApp: {
     capable: true,
@@ -47,11 +54,13 @@ export const viewport: Viewport = {
   themeColor: "#0c0a09",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  await connection();
+  const localOnly = isLocalRelease();
   return (
     <html
       lang="en"
@@ -59,10 +68,12 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col">
         <PwaRegister />
-        <AuthCookieMigration />
-        <AuthProvider>
-          <SessionProvider>{children}</SessionProvider>
-        </AuthProvider>
+        {!localOnly && <AuthCookieMigration />}
+        <Suspense fallback={<main className="min-h-dvh" aria-label="Checking shared-device privacy" />}>
+          <EventKioskGuard><AuthProvider accountsEnabled={!localOnly}>
+            <ReleaseModeProvider localOnly={localOnly}><SessionProvider><AppNavigationProvider><SiteNav /><div className="app-content flex min-h-0 flex-1 flex-col"><ReleaseFeatureBoundary>{children}</ReleaseFeatureBoundary></div></AppNavigationProvider></SessionProvider></ReleaseModeProvider>
+          </AuthProvider></EventKioskGuard>
+        </Suspense>
       </body>
     </html>
   );

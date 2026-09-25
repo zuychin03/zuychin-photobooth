@@ -31,12 +31,17 @@ export function canvasToJpeg(
 
 export async function blobToCanvas(blob: Blob): Promise<HTMLCanvasElement> {
   const bitmap = await createImageBitmap(blob);
-  const canvas = document.createElement("canvas");
-  canvas.width = bitmap.width;
-  canvas.height = bitmap.height;
-  canvas.getContext("2d")!.drawImage(bitmap, 0, 0);
-  bitmap.close();
-  return canvas;
+  try {
+    const canvas = document.createElement("canvas");
+    canvas.width = bitmap.width;
+    canvas.height = bitmap.height;
+    const context = canvas.getContext("2d");
+    if (!context) throw new Error("Canvas context unavailable");
+    context.drawImage(bitmap, 0, 0);
+    return canvas;
+  } finally {
+    bitmap.close();
+  }
 }
 
 export async function fileToCanvas(file: File): Promise<HTMLCanvasElement> {

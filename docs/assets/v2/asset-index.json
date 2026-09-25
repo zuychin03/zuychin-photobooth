@@ -1,0 +1,415 @@
+{
+  "version": "2.0.0",
+  "generatedOn": "22/09/2026",
+  "status": "planning assets; application integration pending",
+  "assets": [
+    {
+      "id": "rooftop-blue-hour-v2",
+      "name": "Rooftop Blue Hour",
+      "category": "together",
+      "file": "scenes/rooftop-blue-hour-v2.png",
+      "width": 1536,
+      "height": 1024,
+      "bytes": 2240483,
+      "sha256": "56c3cbe77ef19f89820edb711b3301585f41ababdcf150489b5b0b0d8f937fad",
+      "focalPoint": [
+        0.5,
+        0.5
+      ],
+      "qa": "Visually inspected during original generation. Empty central subject space; no visible people, text or logos. Portrait cropping removes edge details. Live cutout compositing remains pending.",
+      "provenance": "initial-scenes-generation.json",
+      "usage": "Together backdrop, scene card or event wall background"
+    },
+    {
+      "id": "paper-moon-studio-v2",
+      "name": "Paper Moon Studio",
+      "category": "create",
+      "file": "scenes/paper-moon-studio-v2.png",
+      "width": 1536,
+      "height": 1024,
+      "bytes": 2110495,
+      "sha256": "eca7d3dbfeb7e34a45d461fd111595629e86ff0f18dfeb5c98d95058309e9a5c",
+      "focalPoint": [
+        0.5,
+        0.5
+      ],
+      "qa": "Visually inspected during original generation. Empty central subject space; no visible people, text or logos. Portrait cropping removes edge details. Live cutout compositing remains pending.",
+      "provenance": "initial-scenes-generation.json",
+      "usage": "Together backdrop, scene card or event wall background"
+    },
+    {
+      "id": "celebration-garden-v2",
+      "name": "Celebration Garden",
+      "category": "events",
+      "file": "scenes/celebration-garden-v2.png",
+      "width": 1536,
+      "height": 1024,
+      "bytes": 2612706,
+      "sha256": "8fbfe5474ec22dede55f22206b42c8db77f40b960e4d03389f081359b8a92b1c",
+      "focalPoint": [
+        0.5,
+        0.5
+      ],
+      "qa": "Visually inspected during original generation. Empty central subject space; no visible people, text or logos. Portrait cropping removes edge details. Live cutout compositing remains pending.",
+      "provenance": "initial-scenes-generation.json",
+      "usage": "Together backdrop, scene card or event wall background"
+    },
+    {
+      "id": "rainy-cafe-v2",
+      "name": "Rainy Café",
+      "category": "together",
+      "file": "scenes/rainy-cafe-v2.png",
+      "width": 1536,
+      "height": 1024,
+      "bytes": 2669487,
+      "sha256": "e267a6adca0c15dcc7a24b518e285c7f2ce1f6799e7a9fd7ab6fb2389bebfa4e",
+      "focalPoint": [
+        0.5,
+        0.5
+      ],
+      "qa": "Accepted after visual inspection of the generated image. Broad uninterrupted rainy window occupies the centre; furniture and lamps remain at far edges. Blue twilight and amber cafe lighting are distinct from the other scenes. No visible people, faces, legible text, logos, watermark, collage or UI. No image editing or regeneration. Live cutout compositing remains untested.",
+      "provenance": "remote-scenes-generation.json",
+      "usage": "Together backdrop, scene card or event wall background"
+    },
+    {
+      "id": "coastal-picnic-v2",
+      "name": "Coastal Picnic",
+      "category": "together",
+      "file": "scenes/coastal-picnic-v2.png",
+      "width": 1536,
+      "height": 1024,
+      "bytes": 2563720,
+      "sha256": "d0f553f4420fef372176d91f22721ea87a7ceb95655bf4301a8d70ee66e11f94",
+      "focalPoint": [
+        0.5,
+        0.5
+      ],
+      "qa": "Accepted after visual inspection of the generated image. Open central sand, sea and sky with picnic basket and cloth confined to a lower corner. Clearly late-summer golden-hour daylight with pale turquoise water and peach sky. No visible people, faces, text, logos, watermark, collage or UI. No image editing or regeneration. Live cutout compositing remains untested.",
+      "provenance": "remote-scenes-generation.json",
+      "usage": "Together backdrop, scene card or event wall background"
+    },
+    {
+      "id": "lantern-courtyard-v2",
+      "name": "Lantern Courtyard",
+      "category": "together",
+      "file": "scenes/lantern-courtyard-v2.png",
+      "width": 1536,
+      "height": 1024,
+      "bytes": 2685472,
+      "sha256": "7821dffddb304152525d9ee2b355d219b1dc876509854ce5e582946a020f19c0",
+      "focalPoint": [
+        0.5,
+        0.5
+      ],
+      "qa": "Accepted after visual inspection of the generated image. Large calm cream wall and open paving leave a wide central area for cutouts; lanterns, pots and foliage remain at the sides and upper edges. Fictional Vietnamese-inspired courtyard reads as blue-hour dusk. No visible people, faces, writing, logos, watermark, collage or UI. No image editing or regeneration. Live cutout compositing remains untested.",
+      "provenance": "remote-scenes-generation.json",
+      "usage": "Together backdrop, scene card or event wall background"
+    },
+    {
+      "id": "snowy-cabin-v2",
+      "name": "Snowy Cabin",
+      "category": "together",
+      "file": "scenes/snowy-cabin-v2.png",
+      "width": 1536,
+      "height": 1024,
+      "bytes": 2651190,
+      "sha256": "ce49f27146e132de647470bad0d93d65e0dfce624de7b6b9f87d2658eee51ef8",
+      "focalPoint": [
+        0.5,
+        0.5
+      ],
+      "qa": "Accepted after visual inspection of the generated image. Wide picture window has no central mullions; lamp and textiles remain at the edges and foreground floor is clear. Distant snowy trees add texture behind future cutouts, while the central upper region remains low contrast. Winter afternoon is distinct from the rainy scene. No visible people, faces, text, logos, watermark, collage or UI. No image editing or regeneration. Live cutout compositing remains untested.",
+      "provenance": "remote-scenes-generation.json",
+      "usage": "Together backdrop, scene card or event wall background"
+    },
+    {
+      "id": "spring-blossom-v2",
+      "name": "Spring Blossom",
+      "category": "together",
+      "file": "scenes/spring-blossom-v2.png",
+      "width": 1536,
+      "height": 1024,
+      "bytes": 3003338,
+      "sha256": "9ec949aef3b0c35390b75a387ff8548e1ac9dc1f8872902e67dfe72528a598d2",
+      "focalPoint": [
+        0.5,
+        0.5
+      ],
+      "qa": "Accepted after visual inspection of the generated image. Broad empty gravel path leads through soft spring foliage; blossom canopy stays mainly at the upper corners. Centre is open at the foreground and softly blurred farther back. Fresh morning daylight differs from the other four scenes. No visible people, faces, text, logos, watermark, collage or UI. No image editing or regeneration. Live cutout compositing remains untested.",
+      "provenance": "remote-scenes-generation.json",
+      "usage": "Together backdrop, scene card or event wall background"
+    },
+    {
+      "id": "porcelain-sculpture-studio-v2",
+      "name": "Porcelain Sculpture Studio",
+      "category": "create",
+      "file": "scenes/porcelain-sculpture-studio-v2.png",
+      "width": 1536,
+      "height": 1024,
+      "bytes": 2143768,
+      "sha256": "7aaef33c5e4953973a2abc2590abe66331a4025140c74c697820fe983cf690af",
+      "focalPoint": [
+        0.5,
+        0.5
+      ],
+      "qa": "Visually inspected the generated 1536x1024 source. Large matte ivory ceramic forms stay along the outer edges, with warm plaster texture and a broad empty centre/lower middle suitable for later cutouts. No visible people, text, logos, watermarks, collage, photo slots or UI. Small dry foliage is peripheral on the right. Application composition and crop tests remain pending.",
+      "provenance": "studio-scenes-generation.json",
+      "usage": "Together backdrop, scene card or event wall background"
+    },
+    {
+      "id": "lilac-origami-v2",
+      "name": "Lilac Origami",
+      "category": "create",
+      "file": "scenes/lilac-origami-v2.png",
+      "width": 1536,
+      "height": 1024,
+      "bytes": 1985263,
+      "sha256": "af23e6610aaad81399d77e7ef10ac88ca08b48db1a787d5dac540fa260c398f6",
+      "focalPoint": [
+        0.5,
+        0.5
+      ],
+      "qa": "Visually inspected the generated 1536x1024 source. Dimensional lilac paper folds with visible material texture frame a calm open centre and clear lower middle. Distinct from the existing moon scene; no moon or simple vector substitute. No visible people, text, logos, watermarks, collage, photo slots or UI. Tight portrait crops will naturally omit much of the outer paper detail. Application composition tests remain pending.",
+      "provenance": "studio-scenes-generation.json",
+      "usage": "Together backdrop, scene card or event wall background"
+    },
+    {
+      "id": "liquid-chrome-v2",
+      "name": "Liquid Chrome",
+      "category": "create",
+      "file": "scenes/liquid-chrome-v2.png",
+      "width": 1536,
+      "height": 1024,
+      "bytes": 1849009,
+      "sha256": "125300dc3ac7e3f564b45e0819030c6b58df4e17ffc93668ae8993ed58bdadf1",
+      "focalPoint": [
+        0.5,
+        0.5
+      ],
+      "qa": "Visually inspected the generated 1536x1024 source. Reflective chrome sculptures remain peripheral, with restrained blush highlights and a clear neutral centre/lower middle. No visible reflected people or cameras; no text, logos, watermarks, collage, photo slots or UI. Dark reflective accents differentiate this from the paper and ceramic sets. Application composition and crop tests remain pending.",
+      "provenance": "studio-scenes-generation.json",
+      "usage": "Together backdrop, scene card or event wall background"
+    },
+    {
+      "id": "film-noir-lobby-v2",
+      "name": "Film Noir Lobby",
+      "category": "create",
+      "file": "scenes/film-noir-lobby-v2.png",
+      "width": 1536,
+      "height": 1024,
+      "bytes": 2302631,
+      "sha256": "93e1d3db9862db2adf96db0335ee8bdfcb7d9d9192463810ab3b7fc4b1fd091e",
+      "focalPoint": [
+        0.5,
+        0.5
+      ],
+      "qa": "Visually inspected the generated 1536x1024 source. Warm monochrome cinema-lobby architecture, peripheral sconces and fluted columns, central wall illumination, and open floor provide a darker editorial option. No visible signage, letters, people, reflections of people, logos, watermarks, collage, photo slots or UI. Central wall moulding is background architecture and does not obstruct the subject area. Application composition and crop tests remain pending.",
+      "provenance": "studio-scenes-generation.json",
+      "usage": "Together backdrop, scene card or event wall background"
+    },
+    {
+      "id": "candy-cloud-studio-v2",
+      "name": "Candy Cloud Studio",
+      "category": "create",
+      "file": "scenes/candy-cloud-studio-v2.png",
+      "width": 1536,
+      "height": 1024,
+      "bytes": 1920462,
+      "sha256": "41317b672004827a549af0cdc71a0a1dac9c4b6bb5a61570299c5f362bbc34ff",
+      "focalPoint": [
+        0.5,
+        0.5
+      ],
+      "qa": "Visually inspected the generated 1536x1024 source. Tactile blush, cream and powder-blue cloud sculptures sit overhead and at the edges, leaving an open cream centre and lower middle. No faces or childlike icon pattern; no visible people, text, logos, watermarks, collage, photo slots or UI. Upper cloud detail calls for careful headroom in final cutout placement. Application composition and crop tests remain pending.",
+      "provenance": "studio-scenes-generation.json",
+      "usage": "Together backdrop, scene card or event wall background"
+    },
+    {
+      "id": "birthday-confetti-v2",
+      "name": "Birthday Confetti",
+      "category": "events",
+      "file": "scenes/birthday-confetti-v2.png",
+      "width": 1536,
+      "height": 1024,
+      "bytes": 1760009,
+      "sha256": "daad6b939057525fa8eb2ce23a38dcf465cae8a26ac95a3a2acf80561228a57c",
+      "focalPoint": [
+        0.5,
+        0.5
+      ],
+      "qa": "Visually inspected: warm cream central portrait area is open; pastel balloons, tassels and paper accents stay at edges and high overhead; no people, text or logos. Clearly a playful birthday setting. Flat studio lighting should suit later group compositing. Source scene reviewed, no live compositing or layout crop test performed.",
+      "provenance": "event-scenes-generation.json",
+      "usage": "Together backdrop, scene card or event wall background"
+    },
+    {
+      "id": "midnight-disco-v2",
+      "name": "Midnight Disco",
+      "category": "events",
+      "file": "scenes/midnight-disco-v2.png",
+      "width": 1536,
+      "height": 1024,
+      "bytes": 2532046,
+      "sha256": "71d0b0314c4a9d765461134aeaee5b9874206b840444396b5bd1076e4de03b63",
+      "focalPoint": [
+        0.5,
+        0.5
+      ],
+      "qa": "Visually inspected: illuminated rose plaster centre remains readable, with reflective chrome side panels and a small mirror ball at the upper edge. Central portrait space and foreground are clear. No people, text or logos. Disco mood differs from the garden/birthday scenes. Source scene reviewed, no live compositing or layout crop test performed.",
+      "provenance": "event-scenes-generation.json",
+      "usage": "Together backdrop, scene card or event wall background"
+    },
+    {
+      "id": "graduation-atelier-v2",
+      "name": "Graduation Atelier",
+      "category": "events",
+      "file": "scenes/graduation-atelier-v2.png",
+      "width": 1536,
+      "height": 1024,
+      "bytes": 2198066,
+      "sha256": "cd6b305fe85fb71aaccaa1404d8af634a79f1d7f2a8464f47ca69160a150fe50",
+      "focalPoint": [
+        0.5,
+        0.5
+      ],
+      "qa": "Visually inspected: navy satin edge drapes, gold laurel details in the top corners and a broad textured cream centre. No hats, university marks, text, people or foreground obstruction. Restrained academic celebration palette. Source scene reviewed, no live compositing or layout crop test performed.",
+      "provenance": "event-scenes-generation.json",
+      "usage": "Together backdrop, scene card or event wall background"
+    },
+    {
+      "id": "winter-celebration-v2",
+      "name": "Winter Celebration",
+      "category": "events",
+      "file": "scenes/winter-celebration-v2.png",
+      "width": 1536,
+      "height": 1024,
+      "bytes": 2202794,
+      "sha256": "10c7e927001d6fbc47eb5743998628dfaec2eb290e9dc47397afb29c6736caaa",
+      "focalPoint": [
+        0.5,
+        0.5
+      ],
+      "qa": "Visually inspected: warm evergreen and antique-gold seasonal decor stays at the edges; calm cream centre is open. Small lanterns sit at the extreme bottom sides, outside the central portrait area. No people, text, logos or religious emblems. Source scene reviewed, no live compositing or layout crop test performed.",
+      "provenance": "event-scenes-generation.json",
+      "usage": "Together backdrop, scene card or event wall background"
+    },
+    {
+      "id": "summer-festival-v2",
+      "name": "Summer Festival",
+      "category": "events",
+      "file": "scenes/summer-festival-v2.png",
+      "width": 1536,
+      "height": 1024,
+      "bytes": 2563538,
+      "sha256": "734cb11d09d48b1afd526191863bcf2cc826c8a58d50f4a5c0c1129d5e173d3b",
+      "focalPoint": [
+        0.5,
+        0.5
+      ],
+      "qa": "Visually inspected after one imagegen refinement: central trees and lawn softened to reduce detail behind faces; clearer edge flowers and high pastel bunting preserve an outdoor party identity. Bright natural daylight, no central props, people, text or logos. Source scene reviewed, no live compositing or layout crop test performed.",
+      "provenance": "event-scenes-generation.json",
+      "usage": "Together backdrop, scene card or event wall background"
+    },
+    {
+      "id": "ivory-cotton-paper-v2",
+      "name": "Ivory cotton paper",
+      "category": "material",
+      "file": "materials/ivory-cotton-paper-v2.png",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 2499286,
+      "sha256": "bad6540f2a5025cca0414d8a1e530d3b1db08a679749d16c1bb0b99a77f21198",
+      "focalPoint": [
+        0.5,
+        0.5
+      ],
+      "qa": "Accepted: even warm ivory paper, fine grain and no embedded text or objects. Use as an opaque frame fill; check caption contrast at print size.",
+      "provenance": "materials-generation.json",
+      "usage": "Frame fill and keepsake cover; crop to fit"
+    },
+    {
+      "id": "rose-washi-paper-v2",
+      "name": "Rose washi paper",
+      "category": "material",
+      "file": "materials/rose-washi-paper-v2.png",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 2941794,
+      "sha256": "0930fafa9b10257859c5d4a820b56ffc8ff1d3012447ca64a6bf32cfff6fb355",
+      "focalPoint": [
+        0.5,
+        0.5
+      ],
+      "qa": "Accepted: dusty rose fibres with visible larger strands. Apply at reduced texture strength beneath captions if needed; not verified as seamlessly tileable.",
+      "provenance": "materials-generation.json",
+      "usage": "Frame fill and keepsake cover; crop to fit"
+    },
+    {
+      "id": "indigo-bookcloth-v2",
+      "name": "Indigo bookcloth",
+      "category": "material",
+      "file": "materials/indigo-bookcloth-v2.png",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 3453849,
+      "sha256": "481768b7601809d61982cafcbbf9ce34e99c8a056d8d5ebd2d6f813a1c804275",
+      "focalPoint": [
+        0.5,
+        0.5
+      ],
+      "qa": "Accepted: deep indigo tightly woven cloth with distinct fine weave. Use crop-to-fill and test moire after downsampling.",
+      "provenance": "materials-generation.json",
+      "usage": "Frame fill and keepsake cover; crop to fit"
+    },
+    {
+      "id": "champagne-brushed-metal-v2",
+      "name": "Champagne brushed metal",
+      "category": "material",
+      "file": "materials/champagne-brushed-metal-v2.png",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 2217902,
+      "sha256": "2f889712c9fd2f0f13cfe6b5bb5bbdd9fabe762a5a5aca36ed549cbfe70aa1de",
+      "focalPoint": [
+        0.5,
+        0.5
+      ],
+      "qa": "Accepted: pale champagne brushed surface with directional grain. Keep grain orientation consistent across a strip; no metallic print finish is implied.",
+      "provenance": "materials-generation.json",
+      "usage": "Frame fill and keepsake cover; crop to fit"
+    },
+    {
+      "id": "charcoal-photo-paper-v2",
+      "name": "Charcoal photo paper",
+      "category": "material",
+      "file": "materials/charcoal-photo-paper-v2.png",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 3293180,
+      "sha256": "b8d3f1c660e0008240e76a0d9fcc2f346f4a7906c2caa8c8545399027c2e2da9",
+      "focalPoint": [
+        0.5,
+        0.5
+      ],
+      "qa": "Accepted: dark charcoal lustre with restrained grain. Use light captions and preserve adequate contrast.",
+      "provenance": "materials-generation.json",
+      "usage": "Frame fill and keepsake cover; crop to fit"
+    },
+    {
+      "id": "pearl-iridescent-film-v2",
+      "name": "Pearl iridescent film",
+      "category": "material",
+      "file": "materials/pearl-iridescent-film-v2.png",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 2146929,
+      "sha256": "41016a9c617e6530dbbe691edb9552db1f1ece0d4ee6a4a90190f07817570d46",
+      "focalPoint": [
+        0.5,
+        0.5
+      ],
+      "qa": "Accepted: soft pearlescent colour variation. Use as an opaque crop-to-fill material; appearance is baked into the image, not dynamic lighting.",
+      "provenance": "materials-generation.json",
+      "usage": "Frame fill and keepsake cover; crop to fit"
+    }
+  ]
+}

@@ -1,0 +1,107 @@
+[
+  {
+    "id": "rainy-cafe-v2",
+    "name": "Rainy Café",
+    "file": "scenes/rainy-cafe-v2.png",
+    "prompt": "Use case: photorealistic-natural. Asset type: standalone raster background for a browser photobooth with 2 to 4 waist-up people composited later. Generate exactly one landscape 3:2 image, ideally 1536x1024 pixels. Scene: empty intimate cafe at rainy twilight, viewed flat-on from an eye-level camera facing a very large softly rain-speckled window. Outside is an anonymous blurred side street in muted dusk blue with a few warm bokeh lights, no readable signage. The central 65 percent of the full image must be calm, open, softly lit, unobstructed visual space behind future people; no furniture, objects or strong mullions across this area. Cafe details, rose-cream plaster, warm timber trim and small amber lamps appear only at the far left and right edges. Floor may appear as a narrow quiet band at bottom. Natural editorial photographic realism, believable rain droplets, softly diffused window light and warm indoor glow, gentle tonal detail suitable for compositing. Palette: warm cream and muted rose balanced against slate-blue rainy twilight. Real full-bleed environment, no borders. No people, no faces, no silhouettes, no centre furniture, no text, logos, watermark, collage, interface, image grid or camera equipment. This is an atmospheric empty photo background, not a picture of a photo booth.",
+    "category": "together",
+    "sourcePath": "C:\\Users\\kduy1\\.codex\\generated_images\\01a0c93d-ffc4-7661-bcf8-47d357aec7cd\\exec-0685abe5-4157-4260-8ea2-b46c3e671d45.png",
+    "finalPath": "C:\\Users\\kduy1\\OneDrive\\Desktop\\Projects\\zuychin-photobooth\\docs\\assets\\v2\\scenes\\rainy-cafe-v2.png",
+    "qa": "Accepted after visual inspection of the generated image. Broad uninterrupted rainy window occupies the centre; furniture and lamps remain at far edges. Blue twilight and amber cafe lighting are distinct from the other scenes. No visible people, faces, legible text, logos, watermark, collage or UI. No image editing or regeneration. Live cutout compositing remains untested.",
+    "focalPoint": [
+      0.5,
+      0.5
+    ],
+    "dimensions": {
+      "width": 1536,
+      "height": 1024
+    },
+    "generationMethod": "built-in imagegen",
+    "bytes": 2669487,
+    "sha256": "e267a6adca0c15dcc7a24b518e285c7f2ce1f6799e7a9fd7ab6fb2389bebfa4e"
+  },
+  {
+    "id": "coastal-picnic-v2",
+    "name": "Coastal Picnic",
+    "file": "scenes/coastal-picnic-v2.png",
+    "prompt": "Use case: photorealistic-natural. Asset type: standalone raster photobooth background for 2 to 4 waist-up people composited later. Generate exactly one landscape 3:2 image, ideally 1536x1024 pixels. Scene: a quiet pastel seaside picnic location in late-summer golden hour just before sunset. Flat-on eye-level camera looks toward a calm pale turquoise sea and distant warm sky, with open sand or pale coastal grass in the foreground. Keep the central 65 percent of the entire image calm, completely open and unobstructed, with a soft horizon and no foreground objects. A tiny edge of cream picnic cloth, a woven basket and delicate coastal grasses are confined to the far lower corners, never across the centre. The atmosphere is spacious and fresh, visibly outdoors and sunlit, distinct from dusk interiors. Natural editorial photo realism, soft honey light, gentle sea haze, subtle tactile sand and woven textures. Palette: warm cream, blush-peach sky, pale turquoise and quiet sand tones. Full-bleed environmental background with room for future people, no borders. No people, faces, silhouettes, centre furniture, chairs, signage, text, logos, watermarks, collage, user interface, camera or photo booth structure. No oversized picnic objects.",
+    "category": "together",
+    "sourcePath": "C:\\Users\\kduy1\\.codex\\generated_images\\01a0c93d-ffc4-7661-bcf8-47d357aec7cd\\exec-c917be86-2ca4-4154-b303-e16039c2ef77.png",
+    "finalPath": "C:\\Users\\kduy1\\OneDrive\\Desktop\\Projects\\zuychin-photobooth\\docs\\assets\\v2\\scenes\\coastal-picnic-v2.png",
+    "qa": "Accepted after visual inspection of the generated image. Open central sand, sea and sky with picnic basket and cloth confined to a lower corner. Clearly late-summer golden-hour daylight with pale turquoise water and peach sky. No visible people, faces, text, logos, watermark, collage or UI. No image editing or regeneration. Live cutout compositing remains untested.",
+    "focalPoint": [
+      0.5,
+      0.5
+    ],
+    "dimensions": {
+      "width": 1536,
+      "height": 1024
+    },
+    "generationMethod": "built-in imagegen",
+    "bytes": 2563720,
+    "sha256": "d0f553f4420fef372176d91f22721ea87a7ceb95655bf4301a8d70ee66e11f94"
+  },
+  {
+    "id": "lantern-courtyard-v2",
+    "name": "Lantern Courtyard",
+    "file": "scenes/lantern-courtyard-v2.png",
+    "prompt": "Use case: photorealistic-natural. Asset type: standalone raster photobooth background for 2 to 4 waist-up people composited later. Generate exactly one landscape 3:2 image, ideally 1536x1024 pixels. Scene: a fictional Vietnamese-inspired lantern courtyard at early evening blue hour. Flat-on eye-level camera faces an uncluttered warm-cream plaster garden wall and subtle depth into an open courtyard, with a narrow band of old stone paving at bottom. Keep the central 65 percent of the full image calm and empty behind future people, with no furniture, trunks, doors, objects or hanging lanterns crossing that central area. Dark timber eaves, a few small glowing silk lanterns in muted rose and amber, and restrained leafy vines decorate only the top outer corners and far sides. No real landmark, no commercial branding, no written calligraphy. Natural editorial photo realism, warm lamp glow against gentle indigo dusk, believable paper-silk lantern texture and weathered cream plaster. Full-bleed environment, quiet and intimate, varied scene lighting, no borders. No people, faces, silhouettes, centre furniture, dense lantern canopy, text, letters, logos, watermark, collage, UI, camera equipment or photo booth frame.",
+    "category": "together",
+    "sourcePath": "C:\\Users\\kduy1\\.codex\\generated_images\\01a0c93d-ffc4-7661-bcf8-47d357aec7cd\\exec-4b079cce-5c98-45fe-b3f5-c2746fb6b204.png",
+    "finalPath": "C:\\Users\\kduy1\\OneDrive\\Desktop\\Projects\\zuychin-photobooth\\docs\\assets\\v2\\scenes\\lantern-courtyard-v2.png",
+    "qa": "Accepted after visual inspection of the generated image. Large calm cream wall and open paving leave a wide central area for cutouts; lanterns, pots and foliage remain at the sides and upper edges. Fictional Vietnamese-inspired courtyard reads as blue-hour dusk. No visible people, faces, writing, logos, watermark, collage or UI. No image editing or regeneration. Live cutout compositing remains untested.",
+    "focalPoint": [
+      0.5,
+      0.5
+    ],
+    "dimensions": {
+      "width": 1536,
+      "height": 1024
+    },
+    "generationMethod": "built-in imagegen",
+    "bytes": 2685472,
+    "sha256": "7821dffddb304152525d9ee2b355d219b1dc876509854ce5e582946a020f19c0"
+  },
+  {
+    "id": "snowy-cabin-v2",
+    "name": "Snowy Cabin",
+    "file": "scenes/snowy-cabin-v2.png",
+    "prompt": "Use case: photorealistic-natural. Asset type: standalone raster photobooth background for 2 to 4 waist-up people composited later. Generate exactly one landscape 3:2 image, ideally 1536x1024 pixels. Scene: warm empty alpine cabin interior on a softly overcast winter afternoon, looking flat-on at eye level through one broad unobstructed picture window toward distant snowy fir trees and softly falling snow. The central 65 percent of the image is open quiet background behind future people, softly luminous and with no furniture, fireplace, beams or window mullions crossing it. Honey-coloured timber walls and creamy wool or knit textile details are confined to the outer edges; a small shaded lamp at the far side supplies a gentle warm interior glow. A narrow clean timber floor band may run along the bottom, entirely empty. Editorial photographic realism with tactile natural materials, warm cream and muted rose accents, pale snowy blue and soft evergreen outdoors. The landscape beyond the glass is softly distant rather than busy. Full-bleed natural environment, no borders. No people, faces, silhouettes, centre table or sofa, holiday decorations, text, logos, watermark, collage, UI, camera equipment or photo booth structure.",
+    "category": "together",
+    "sourcePath": "C:\\Users\\kduy1\\.codex\\generated_images\\01a0c93d-ffc4-7661-bcf8-47d357aec7cd\\exec-900f6c10-6f50-4ab7-bb8d-a0503ab6f796.png",
+    "finalPath": "C:\\Users\\kduy1\\OneDrive\\Desktop\\Projects\\zuychin-photobooth\\docs\\assets\\v2\\scenes\\snowy-cabin-v2.png",
+    "qa": "Accepted after visual inspection of the generated image. Wide picture window has no central mullions; lamp and textiles remain at the edges and foreground floor is clear. Distant snowy trees add texture behind future cutouts, while the central upper region remains low contrast. Winter afternoon is distinct from the rainy scene. No visible people, faces, text, logos, watermark, collage or UI. No image editing or regeneration. Live cutout compositing remains untested.",
+    "focalPoint": [
+      0.5,
+      0.5
+    ],
+    "dimensions": {
+      "width": 1536,
+      "height": 1024
+    },
+    "generationMethod": "built-in imagegen",
+    "bytes": 2651190,
+    "sha256": "ce49f27146e132de647470bad0d93d65e0dfce624de7b6b9f87d2658eee51ef8"
+  },
+  {
+    "id": "spring-blossom-v2",
+    "name": "Spring Blossom",
+    "file": "scenes/spring-blossom-v2.png",
+    "prompt": "Use case: photorealistic-natural. Asset type: standalone raster photobooth backdrop for 2 to 4 waist-up people composited later. Generate exactly one landscape 3:2 image, ideally 1536x1024 pixels. Scene: a soft spring garden in fresh morning daylight, viewed flat-on from an eye-level camera along a broad quiet pale gravel path. Pale pink and creamy white blossom branches form a loose canopy only along the upper edges and far sides; trunks and dense flowerbeds stay entirely outside the central 65 percent. Keep the central 65 percent of the full image open, calm and softly lit, with a gently receding path and softly blurred distant garden suitable behind future people. No central tree, bench, arch, sign or other focal object. Natural editorial photographic realism, delicate realistic petals, gentle fresh green foliage, soft morning sun and lightly dewy atmosphere. Palette: warm cream, pale rose blossoms, restrained spring green, natural sky glow. Clearly an airy spring morning, not autumn, dusk or an indoor scene. Full-bleed environment, no borders. No people, faces, silhouettes, centre furniture, text, logos, watermarks, collage, image grid, UI, camera equipment or photo booth structure.",
+    "category": "together",
+    "sourcePath": "C:\\Users\\kduy1\\.codex\\generated_images\\01a0c93d-ffc4-7661-bcf8-47d357aec7cd\\exec-371e8e53-c8d4-42ae-b6e5-809b90e72717.png",
+    "finalPath": "C:\\Users\\kduy1\\OneDrive\\Desktop\\Projects\\zuychin-photobooth\\docs\\assets\\v2\\scenes\\spring-blossom-v2.png",
+    "qa": "Accepted after visual inspection of the generated image. Broad empty gravel path leads through soft spring foliage; blossom canopy stays mainly at the upper corners. Centre is open at the foreground and softly blurred farther back. Fresh morning daylight differs from the other four scenes. No visible people, faces, text, logos, watermark, collage or UI. No image editing or regeneration. Live cutout compositing remains untested.",
+    "focalPoint": [
+      0.5,
+      0.5
+    ],
+    "dimensions": {
+      "width": 1536,
+      "height": 1024
+    },
+    "generationMethod": "built-in imagegen",
+    "bytes": 3003338,
+    "sha256": "9ec949aef3b0c35390b75a387ff8548e1ac9dc1f8872902e67dfe72528a598d2"
+  }
+]

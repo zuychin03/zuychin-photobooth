@@ -1,0 +1,56 @@
+{
+  "sharp": "0.34.5",
+  "scope": "Decoded raster opacity, safe-circle geometry, and synthetic launcher crops. No installed-device claim.",
+  "icons": [
+    {
+      "file": "public/apple-touch-icon-v2.png",
+      "width": 180,
+      "height": 180,
+      "alphaMin": 255,
+      "alphaMax": 255,
+      "foregroundMaxRadiusFraction": 0.48344507009842297,
+      "foregroundOutsideSafeCircle": 875,
+      "maskable": false
+    },
+    {
+      "file": "public/icon-192-v2.png",
+      "width": 192,
+      "height": 192,
+      "alphaMin": 255,
+      "alphaMax": 255,
+      "foregroundMaxRadiusFraction": 0.48295883929315225,
+      "foregroundOutsideSafeCircle": 993,
+      "maskable": false
+    },
+    {
+      "file": "public/icon-512-v2.png",
+      "width": 512,
+      "height": 512,
+      "alphaMin": 255,
+      "alphaMax": 255,
+      "foregroundMaxRadiusFraction": 0.48227754356627506,
+      "foregroundOutsideSafeCircle": 6519,
+      "maskable": false
+    },
+    {
+      "file": "public/icon-512-maskable-v2.png",
+      "width": 512,
+      "height": 512,
+      "alphaMin": 255,
+      "alphaMax": 255,
+      "foregroundMaxRadiusFraction": 0.3759575380738765,
+      "foregroundOutsideSafeCircle": 0,
+      "maskable": true
+    },
+    {
+      "file": "public/badge-v2.png",
+      "width": 96,
+      "height": 96,
+      "alphaMin": 0,
+      "alphaMax": 255,
+      "foregroundMaxRadiusFraction": 0.5013545021295366,
+      "foregroundOutsideSafeCircle": 472,
+      "maskable": false
+    }
+  ]
+}

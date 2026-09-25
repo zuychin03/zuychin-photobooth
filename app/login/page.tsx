@@ -2,7 +2,8 @@
 
 import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, Loader2, Mail } from "lucide-react";
+import { Loader2, Mail } from "lucide-react";
+import { safeAuthReturnPath } from "@/lib/auth-return-path";
 import { createClient, hasSupabase } from "@/lib/supabase/client";
 
 type Mode = "password" | "magic-link";
@@ -19,7 +20,7 @@ function LoginInner() {
     search.get("error") ? { kind: "error", text: "Sign-in link expired. Try again." } : null,
   );
 
-  const next = search.get("next") ?? "/";
+  const next = safeAuthReturnPath(search.get("next"));
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,19 +50,11 @@ function LoginInner() {
   };
 
   return (
-    <main className="relative flex min-h-dvh flex-1 items-center justify-center overflow-hidden px-6">
-      <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
+    <main className="relative flex min-h-dvh flex-1 items-center justify-center px-6">
+      <div aria-hidden className="pointer-events-none absolute inset-x-0 top-[calc(-1*var(--app-nav-height,0px))] bottom-0 -z-10 overflow-hidden">
         <div className="fluid-orb absolute -top-24 -left-24 h-96 w-96 rounded-full bg-accent/20 blur-3xl" />
         <div className="fluid-orb--slow fluid-orb absolute bottom-0 -right-24 h-[24rem] w-[24rem] rounded-full bg-partner/20 blur-3xl" />
       </div>
-
-      <button
-        onClick={() => router.push("/")}
-        aria-label="Back"
-        className="glass-card absolute top-4 left-4 flex h-11 w-11 items-center justify-center rounded-full"
-      >
-        <ArrowLeft size={20} />
-      </button>
 
       <div className="glass-card w-full max-w-sm rounded-3xl p-7">
         <h1
@@ -71,13 +64,12 @@ function LoginInner() {
           Sign in
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Use your Zuychin account to save strips to your Shared Vault.
+          Save and share with your Zuychin account.
         </p>
 
         {!enabled ? (
           <p className="mt-6 rounded-xl bg-muted p-3 text-sm text-muted-foreground">
-            Accounts aren&apos;t configured on this deployment yet. The booth still
-            works without signing in.
+            Sign-in is unavailable. You can still use the solo booth.
           </p>
         ) : (
           <>
@@ -98,6 +90,8 @@ function LoginInner() {
             <form onSubmit={submit} className="mt-4 flex flex-col gap-3">
               <input
                 type="email"
+                aria-label="Email address"
+                autoComplete="email"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -107,6 +101,8 @@ function LoginInner() {
               {mode === "password" && (
                 <input
                   type="password"
+                  aria-label="Password"
+                  autoComplete="current-password"
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}

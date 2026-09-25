@@ -1,0 +1,52 @@
+# Owner event export foundation
+
+Migration `018_v2_event_exports.sql`, the typed export store and `POST /api/events/<event>/exports` implement the authority and durable metadata portion of E7. The browser client, coordinator, store-only ZIP writer and owner panel are now source-ready in `lib/events/export-*.ts` and `components/events/EventExportPanel.tsx`. Host wiring and native visual evidence remain separately recorded. `PB_EVENTS_ENABLED` remains false. No hosted schema, account or provider operation was performed.
+
+The migration is additive after 005 and 016. It does not depend on 017 look/settings columns, replace existing event functions, change storage charges, extend retention or duplicate media. Direct table access is denied to anonymous, authenticated and service roles; only named service RPCs can read or mutate the journal. Each call verifies the current exact event owner, including `pb_events.owner_id`. Accepted moderators, invited moderators, guests and owners of a different event cannot export. Expired or deleted events refuse export operations. Ordinary pause/closure preserves export opportunity until expiry.
+
+## Finite immutable snapshots
+
+Each event retains at most eight stable export slots, with no silent eviction. An owner can explicitly retire an obsolete snapshot, clearing its manifest/progress without deleting photos. Retirement advances a bounded generation counter and leaves the stable slot identity. The owner may explicitly reuse that slot for a fresh snapshot. A snapshot contains at most 100 UUID-ordered submission entries and at most 128 KiB JSON. Same-ID/same-generation creation with the same source cursor is idempotent; a changed cursor conflicts. Every page, media, access and checkpoint request carries the generation. Old creation or mutation retries cannot recreate a retired snapshot or affect its replacement. A lost retirement acknowledgement replays its ticket only while the slot is still retired; after reuse it conflicts. Creation serialises under the event row lock, including the eight-manifest race. An old snapshot never acquires later contributions silently.
+
+Historical submission rows can outlive their active quota charge, so an event may have more than 100 historical rows. `afterSubmissionId` and `nextSubmissionCursor` describe explicit continuation snapshots. These are separate bounded snapshots, not a claim of one global point-in-time export across concurrent contributions. The UI shows continuation and the eight-slot limit, plus explicit retirement/reuse controls. Retiring unfinished progress requires a confirmation. No unbounded tombstone ledger is needed, and old IDs are never reassigned to another slot. A fresh snapshot is also the way to include a submission that was not ready in an earlier snapshot.
+
+Entries retain submission ID, fixed creation time, promised expiry, snapshot state, and either a verified delivery descriptor or an explicit unavailable reason. Captions are `null` with `captionStatus:"not_collected"`. The current event-look default caption is not presented as a captured per-photo caption. Guestbook media and authored per-submission captions are not implemented by this tranche. There are no guest identities, receipt credentials, staging paths, original upload contents or signed URLs in persisted manifests.
+
+The delivery descriptor comes from a completed finalisation checkpoint that records real decoder/readback verification, SHA-256, JPEG MIME and dimensions. Its exact byte length comes from the delivery object's Storage metadata. It is bounded to 2,000,000 bytes, 4,096 pixels per edge and 12 MiPixels. Older or malformed ready metadata produces an unavailable entry instead of invented verification. The worker/provider relationship behind that metadata still requires hosted activation evidence.
+
+## Access and resumable progress
+
+Manifest pages contain at most ten entries, therefore at most 20,000,000 delivery bytes before ZIP metadata/headers. Snapshot metadata is not permission to fetch. `access` rechecks ready state, current underlying submission consent from every contributor, guest revocation, physical object metadata, promised expiry and exact equality with the frozen delivery descriptor. Gallery and wall publication permissions are independent: a private delivery remains exportable by its owner when neither publication surface is enabled. A removed source, changed digest, revoked contributor or withdrawn underlying submission consent denies the fetch.
+
+`media` performs that check, signs the exact delivery image for at most 300 seconds and original retention, then rechecks authority and descriptor after signing. The existing signing adapter reserves ten seconds of provider latency. `access` performs a fresh check without issuing another URL, for the browser's post-download and pre-publication rechecks. Prior signed URLs can outlive revocation until their short expiry; downloaded copies cannot be recalled. The future coordinator must clear a pending batch when any final authority check fails.
+
+Progress is one bounded current array per snapshot, without an append-only timestamp log. Entries begin `pending`, or `failed` when unavailable at snapshot creation. `prepared` means the browser assembled a bounded batch; it does not claim disk persistence. `confirmed_saved` is permitted only after preparation and must be an explicit future user action. Failures use a finite code set. Confirmed-saved entries cannot be downgraded. Updates contain at most ten unique indices and use expected revision CAS. An exact retry whose requested progress already matches returns the current revision without another mutation; a conflicting stale update fails. No checkpoint releases storage capacity or postpones purge.
+
+## HTTP contract
+
+All operations use same-origin POST, exact Bearer authentication, private no-store replies, a 45-second caller deadline, bounded JSON and existing durable actor read/write rate buckets. The actor is derived with `getUser`, never accepted from the body. Missing schema/configuration fails closed. The endpoint accepts:
+
+| Operation | Fields after `operation` |
+| --- | --- |
+| `list` | none |
+| `create` | `exportId`, `generation`, optional `afterSubmissionId` |
+| `page` | `exportId`, `generation`, optional `after` (default -1), `limit` (default 10) |
+| `media` / `access` | `exportId`, `generation`, `index` |
+| `checkpoint` | `exportId`, `generation`, `revision`, `updates` |
+| `retire` | `exportId`, `generation`, `revision` |
+
+`EventExportSummary`, `EventExportPage`, `EventExportAccess` and exact response/input parsers are in `lib/events/export-contract.ts`. A signed media response adds `signedUrl` and token `expiresAt`; original promised expiry is `retainedUntil`. The plain access response uses `expiresAt` for promised expiry and carries `maxAgeSeconds`, with no URL. Consumers must not persist signed URLs as recovery state.
+
+## Browser implementation and remaining evidence
+
+The implemented writer produces a standard uncompressed ZIP with generated names such as `photos/000-submissionUUID.jpg`, `manifest.json` and `failures.json`. It does not parse archive paths or reuse the custom `.pbproject` envelope as though it were ZIP. It adds no dependency and uses a small store-only ZIP writer with CRC32, local/central headers, UTF-8 names and explicit lengths. The complete output is bounded to 20,000,000 image bytes plus 128 KiB manifest/report data and a fixed header allowance. Entries and lengths are capped before allocation; ZIP64 and arbitrary names are not supported.
+
+The coordinator fetches sequentially, uses the exact configured Storage origin/path, bounds bytes and chunks, compares actual SHA-256/byte length and native decoded dimensions, then rechecks authority. The client holds its active operation slot and shared decode slot until late byte reads/native decoding actually settle. Cancellation disposes late bitmaps and clears owned byte buffers. The panel revokes object URLs on replacement/unmount/access loss and never starts background exports. Account/epoch changes invalidate the client, and final access is checked again on the explicit Download ZIP action. Durable server progress plus stable manifest/export IDs allows reload recovery without retaining delivery bytes in a new browser vault. Recreating a missing download is an explicit fresh-authority retry. ZIP compatibility has a local independent .NET reader check. Actual browser download/reload/cancellation behaviour, resource measurements and host UI controls still require native rehearsal. `runEventExportProbe()` exercises native JPEG decoding and ZIP preparation against a labelled synthetic transport without accounts or hosted writes.
+
+## Local evidence
+
+A follow-up authority regression now requires a fresh exact-event/export/generation page before every batch publication or saved confirmation, including empty and all-failed batches. This prevents a manifest-only ZIP from bypassing expiry or revocation checks. Eleven focused browser/coordinator tests and scoped lint passed, including revoked/expired metadata-only batches and mismatched generation responses.
+
+`tests/event-export.test.ts` covers strict projections, bounded progress, verified actors, absent schema, same-origin/Bearer/rate gates, metadata-only checkpoints, post-sign changes/revocation and independent post-download access checks. `database/tests/run-event-exports.mjs` uses a unique disposable PostgreSQL16 database and actual EventExportStore parsing. It exercises empty/populated migration reruns, service grant isolation, private delivery, moderator/foreign denial, immutable snapshot replay, paging/continuation, CAS races, the eight-snapshot concurrent ceiling, source withdrawal/revocation/deletion, descriptor mismatch, ordinary closure and expiry. Storage metadata and trusted finaliser checkpoint data in this harness are explicit fixtures. The earlier real Sharp plus SQL worker harness remains separate evidence; neither proves hosted provider behaviour.
+
+Verification on 23/09/2026: 17 focused tests passed, expanded disposable PostgreSQL tests passed, whole-project TypeScript passed, and the Impeccable detector reported no findings for the new panel. The ZIP was also read using Windows .NET ZipArchive, with exact synthetic entry bytes checked. The browser tests use actual Sharp decoding via an injected decoder; this is distinct from native browser decode evidence. No hosted/provider operation or feature activation was performed.

@@ -1,9 +1,10 @@
-// Shared-scene backdrops for Together mode, drawn in canvas so no image
-// assets are needed. previewCss approximates the scene for picker swatches.
+import { SCENE_ASSETS } from "./assets/registry";
+
 export interface SceneDef {
   id: string;
   name: string;
   previewCss: string;
+  assetId?: string;
   draw: (ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number) => void;
 }
 
@@ -163,6 +164,15 @@ export const SCENES: SceneDef[] = [
     },
   },
 ];
+
+SCENES.push(...SCENE_ASSETS.map(asset => ({
+  id: asset.id, name: asset.name, assetId: asset.id, previewCss: asset.fallback.colour,
+  draw(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number) {
+    const fallback = SCENES.find(scene => scene.id === asset.fallback.sceneId);
+    if (fallback) fallback.draw(ctx, x, y, w, h);
+    else { ctx.fillStyle = asset.fallback.colour; ctx.fillRect(x, y, w, h); }
+  },
+})));
 
 export function getScene(id: string): SceneDef | null {
   return SCENES.find((s) => s.id === id) ?? null;

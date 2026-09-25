@@ -112,6 +112,17 @@ export const LAYOUTS: StripLayout[] = [
     minMembers: 4,
     duoPattern: ["A", "B", "C", "D", "A", "B", "C", "D", "A", "B", "C", "D"],
   },
+  {
+    id: "quad-story",
+    name: "Four-cut group story",
+    mode: "group",
+    cols: 4,
+    rows: 4,
+    cellAspect: 3 / 2,
+    shots: 4,
+    minMembers: 4,
+    duoPattern: ["A", "B", "C", "D", "A", "B", "C", "D", "A", "B", "C", "D", "A", "B", "C", "D"],
+  },
 ];
 
 export function getLayout(id: string): StripLayout {

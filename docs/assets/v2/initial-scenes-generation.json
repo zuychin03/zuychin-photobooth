@@ -1,0 +1,62 @@
+[
+  {
+    "id": "rooftop-blue-hour-v2",
+    "name": "Rooftop Blue Hour",
+    "category": "together",
+    "file": "scenes/rooftop-blue-hour-v2.png",
+    "prompt": "Use case: photorealistic-natural. Asset type: original raster Together-mode photobooth background for Zuychin Photobooth, scene ID rooftop-blue-hour-v1. Create one high-quality landscape 3:2 image, ideally 1536x1024. Scene: a serene fictional rooftop terrace at blue hour, distant low city skyline, soft dusky rose and indigo sky, a few warm bistro lights high along outer edges, muted terracotta low parapet. Eye-level camera, straight horizon, softly lit editorial photographic realism with natural texture. Composition: centre 65 percent and lower middle mostly open and uncluttered for two to four waist-up selfie cutouts; no furniture in front of subjects, no foreground rail across their bodies; subtle background detail should survive a centred portrait crop. Restrained warm rose, cream and deep ink palette compatible with the app. This is a ready-to-composite empty environment, not a mockup or photo strip. No people, faces, silhouettes, animals, text, lettering, logos, brands, watermark, frames, collage or UI. One scene filling the entire canvas.",
+    "sourcePath": "C:\\Users\\kduy1\\.codex\\generated_images\\01a0c93a-39dc-7cf3-8ad0-0f8e4cde9f0b\\exec-5f3270f9-e08e-4cf2-8641-161e634e068e.png",
+    "qa": "Visually inspected during original generation. Empty central subject space; no visible people, text or logos. Portrait cropping removes edge details. Live cutout compositing remains pending.",
+    "focalPoint": [
+      0.5,
+      0.5
+    ],
+    "dimensions": {
+      "width": 1536,
+      "height": 1024
+    },
+    "bytes": 2240483,
+    "sha256": "56c3cbe77ef19f89820edb711b3301585f41ababdcf150489b5b0b0d8f937fad",
+    "generationMethod": "built-in imagegen"
+  },
+  {
+    "id": "paper-moon-studio-v2",
+    "name": "Paper Moon Studio",
+    "category": "create",
+    "file": "scenes/paper-moon-studio-v2.png",
+    "prompt": "Use case: stylized-concept. Asset type: original raster Together-mode photobooth scene background, paper-moon-studio-v1. Generate one empty landscape 3:2 backdrop, ideally 1536x1024, entire canvas one scene. A beautifully art-directed handmade paper theatre photography studio: warm ivory textured seamless paper background and floor, oversized sculptural blush crescent moon high at upper right, tiny suspended matte champagne stars restricted to upper outer corners, very subtle lavender and dusty rose paper arches at far left and right. Sophisticated tactile cut-paper and ceramic-like surfaces, warm diffused studio light, soft physically plausible shadows, finely detailed material grain. Central 65 percent clear quiet cream space for 2-4 waist-up selfie cutouts; floor at bottom quarter, no objects across central subject placement; usable centred portrait crop. Style cohesive with a warm rose-accent photobooth app. No people, no faces, no silhouettes, no animals, no text, logo, letters, watermarks, photo slots, UI, poster, borders, or collage. Flat-on eye-level perspective, no warped architecture. This is a final reusable background asset, not a mockup.",
+    "sourcePath": "C:\\Users\\kduy1\\.codex\\generated_images\\01a0c93a-39dc-7cf3-8ad0-0f8e4cde9f0b\\exec-8a68deb4-ca70-4dee-98ab-88dee24c85c5.png",
+    "qa": "Visually inspected during original generation. Empty central subject space; no visible people, text or logos. Portrait cropping removes edge details. Live cutout compositing remains pending.",
+    "focalPoint": [
+      0.5,
+      0.5
+    ],
+    "dimensions": {
+      "width": 1536,
+      "height": 1024
+    },
+    "bytes": 2110495,
+    "sha256": "eca7d3dbfeb7e34a45d461fd111595629e86ff0f18dfeb5c98d95058309e9a5c",
+    "generationMethod": "built-in imagegen"
+  },
+  {
+    "id": "celebration-garden-v2",
+    "name": "Celebration Garden",
+    "category": "events",
+    "file": "scenes/celebration-garden-v2.png",
+    "prompt": "Use case: photorealistic-natural. Asset type: original raster Together-mode photobooth background for parties and events, celebration-garden-v1. Create a single high-quality landscape 3:2 image ideally 1536x1024, full-canvas empty background. Scene: a refined intimate garden celebration at dusk, softly glowing warm ivory string lights high overhead, romantic blurred garden foliage far behind, restrained blush and cream flowers framing the extreme left and right edges, subtle champagne accents. No wedding-specific signs or objects so it works for birthdays, graduations and anniversaries. Editorial photographic realism, eye-level straight camera, flattering diffuse soft light from the front, natural linen-like muted floor at bottom quarter. Central 65 percent calm soft sage and warm-cream negative space for two to four waist-up selfie cutouts; no table, chair, balloon clusters, food or foreground objects blocking people. Keep important decorative detail to the upper and outer areas, usable when centre-cropped to portrait. Restrained rose, cream, sage colour palette. No people, faces, silhouettes, text, letters, logos, watermarks, photo frames, collage, or UI. Ready-to-composite background environment only.",
+    "sourcePath": "C:\\Users\\kduy1\\.codex\\generated_images\\01a0c93a-39dc-7cf3-8ad0-0f8e4cde9f0b\\exec-4660bed5-76be-4c6b-84c5-3c06bd057381.png",
+    "qa": "Visually inspected during original generation. Empty central subject space; no visible people, text or logos. Portrait cropping removes edge details. Live cutout compositing remains pending.",
+    "focalPoint": [
+      0.5,
+      0.5
+    ],
+    "dimensions": {
+      "width": 1536,
+      "height": 1024
+    },
+    "bytes": 2612706,
+    "sha256": "8fbfe5474ec22dede55f22206b42c8db77f40b960e4d03389f081359b8a92b1c",
+    "generationMethod": "built-in imagegen"
+  }
+]

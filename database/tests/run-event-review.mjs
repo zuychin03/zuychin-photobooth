@@ -1,0 +1,83 @@
+import assert from "node:assert/strict";
+import { spawn } from "node:child_process";
+import { readFile } from "node:fs/promises";
+import { randomUUID } from "node:crypto";
+import { createEventReviewStore } from "../../lib/server/event-review-store.ts";
+import { verifyEventActor } from "../../lib/server/event-store.ts";
+
+const container = process.env.PB_TEST_CONTAINER ?? "pb-v2-p1-postgres", database = `pb_v2_event_review_${Date.now()}`;
+if (!/^pb-v2-[a-z0-9-]+$/.test(container)) throw new Error("Use a task-owned pb-v2-* container");
+const docker = (args, input = "") => new Promise((resolve, reject) => {
+  const child = spawn("docker", ["--context", "desktop-linux", ...args], { windowsHide: true, stdio: ["pipe", "pipe", "pipe"] });
+  let stdout = "", stderr = ""; child.stdout.on("data", v => { stdout += v; }); child.stderr.on("data", v => { stderr += v; }); child.on("error", reject); child.on("close", code => resolve({ code, stdout, stderr })); child.stdin.end(input);
+});
+const sql = async (source, failure = false) => { const r = await docker(["exec", "-i", container, "psql", "-X", "-qAt", "-v", "ON_ERROR_STOP=1", "-U", "postgres", "-d", database], source); if (r.code && !failure) throw new Error(r.stderr); return r; };
+const q = v => `'${String(v).replaceAll("'", "''")}'`, j = v => `${q(JSON.stringify(v))}::jsonb`, service = "SET ROLE service_role; SET request.jwt.claim.role='service_role'; ";
+const call = async expr => JSON.parse((await sql(`${service} SELECT ${expr};`)).stdout.trim());
+const owner = randomUUID(), other = randomUUID(), moderator = randomUUID(), event = randomUUID(), guest = randomUUID();
+const token = "a".repeat(64), invitation = "b".repeat(64), submission = n => `10000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
+const env = { PB_EVENTS_ENABLED: "true", NEXT_PUBLIC_SUPABASE_URL: "https://synthetic.invalid", SUPABASE_SERVICE_ROLE_KEY: "synthetic" };
+const store = createEventReviewStore(env, { rpc: async (name, args) => {
+  assert.match(name, /^pb_event_[a-z_]+$/);
+  const value = v => v === null ? "NULL" : typeof v === "number" ? String(v) : typeof v === "object" ? j(v) : q(v);
+  const result = await sql(`${service} SELECT public.${name}(${Object.entries(args).map(([k, v]) => { assert.match(k, /^p_[a-z_]+$/); return `${k}=>${value(v)}`; }).join(",")});`, true);
+  return result.code ? { data: null, error: { message: result.stderr.match(/PB_EVENT_[A-Z_]+/)?.[0] ?? "fixture_error" } } : { data: JSON.parse(result.stdout.trim()), error: null };
+} });
+const actor = id => verifyEventActor({ getUser: async () => ({ data: { user: { id } }, error: null }) });
+const migration = await readFile(new URL("../migrations/020_v2_event_review.sql", import.meta.url), "utf8");
+assert.equal((await docker(["exec", container, "createdb", "-U", "postgres", database])).code, 0);
+try {
+  await sql(await readFile(new URL("./bootstrap.sql", import.meta.url), "utf8"));
+  await sql("CREATE TABLE storage.buckets(id text PRIMARY KEY,name text,public boolean,file_size_limit bigint,allowed_mime_types text[]); ALTER TABLE storage.objects ADD COLUMN user_metadata jsonb;");
+  await sql((await readFile(new URL("../../supabase-setup.sql", import.meta.url), "utf8")).split("-- BEGIN PB_LIFECYCLE_V1")[0]);
+  for (const file of ["001_v2_lifecycle.sql", "003_v2_rooms.sql", "005_v2_events.sql"]) await sql(await readFile(new URL(`../migrations/${file}`, import.meta.url), "utf8"));
+  await sql(migration); await sql(migration);
+  await sql(`INSERT INTO auth.users VALUES(${q(owner)},'owner@example.invalid'),(${q(other)},'other@example.invalid'),(${q(moderator)},'moderator@example.invalid');`);
+  await call("public.pb_event_configure(250000000)"); const now = Date.now();
+  await call(`public.pb_event_create(${q(owner)},${q(event)},${j({ title: "Export fixture", timezone: "Australia/Sydney", startsAt: new Date(now - 60000).toISOString(), closesAt: new Date(now + 86400000).toISOString(), expiresAt: new Date(now + 7 * 86400000).toISOString(), maxGuests: 25, maxContributions: 100, maxBytes: 250000000 })})`);
+  await call(`public.pb_event_manage(${q(owner)},${q(event)},'open','{}')`);
+  await call(`public.pb_event_manage(${q(owner)},${q(event)},'invite',${j({ hash: invitation, expiresAt: new Date(now + 86400000).toISOString() })})`);
+  await call(`public.pb_event_redeem(${q(event)},${q(invitation)},${q(guest)},${q(token)})`);
+  await sql(`INSERT INTO public.pb_event_members VALUES(${q(event)},${q(moderator)},'moderator','active');`);
+  for (let n = 1; n <= 12; n++) {
+    const id = submission(n), path = `${event}/${id}`;
+    await call(`public.pb_event_reserve(${q(event)},${q(token)},${q(id)},${q(randomUUID())},${q(n.toString(16).padStart(64, "0"))},ARRAY[${q(guest)}]::uuid[],${j({ submission: true, gallery: false, wall: false })})`);
+    await call(`public.pb_event_authorise_upload(${q(event)},${q(token)},${q(id)})`);
+    await sql(`INSERT INTO storage.objects(bucket_id,name,metadata) VALUES('photobooth-event-images-staging-v2',${q(`${path}/source`)},'{"size":100}');`);
+    await call(`public.pb_event_enqueue_finalise(${q(event)},${q(token)},${q(id)})`);
+    const [job] = await call("public.pb_event_claim_jobs(1)");
+    await sql(`${service} INSERT INTO storage.objects(bucket_id,name,metadata,user_metadata) VALUES('photobooth-events-v2',${q(`${path}/image`)},'{"size":100,"mimetype":"image/jpeg"}',${j({ eventJobId: job.id, eventLease: job.lease_token })}),('photobooth-events-v2',${q(`${path}/thumbnail`)},'{"size":20}',${j({ eventJobId: job.id, eventLease: job.lease_token })});`);
+    await call(`public.pb_event_checkpoint_job(${q(job.id)},${q(job.lease_token)},${j({ decoded: true, objectsVerified: true, mime: "image/jpeg", width: 40, height: 30, sha256: "1".repeat(64) })})`);
+    await call(`public.pb_event_finish_job(${q(job.id)},${q(job.lease_token)},'complete')`);
+  }
+  const own = await actor(owner), mod = await actor(moderator);
+  assert.equal((await store.list(own,event)).entries.length,12);
+  assert.equal((await store.list(mod,event,undefined,5)).nextCursor,submission(5));
+  assert.equal((await store.access(own,event,submission(1))).bytes,20);
+  assert.equal((await store.access(mod,event,submission(1))).sha256,null);
+  await assert.rejects(store.list(await actor(other),event),/access_denied/);
+  await assert.rejects(store.access(own,randomUUID(),submission(1)),/access_denied/);
+  await assert.rejects(store.access(own,event,randomUUID()),/access_denied/);
+  await sql(`UPDATE public.pb_event_submissions SET gallery_state='hidden',wall_state='rejected' WHERE id=${q(submission(1))};`);
+  assert.equal((await store.access(own,event,submission(1))).bytes,20);
+  await sql(`UPDATE public.pb_event_members SET status='invited' WHERE event_id=${q(event)} AND user_id=${q(moderator)};`);
+  await assert.rejects(store.list(mod,event),/access_denied/);
+  await sql(`UPDATE public.pb_event_members SET status='active' WHERE event_id=${q(event)} AND user_id=${q(moderator)};`);
+  await sql(`UPDATE public.pb_event_guests SET revoked=true WHERE id=${q(guest)};`);
+  await assert.rejects(store.access(own,event,submission(1)),/access_denied/);
+  assert((await store.list(own,event)).entries.every(x=>!x.thumbnailAvailable));
+  await sql(`UPDATE public.pb_event_guests SET revoked=false WHERE id=${q(guest)};`);
+  await call(`public.pb_event_consent(${q(event)},${q(token)},${q(submission(1))},${j({submission:false,gallery:false,wall:false})})`);
+  await assert.rejects(store.access(mod,event,submission(1)),/access_denied/);
+  await sql(`${service} DELETE FROM storage.objects WHERE bucket_id='photobooth-events-v2' AND name=${q(`${event}/${submission(2)}/thumbnail`)};`);
+  await assert.rejects(store.access(own,event,submission(2)),/access_denied/);
+  await sql(`UPDATE public.pb_event_jobs SET checkpoint='{}' WHERE submission_id=${q(submission(3))} AND kind='finalise';`);
+  await assert.rejects(store.access(own,event,submission(3)),/access_denied/);
+  await sql(migration); assert.equal((await store.access(own,event,submission(4))).bytes,20);
+  const denied=await sql(`SET ROLE authenticated; SELECT public.pb_event_review_access(${q(owner)},${q(event)},${q(submission(4))});`,true);assert.notEqual(denied.code,0);
+  const helper=await sql(`${service} SELECT public.pb_event_review_thumbnail(${q(event)},${q(submission(4))});`,true);assert.notEqual(helper.code,0);
+  await call(`public.pb_event_manage(${q(owner)},${q(event)},'close','{}')`); assert.equal((await store.access(mod,event,submission(4))).bytes,20);
+  await sql(`UPDATE public.pb_events SET starts_at=clock_timestamp()-interval '3 days',contribution_closes_at=clock_timestamp()-interval '1 day',expires_at=clock_timestamp()-interval '1 second' WHERE id=${q(event)};`);await assert.rejects(store.access(own,event,submission(4)),/access_denied/);
+  await sql(`UPDATE public.pb_events SET expires_at=clock_timestamp()+interval '1 day',status='deleted' WHERE id=${q(event)};`);await assert.rejects(store.list(own,event),/access_denied/);
+  console.log('Event private review SQL passed: additive rerun, owner/moderator, private/hidden, source revocation, missing bytes, closure/expiry/deletion and direct grant denials. Storage metadata is a fixture, not hosted provider evidence.');
+} finally { await docker(['exec',container,'dropdb','-U','postgres',database]); }
