@@ -29,8 +29,16 @@ test("release defaults fail closed in production and explicit modes override", (
 });
 
 test("online page prefixes respect route boundaries", () => {
-  for (const path of ["/", "/booth", "/customize", "/projects", "/projects/", "/templates", "/templates/design", "/eventsmith", "/projects/cloudy", "/rooms", "/ｅ"]) assert.equal(incomingFeature(path), null, path);
-  for (const path of ["/projects/cloud", "/projects/cloud/", "/projects/cloud/a", "/events/a.png", "/e/a/gallery", "/room/code", "/relay/new", "/challenges/a", "/memories/rituals", "/timeline", "/login", "/auth/callback", "/together"]) assert.ok(incomingFeature(path), path);
+  for (const path of ["/", "/booth", "/customize", "/projects", "/projects/", "/templates", "/templates/design", "/eventsmith", "/projects/cloudy", "/rooms", "/ｅ", "/together"]) assert.equal(incomingFeature(path), null, path);
+  for (const path of ["/projects/cloud", "/projects/cloud/", "/projects/cloud/a", "/events/a.png", "/e/a/gallery", "/room/code", "/relay/new", "/challenges/a", "/memories/rituals", "/timeline", "/login", "/auth/callback"]) assert.ok(incomingFeature(path), path);
+});
+
+test("legacy room codes allow host and join while every explicit V2 value stays incoming", () => {
+  for (const code of ["ABC234", "abc234", "aBc234", "999999"]) {
+    for (const query of ["", "host=1", "v=1", "v=1&host=1"]) assert.equal(incomingFeature(`/room/${code}`, new URLSearchParams(query)), null, `${code}?${query}`);
+    for (const query of ["v=2", "host=1&v=2", "v=1&v=2", "v=2&v=1", "v=%32"]) assert.ok(incomingFeature(`/room/${code}`, new URLSearchParams(query)), `${code}?${query}`);
+  }
+  for (const path of ["/room", "/room/new", "/room/ABC23", "/room/ABC2345", "/room/ABC230", "/room/ABO234", "/room/ABI234", "/room/ABL234", "/room/ABC234.png", "/room/ABC234/extra"]) assert.ok(incomingFeature(path), path);
 });
 
 test("maintenance and existing receipts permit only their narrow methods and paths", () => {
@@ -53,7 +61,7 @@ test("actual proxy gates pages and APIs before configured Supabase access, prese
   try {
     Object.assign(process.env, { NODE_ENV: "production", PB_RELEASE_MODE: "local", NEXT_PUBLIC_SUPABASE_URL: "https://release-canary.invalid", NEXT_PUBLIC_SUPABASE_ANON_KEY: "synthetic-canary-must-not-be-used" });
     globalThis.fetch = async () => { networkCalls++; throw new Error("Unexpected network call"); };
-    for (const path of ["/events/a.png", "/projects/cloud/a.jpg", "/room/code.webp", "/auth/callback?code=synthetic", "/memories/", "/together"]) {
+    for (const path of ["/events/a.png", "/projects/cloud/a.jpg", "/room/code.webp", "/room/new", "/room/ABO234", "/room/ABC234/extra", "/room/ABC234?v=2", "/room/abc234?host=1&v=2", "/room/ABC234?v=1&v=2", "/room/ABC234?v=2&v=1", "/room/ABC234?v=%32", "/auth/callback?code=synthetic", "/memories/"]) {
       assert.equal(unstable_doesMiddlewareMatch({ config, nextConfig: {}, url: `https://booth.example${path}` }), true, path);
       const result = await proxy(new NextRequest(`https://booth.example${path}`));
       const rewrite = new URL(result.headers.get("x-middleware-rewrite")!);
@@ -61,12 +69,12 @@ test("actual proxy gates pages and APIs before configured Supabase access, prese
       assert.equal(rewrite.searchParams.has("code"), false);
       assert.equal(result.headers.get("cache-control"), "private, no-store");
     }
-    for (const path of ["/api/projects", "/api/events/photo.png", "/api/rooms/join", "/api/keep", "/api/reminders"]) {
+    for (const path of ["/api/projects", "/api/events/photo.png", "/api/rooms", "/api/rooms/join", "/api/rooms/ABC234?v=1", "/api/rooms/ABC234?v=2", "/api/keep", "/api/reminders"]) {
       assert.equal(unstable_doesMiddlewareMatch({ config, nextConfig: {}, url: `https://booth.example${path}` }), true, path);
       const result = await proxy(new NextRequest(`https://booth.example${path}`, { method: "POST" }));
       assert.equal(result.status, 503); assert.deepEqual(await result.json(), { error: "feature_incoming" });
     }
-    for (const path of ["/", "/projects", "/templates/design", "/receipt/existing", "/api/projects/maintenance", "/api/events/event/receipts/submission"]) {
+    for (const path of ["/", "/together", "/room/ABC234", "/room/ABC234?host=1", "/room/abc234", "/room/aBc234?host=1&v=1", "/projects", "/templates/design", "/receipt/existing", "/api/projects/maintenance", "/api/events/event/receipts/submission"]) {
       const result = await proxy(new NextRequest(`https://booth.example${path}`));
       assert.equal(result.headers.get("x-middleware-next"), "1", path);
     }

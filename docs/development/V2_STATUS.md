@@ -1,8 +1,14 @@
 # V2 development status
 
-Updated 25/09/2026. [Approved scope](../../V2_PLAN.md). Release version: `2.0.0`. Development baseline: `main` at `6fd2387`. Danny authorised committing and pushing the limited friends release to `main`; full V2 acceptance remains separate.
+Updated 26/09/2026. [Approved scope](../../V2_PLAN.md). Release version: `2.0.0`. Development baseline: `main` at `6fd2387`. Danny authorised committing and pushing the limited friends release to `main`; full V2 acceptance remains separate.
 
 Danny approved development and requires Astra for all subagents. Existing planning artefacts and 24 generated image sources are preserved. Package and lockfile declare `2.0.0`. The deployment scope is the local-only release described below, not activation of all hosted features.
+
+## Together restoration, 26/09/2026
+
+The friends release shipped in `de870c9` with successful GitHub CI and Vercel deployment. Danny then reported that Together was unavailable: the incoming gate had blocked the existing room flow along with unfinished V2 rooms. The correction restores home/Together creation at `/room/CODE?host=1` and joining at `/room/CODE`, using the existing six-character code alphabet. Accounts remain disabled. Cross-device signalling retains the existing public Supabase Realtime settings and optional TURN configuration; no new V2 migration is needed. Links containing `v=2`, room APIs and the other unfinished online families remain gated on both server and client, including duplicate query parameters.
+
+Verification passed 1,148/1,148 tests, including six release-gate tests, whole nonincremental TypeScript and repository ESLint. The final isolated production build and scoped Together lint passed. HTTP checks allowed Together/legacy host/join while preserving V2/Events/cloud rewrites and the room API's 503 refusal. Native production checks covered host creation and guest entry from both home and Together, invalid-code feedback, direct V2 refusal and Events navigation. An active join-form overflow was corrected with explicit single-column grids; final 320/375 px checks showed no horizontal overflow. Desktop controls and navigation passed, and no console errors were recorded. Camera access was not granted, so these checks do not claim a new camera capture, peer connection or cross-network TURN result. Preview port 3012 retains the corrected build; older acceptance services were preserved.
 
 ## Limited friends release, 25/09/2026
 

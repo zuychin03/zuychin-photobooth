@@ -7,7 +7,7 @@ import { StripMockup } from "@/components/StripMockup";
 import { HelpTooltip } from "@/components/HelpTooltip";
 import { InstallPrompt } from "@/components/InstallPrompt";
 import { RecentProjects } from "@/components/RecentProjects";
-import { normalizeRoomCode } from "@/lib/room-code";
+import { isValidRoomCode, newRoomCode, normalizeRoomCode } from "@/lib/room-code";
 import { isV2RoomCode, roomV2Url } from "@/lib/rtc/entry-v2";
 import { useLocalRelease } from "@/components/ReleaseMode";
 
@@ -17,14 +17,14 @@ export default function Home() {
   const [joinCode, setJoinCode] = useState("");
   const [joinError, setJoinError] = useState(false);
 
-  const createRoom = () => router.push(localOnly ? "/together" : "/room/new?v=2");
+  const createRoom = () => router.push(localOnly ? `/room/${newRoomCode()}?host=1` : "/room/new?v=2");
 
   const joinRoom = () => {
-    if (!isV2RoomCode(joinCode)) {
+    if (!(localOnly ? isValidRoomCode(joinCode) : isV2RoomCode(joinCode))) {
       setJoinError(true);
       return;
     }
-    router.push(roomV2Url(joinCode));
+    router.push(localOnly ? `/room/${joinCode}` : roomV2Url(joinCode));
   };
 
   return (
@@ -66,12 +66,12 @@ export default function Home() {
               className="group glass-card flex min-h-14 items-center justify-between rounded-2xl px-5 transition hover:border-accent/40 active:scale-[0.99]"
             >
               <span className="flex items-center gap-3 font-semibold">
-                <Heart size={20} className="text-accent" /> {localOnly ? "Together" : "Create a room"}
+                <Heart size={20} className="text-accent" /> Create a room
               </span>
-              {localOnly ? <span className="text-sm font-medium text-muted-foreground">Incoming</span> : <ArrowRight size={18} className="transition group-hover:translate-x-0.5" />}
+              <ArrowRight size={18} className="transition group-hover:translate-x-0.5" />
             </button>
 
-            {!localOnly && <div className="glass-card flex min-h-14 items-center gap-2 rounded-2xl px-4">
+            <div className="glass-card flex min-h-14 items-center gap-2 rounded-2xl px-4">
               <Users size={20} className="shrink-0 text-partner" />
               <input
                 value={joinCode}
@@ -94,7 +94,7 @@ export default function Home() {
               >
                 Join
               </button>
-            </div>}
+            </div>
             {joinError && (
               <p id="room-code-error" role="alert" className="text-sm text-destructive">
                 Room codes are 6 letters or numbers. Check with your host.

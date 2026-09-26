@@ -25,7 +25,7 @@ export async function proxy(request: NextRequest) {
     if (pathname.startsWith("/api/")) {
       return localReleaseApiAllowed(pathname, request.method) ? NextResponse.next({ headers }) : NextResponse.json({ error: "feature_incoming" }, { status: 503, headers });
     }
-    const feature = incomingFeature(pathname);
+    const feature = incomingFeature(pathname, request.nextUrl.searchParams);
     if (feature) {
       const destination = new URL("/incoming", request.url);
       destination.searchParams.set("feature", feature);
