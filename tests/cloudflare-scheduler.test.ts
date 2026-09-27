@@ -42,7 +42,7 @@ test("minute calls only fixed project/event URLs with header auth and redirects 
   await handler.scheduled(minute, enabled);
   assert.deepEqual(calls.map(call => call.url).sort(), ["https://photobooth.zuychin.me/api/events/maintenance", "https://photobooth.zuychin.me/api/projects/maintenance"]);
   for (const call of calls) {
-    assert.equal(call.init?.method, "GET"); assert.equal(call.init?.redirect, "error");
+    assert.equal(call.init?.method, "GET"); assert.equal(call.init?.redirect, "manual");
     assert.equal(new Headers(call.init?.headers).get("authorization"), "Bearer synthetic-test-secret");
     assert.ok(call.init?.signal); assert.equal(call.init?.body, undefined);
   }
@@ -92,6 +92,45 @@ test("successful response body is cancelled without reading it", async () => {
   const handler = createScheduler({ fetch: async () => new Response(new ReadableStream({ cancel() { cancelled = true; } })), log: () => {} });
   await handler.scheduled(minute, { ...enabled, PROJECTS_ENABLED: "false" });
   assert.equal(cancelled, true);
+});
+
+test("response status survives synchronous body cancellation failure without leaking details", async () => {
+  const logs: string[] = [];
+  const response = new Response(null, { status: 503 });
+  Object.defineProperty(response, "body", { value: { cancel() { throw new TypeError("synthetic-test-secret private-body-error"); } } });
+  const handler = createScheduler({ fetch: async () => response, log: line => logs.push(line) });
+  await assert.rejects(handler.scheduled(minute, { ...enabled, PROJECTS_ENABLED: "false" }), /Maintenance pass failed/);
+  assert.equal(logs.length, 1);
+  const record = JSON.parse(logs[0]);
+  assert.equal(record.status, 503);
+  assert.equal(record.phase, "discard_body");
+  assert.equal(record.category, "type_error");
+  assert.ok(Number.isInteger(record.elapsedMs) && record.elapsedMs >= 0 && record.elapsedMs <= 120000);
+  assert.ok(!/synthetic|private/.test(logs[0]));
+});
+
+test("pre-header failure diagnostics use only bounded fixed categories", async () => {
+  const logs: string[] = [];
+  for (const error of [new TypeError("private-cache-or-network"), new Error("private-provider"), { name: "secret-name", message: "private" }]) {
+    const handler = createScheduler({ fetch: async () => { throw error; }, log: line => logs.push(line) });
+    await assert.rejects(handler.scheduled(minute, { ...enabled, PROJECTS_ENABLED: "false" }), /Maintenance pass failed/);
+  }
+  assert.deepEqual(logs.map(line => JSON.parse(line).category), ["type_error", "error", "unknown"]);
+  assert.ok(logs.every(line => JSON.parse(line).phase === "awaiting_headers" && JSON.parse(line).status === null && !/private|secret/.test(line)));
+});
+
+test("redirect response is rejected without following or exposing its destination", async () => {
+  const calls: string[] = [], logs: string[] = [];
+  const handler = createScheduler({ fetch: async (url, init) => {
+    calls.push(url);
+    assert.equal(init.redirect, "manual");
+    return new Response(null, { status: 302, headers: { Location: "https://untrusted.invalid/private-token" } });
+  }, log: line => logs.push(line) });
+  await assert.rejects(handler.scheduled(minute, { ...enabled, PROJECTS_ENABLED: "false" }), /Maintenance pass failed/);
+  assert.deepEqual(calls, ["https://photobooth.zuychin.me/api/events/maintenance"]);
+  assert.equal(JSON.parse(logs[0]).status, 302);
+  assert.equal(JSON.parse(logs[0]).outcome, "failed");
+  assert.ok(!/untrusted|private-token|synthetic-test-secret/.test(logs[0]));
 });
 
 test("overlapping scheduled invocations dispatch independently and only report HTTP acknowledgement", async () => {

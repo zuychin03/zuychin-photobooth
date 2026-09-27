@@ -45,8 +45,11 @@ export function createScheduler(overrides: Partial<Ports> = {}) {
       const secret = env.CRON_SECRET;
       const results = await Promise.allSettled(jobs.map(async job => {
         const signal = ports.timeoutSignal(TIMEOUT_MS);
+        const startedAt = Date.now();
         let abort: () => void = () => {};
         let status: number | null = null;
+        let phase = "before_fetch";
+        const elapsedMs = () => Math.max(0, Math.min(TIMEOUT_MS, Math.round(Date.now() - startedAt)));
         try {
           const deadline = new Promise<never>((_, reject) => {
             abort = () => reject(new Error("Request deadline"));
@@ -54,19 +57,24 @@ export function createScheduler(overrides: Partial<Ports> = {}) {
           });
           const request = async () => {
             signal.throwIfAborted();
+            phase = "awaiting_headers";
             const response = await ports.fetch(`${ORIGIN}${job.path}`, {
-              method: "GET", redirect: "error", cache: "no-store", signal,
+              method: "GET", redirect: "manual", cache: "no-store", signal,
               headers: { Authorization: `Bearer ${secret}` },
             });
+            status = response.status;
+            phase = "discard_body";
             discardBody(response);
+            phase = "response_received";
             signal.throwIfAborted();
             return response.status;
           };
           status = await Promise.race([request(), deadline]);
           if (status !== 200) throw new Error("Unconfirmed maintenance pass");
-          ports.log(JSON.stringify({ job: job.name, status, outcome: "http_ok" }));
-        } catch {
-          ports.log(JSON.stringify({ job: job.name, status, outcome: signal.aborted ? "timeout" : status === 409 ? "busy" : "failed" }));
+          ports.log(JSON.stringify({ job: job.name, status, outcome: "http_ok", phase, category: "none", elapsedMs: elapsedMs() }));
+        } catch (error) {
+          const category = signal.aborted ? "aborted" : error instanceof TypeError ? "type_error" : error instanceof RangeError ? "range_error" : error instanceof ReferenceError ? "reference_error" : error instanceof Error ? "error" : "unknown";
+          ports.log(JSON.stringify({ job: job.name, status, outcome: signal.aborted ? "timeout" : status === 409 ? "busy" : "failed", phase, category, elapsedMs: elapsedMs() }));
           throw new Error("Maintenance job failed");
         } finally {
           signal.removeEventListener("abort", abort);
