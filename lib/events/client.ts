@@ -57,15 +57,18 @@ export interface EventHostClientOptions extends EventBrowserOptions { identity()
 export interface EventGuestClientOptions extends EventBrowserOptions { eventId: string; storageOrigin?: string; identity(): EventGuestIdentity | null }
 export interface EventUploadGrant { submissionId: string; bucket: "photobooth-event-images-staging-v2"; path: string; signedUrl: string; expiresAt: string; maxBytes: number; overwrite: false }
 export interface EventMediaGrant { submissionId: string; bucket: "photobooth-events-v2"; path: string; signedUrl: string; expiresAt: string; maxBytes: number; mime: "image/jpeg" }
+interface EventGrantClock { serverNow: number; startedAt: number }
 export type EventHostAction = "update" | "open" | "pause" | "close" | "delete" | "revoke_guest" | "invite_moderator" | "accept_moderator" | "revoke_moderator" | "publication" | "remove_submission";
 function transport(options: EventBrowserOptions, identity: () => unknown, accessToken?: () => Promise<string | null>) {
   let url: URL; try { url = new URL(options.appOrigin); } catch { return fail("invalid_configuration"); }
   if (url.origin !== options.appOrigin || url.username || url.password || url.protocol !== "https:" && !(url.protocol === "http:" && ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname)) || typeof location !== "undefined" && location.origin !== url.origin) fail("invalid_configuration");
   const initial = JSON.stringify(identity()), lifetime = new AbortController(), timeoutMs = options.timeoutMs ?? 10000;
+  const grantClocks = new WeakMap<object, EventGrantClock>();
   integer(timeoutMs, 1, 45000);
   function assertActive(signal?: AbortSignal) { if (JSON.stringify(identity()) !== initial) { lifetime.abort(); fail("identity_changed"); } if (lifetime.signal.aborted || signal?.aborted) fail("cancelled"); }
   async function request(path: string, operation: string, input: object, signal?: AbortSignal, authenticated = !!accessToken): Promise<unknown> {
     assertActive(signal);
+    const startedAt = performance.now();
     const body = JSON.stringify({ operation, ...input }); if (new TextEncoder().encode(body).length > 8192) fail("invalid_request");
     const deadline = new AbortController(), timer = setTimeout(() => deadline.abort(), timeoutMs), active = AbortSignal.any([lifetime.signal, deadline.signal, ...(signal ? [signal] : [])]);
     let onAbort: (() => void) | undefined;
@@ -85,6 +88,8 @@ function transport(options: EventBrowserOptions, identity: () => unknown, access
       const bytes = new Uint8Array(size); let offset = 0; for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.length; }
       let value: unknown; try { value = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes)); } catch { return fail(); }
       if (!response.ok) { const v = eventClientObject(value, ["error"]), codes = ["unavailable", "invalid_request", "access_denied", "origin_denied", "capacity", "conflict", "expired", "not_ready", "lease_lost", "rate_limited"]; const retry = Number(response.headers.get("retry-after")); throw new EventClientError(typeof v.error === "string" && codes.includes(v.error) ? v.error : "unavailable", response.status, response.status === 429 && Number.isInteger(retry) && retry >= 1 && retry <= 60 ? retry : undefined); }
+      const serverTime = response.headers.get("x-pb-server-time");
+      if (serverTime !== null && value && typeof value === "object") grantClocks.set(value, { serverNow: Date.parse(eventClientInstant(serverTime)), startedAt });
       assertActive(active); return value;
     };
     try { const result = await Promise.race([work(), interrupted]); assertActive(signal); return result; }
@@ -114,7 +119,7 @@ function transport(options: EventBrowserOptions, identity: () => unknown, access
     catch (error) { assertActive(signal); if (error instanceof EventClientError) throw error; throw new EventClientError("network_error"); }
     finally { binaryBusy = false; clearTimeout(timer); if (onAbort) active.removeEventListener("abort", onAbort); deadline.abort(); }
   }
-  return { request, capabilities, binary, assertActive, close() { lifetime.abort(); } };
+  return { request, capabilities, binary, assertActive, grantClock(value: object) { return grantClocks.get(value); }, close() { lifetime.abort(); } };
 }
 export function createEventHostClient(options: EventHostClientOptions) {
   const initial = options.identity(); if (!initial) return fail("identity_changed"); const ownerId = eventClientUuid(initial.ownerId); integer(initial.epoch, 0, Number.MAX_SAFE_INTEGER);
@@ -179,14 +184,20 @@ export function createEventGuestClient(options: EventGuestClientOptions) {
   const eventId = eventClientUuid(options.eventId), initial = options.identity();
   if (initial && (eventClientUuid(initial.eventId) !== eventId || !eventClientUuid(initial.guestId))) fail("identity_changed"); if (initial) integer(initial.epoch, 0, Number.MAX_SAFE_INTEGER);
   const io = transport(options, options.identity), path = `/${eventId}/guest`;
+  const grantClocks = new WeakMap<object, EventGrantClock>();
   function grant(value: unknown, submissionId: string, upload: true): EventUploadGrant;
   function grant(value: unknown, submissionId: string, upload: false): EventMediaGrant;
   function grant(value: unknown, submissionId: string, upload: boolean): EventUploadGrant | EventMediaGrant {
     const v = eventClientObject(value, ["submissionId", "bucket", "path", "signedUrl", "expiresAt", "maxBytes", upload ? "overwrite" : "mime"]), expectedBucket = upload ? "photobooth-event-images-staging-v2" : "photobooth-events-v2", expectedPath = `${eventId}/${submissionId}/${upload ? "source" : "image"}`, expiresAt = eventClientInstant(v.expiresAt);
+    const clock = grantClocks.get(value as object) ?? io.grantClock(value as object), issuedAt = clock?.serverNow ?? Date.now();
+    const elapsed = clock ? performance.now() - clock.startedAt : 0;
+    if (!Number.isFinite(elapsed) || elapsed < 0 || Date.parse(expiresAt) <= issuedAt + elapsed || Date.parse(expiresAt) > issuedAt + (upload ? EVENT_LIMITS.uploadSeconds : EVENT_LIMITS.readSeconds) * 1000) return fail();
     if (!options.storageOrigin) return fail("provider_unavailable");
     let origin: URL, signed: URL; try { origin = new URL(options.storageOrigin); signed = new URL(v.signedUrl as string); } catch { return fail(); }
-    if (origin.origin !== options.storageOrigin || origin.username || origin.password || origin.protocol !== "https:" && !(origin.protocol === "http:" && ["localhost", "127.0.0.1", "[::1]"].includes(origin.hostname)) || v.submissionId !== submissionId || v.bucket !== expectedBucket || v.path !== expectedPath || v.maxBytes !== EVENT_LIMITS.imageBytes || upload && v.overwrite !== false || !upload && v.mime !== "image/jpeg" || signed.origin !== origin.origin || signed.username || signed.password || signed.hash || signed.pathname !== `/storage/v1/object/${upload ? "upload/sign" : "sign"}/${expectedBucket}/${expectedPath}` || [...signed.searchParams.keys()].join() !== "token" || !signed.searchParams.get("token") || signed.href.length > 16384 || Date.parse(expiresAt) <= Date.now() || Date.parse(expiresAt) > Date.now() + (upload ? EVENT_LIMITS.uploadSeconds : EVENT_LIMITS.readSeconds) * 1000) return fail();
-    return upload ? { submissionId, bucket: "photobooth-event-images-staging-v2", path: expectedPath, signedUrl: signed.href, expiresAt, maxBytes: EVENT_LIMITS.imageBytes, overwrite: false } : { submissionId, bucket: "photobooth-events-v2", path: expectedPath, signedUrl: signed.href, expiresAt, maxBytes: EVENT_LIMITS.imageBytes, mime: "image/jpeg" };
+    if (origin.origin !== options.storageOrigin || origin.username || origin.password || origin.protocol !== "https:" && !(origin.protocol === "http:" && ["localhost", "127.0.0.1", "[::1]"].includes(origin.hostname)) || v.submissionId !== submissionId || v.bucket !== expectedBucket || v.path !== expectedPath || v.maxBytes !== EVENT_LIMITS.imageBytes || upload && v.overwrite !== false || !upload && v.mime !== "image/jpeg" || signed.origin !== origin.origin || signed.username || signed.password || signed.hash || signed.pathname !== `/storage/v1/object/${upload ? "upload/sign" : "sign"}/${expectedBucket}/${expectedPath}` || [...signed.searchParams.keys()].join() !== "token" || !signed.searchParams.get("token") || signed.href.length > 16384) return fail();
+    const result: EventUploadGrant | EventMediaGrant = upload ? { submissionId, bucket: "photobooth-event-images-staging-v2", path: expectedPath, signedUrl: signed.href, expiresAt, maxBytes: EVENT_LIMITS.imageBytes, overwrite: false } : { submissionId, bucket: "photobooth-events-v2", path: expectedPath, signedUrl: signed.href, expiresAt, maxBytes: EVENT_LIMITS.imageBytes, mime: "image/jpeg" };
+    if (clock) grantClocks.set(result, clock);
+    return result;
   }
   function session(value: unknown, redeemed = false): EventSession {
     const v = eventClientObject(value, ["eventId", "kind", "guestId", "submissionId", "expiresAt", ...(redeemed ? ["replacesBrowserGuestSession"] : [])]);
@@ -234,7 +245,7 @@ export function createEventGuestClient(options: EventGuestClientOptions) {
     async mintUpload(submissionId: string, signal?: AbortSignal): Promise<EventUploadGrant> { const id = eventClientUuid(submissionId); return grant(await io.request(path, "upload", { submissionId: id, expectedGuestId: guest() }, signal), id, true); },
     async upload(submissionId: string, blob: Blob, authorisation: EventUploadGrant, signal?: AbortSignal): Promise<{ acknowledged: boolean }> {
       guest(); const id = eventClientUuid(submissionId), checked = grant(authorisation, id, true); if (!(blob instanceof Blob) || blob.size < 1 || blob.size > EVENT_LIMITS.imageBytes) fail("invalid_request");
-      const info = inspectImageHeader(new Uint8Array(await blob.arrayBuffer())); io.assertActive(signal);
+      const info = inspectImageHeader(new Uint8Array(await blob.arrayBuffer())); io.assertActive(signal); grant(checked, id, true);
       const result = await io.binary(checked.signedUrl, { method: "PUT", headers: { "Content-Type": info.mime, "x-upsert": "false" }, body: blob }, 65536, signal);
       if (!result.ok && result.status !== 409) throw new EventClientError("upload_uncertain", result.status); return { acknowledged: result.ok };
     },

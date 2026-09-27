@@ -91,6 +91,8 @@ function fixture() {
 test("guest upload endpoint persists authorisation before provider mint and returns only exact upload descriptor", async () => {
   const f = fixture(), result = await f.run("guest", { operation: "upload", submissionId: submission, expectedGuestId: guest });
   assert.equal(result.status, 200); const data = await result.json();
+  assert(Number.isFinite(Date.parse(result.headers.get("x-pb-server-time") ?? "")));
+  assert.deepEqual(Object.keys(data).sort(), ["submissionId", "bucket", "path", "signedUrl", "expiresAt", "maxBytes", "overwrite"].sort());
   assert.equal(data.submissionId, submission); assert.equal(data.path, authorisation().path); assert.equal(data.overwrite, false); assert.equal(data.maxBytes, 2000000);
   assert.equal(data.token, undefined); assert.equal(data.generation, undefined); assert.equal(result.headers.get("cache-control"), "private, no-store");
   assert(f.calls.includes("pb_event_authorise_upload")); assert(f.calls.filter(name => name === "pb_event_check_rate").length >= 2); assert.equal(f.providerCalls(), 1);
@@ -106,6 +108,8 @@ test("swapped guest cookie, revocation during mint and caller abort cannot relea
 test("receipt media requires ready exact receipt and reauthorises after signing", async () => {
   const f = fixture(), result = await f.run("receipt", { operation: "media" }); assert.equal(result.status, 200);
   const data = await result.json(); assert.equal(data.bucket, access.bucket); assert.equal(data.path, access.path); assert.equal(data.mime, "image/jpeg"); assert.equal(data.sha256, undefined);
+  assert(Number.isFinite(Date.parse(result.headers.get("x-pb-server-time") ?? "")));
+  assert.deepEqual(Object.keys(data).sort(), ["submissionId", "bucket", "path", "signedUrl", "expiresAt", "maxBytes", "mime"].sort());
   assert.equal(f.calls.filter(name => name === "pb_event_read_access").length, 2);
   assert.equal(f.calls.filter(name => name === "pb_event_session").length, 2);
   const notReady = fixture(); notReady.setState("finalising"); assert.equal((await notReady.run("receipt", { operation: "media" })).status, 409); assert.equal(notReady.providerCalls(), 0);

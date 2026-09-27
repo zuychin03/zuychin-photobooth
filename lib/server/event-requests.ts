@@ -85,6 +85,12 @@ function cleanEvent(value: Record<string, unknown>, id: string) {
   return { eventId: id, status: value.status, ...eventCreate({ title: value.title, timezone: value.timezone, startsAt: value.starts_at, closesAt: value.contribution_closes_at, expiresAt: value.expires_at, maxGuests: value.max_guests, maxContributions: value.max_contributions, maxBytes: value.max_bytes }) };
 }
 
+function signedGrantJson(value: unknown): Response {
+  const response = privateJson(value);
+  response.headers.set("X-PB-Server-Time", new Date().toISOString());
+  return response;
+}
+
 export function createEventHandler(route: EventRoute, ports: EventRequestPorts = production, getEnv: () => Record<string, string | undefined> = () => process.env) {
   return async (request: Request, eventId?: string, submissionId?: string): Promise<Response> => {
     const controller = new AbortController(), expire = () => controller.abort();
@@ -247,7 +253,7 @@ export function createEventHandler(route: EventRoute, ports: EventRequestPorts =
           const signed = await ports.objects(env).mintUpload(authorisation, controller.signal); check();
           const fresh = await store.session(eventId!, digest(token), "contribute"); check();
           if (fresh.guestId !== session.guestId || Date.now() >= Date.parse(authorisation.mintBefore) || Date.parse(signed.expiresAt) > Date.parse(authorisation.authorisationUntil)) throw new EventStoreError("expired", 410);
-          return privateJson({ submissionId: id, bucket: authorisation.bucket, path: authorisation.path, signedUrl: signed.signedUrl, expiresAt: signed.expiresAt, maxBytes: EVENT_LIMITS.imageBytes, overwrite: false });
+          return signedGrantJson({ submissionId: id, bucket: authorisation.bucket, path: authorisation.path, signedUrl: signed.signedUrl, expiresAt: signed.expiresAt, maxBytes: EVENT_LIMITS.imageBytes, overwrite: false });
         }
         return eventInvalid();
       }
@@ -269,7 +275,7 @@ export function createEventHandler(route: EventRoute, ports: EventRequestPorts =
         const freshReceipt = cleanReceipt(await store.receipt(eventId!, digest(token), submissionId!), submissionId!); check();
         const fresh = await store.readAccess(eventId!, digest(token), submissionId!, "receipt"); check();
         if (fresh.path !== access.path || fresh.bucket !== access.bucket || freshReceipt.state !== "ready" || Date.parse(signed.expiresAt) <= Date.now() || Date.parse(signed.expiresAt) > Math.min(Date.parse(freshReceipt.eventExpiresAt), Date.now() + fresh.maxAgeSeconds * 1000)) throw new EventStoreError("access_denied", 403);
-        return privateJson({ submissionId, bucket: access.bucket, path: access.path, signedUrl: signed.signedUrl, expiresAt: signed.expiresAt, maxBytes: EVENT_LIMITS.imageBytes, mime: "image/jpeg" });
+        return signedGrantJson({ submissionId, bucket: access.bucket, path: access.path, signedUrl: signed.signedUrl, expiresAt: signed.expiresAt, maxBytes: EVENT_LIMITS.imageBytes, mime: "image/jpeg" });
       }
       const response = privateJson(receipt);
       if (operation === "exchange") setCookie(response, "receipt", token, secure, session.expiresAt); return response;
