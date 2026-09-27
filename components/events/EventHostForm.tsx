@@ -32,7 +32,7 @@ export function EventHostLook({ value, onChange, disabled }: { value: EventLook;
       <label htmlFor={`${id}-caption`} className="block text-sm font-medium">Default caption<input id={`${id}-caption`} className={`${eventInput} mt-2`} disabled={disabled} maxLength={320} value={value.caption} onChange={event => onChange({ ...value, caption: [...event.target.value].slice(0, 160).join("") })} /></label>
       <label className="flex min-h-11 items-center gap-3 text-sm"><input type="checkbox" disabled={disabled} checked={value.showDate} onChange={event => onChange({ ...value, showDate: event.target.checked })} />Show event date by default</label>
     </div>
-    <figure className="self-start rounded-sm p-3 shadow-sm" style={{ background: frame.color, color: frame.ink }}>
+    <figure className="w-[min(100%,13rem,24dvh)] justify-self-center self-start rounded-sm p-3 shadow-sm md:w-full" style={{ background: frame.color, color: frame.ink }}>
       <div role="img" aria-label={asset ? `${asset.name} event scene preview` : "Plain event frame preview"} className="aspect-[3/4] bg-cover bg-center" style={{ backgroundColor: asset?.fallback.colour ?? "#e7ddd2", backgroundImage: asset ? `url("${asset.thumbnail.path}")` : undefined }} />
       <figcaption className="mt-3 break-words text-center text-sm">{value.caption || "Your celebration"}</figcaption><p className="mt-2 text-center text-xs">Filters appear on guest photos.</p>
     </figure>

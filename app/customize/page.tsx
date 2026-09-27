@@ -560,7 +560,7 @@ function CustomizeWorkspace({ project }: { project: PhotoProject }) {
               onClick={() => void navigate(isShared ? session.roomCode ? `/room/${session.roomCode}` : "/projects" : "/booth")}
               className="flex min-h-11 items-center gap-2 rounded-full bg-muted px-4 text-sm font-medium"
             >
-              <ArrowLeft size={16} /> {isShared && !session.roomCode ? "Back" : hasShots ? "Retake" : "Add photos"}
+              <ArrowLeft size={16} /> {isShared ? session.roomCode ? "Back to room" : "Back" : hasShots ? "Retake photos" : "Add photos"}
             </button>
             <h1 className="text-lg font-semibold" style={{ fontFamily: "var(--font-fraunces)" }}>
               Edit your strip

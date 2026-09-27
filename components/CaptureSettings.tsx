@@ -21,7 +21,7 @@ export function CaptureSettings({ value, cameras, disabled, onChange }: {
         <Dropdown label="Timer" value={String(value.timerSeconds)} disabled={disabled} onChange={timer => onChange({ timerSeconds: Number(timer) as 3 | 5 | 10 })} options={[3, 5, 10].map(seconds => ({ value: String(seconds), label: `${seconds} seconds` }))} />
       </div>
     </div>
-    <p className="text-sm text-muted-foreground">{value.style === "classic" ? "Classic takes every shot in one go, with no retakes." : "Flexible lets you retake any shot."}</p>
+    <p className="text-sm text-muted-foreground">{value.style === "classic" ? "Classic takes every shot, then opens the editor." : "Flexible stays here so you can review your shots."} You can retake selected photos in either style.</p>
     <div className="space-y-1 text-sm"><span>Camera</span>
       <Dropdown label="Camera" value={value.cameraId ?? ""} disabled={disabled} onChange={cameraId => onChange({ cameraId: cameraId || null })} options={[
         { value: "", label: "Default camera" },

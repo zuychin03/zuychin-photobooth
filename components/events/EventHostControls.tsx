@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef } from "react";
+import { useEffect, useId, useRef } from "react";
 
 export const eventControl = "inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-50";
 export const eventInput = "min-h-11 w-full min-w-0 rounded-xl border border-border bg-card px-3 py-2 text-sm focus-visible:outline-2 focus-visible:outline-ring disabled:opacity-60";
@@ -15,21 +15,29 @@ export function useEventLeaveWarning(dirty: boolean) {
   }, [dirty]);
 }
 export function EventHostConfirm({ title, children, action, busy, returnFocus, returnFocusRef, fallbackFocusRef, onKeep, onConfirm }: { title: string; children: React.ReactNode; action: string; busy: boolean; returnFocus?: HTMLElement | null; returnFocusRef?: React.RefObject<HTMLElement | null>; fallbackFocusRef?: React.RefObject<HTMLElement | null>; onKeep(): void; onConfirm(): void }) {
-  const keep = useRef<HTMLButtonElement>(null), previous = useRef<Element | null>(null);
+  const dialog = useRef<HTMLDialogElement>(null), keep = useRef<HTMLButtonElement>(null), previous = useRef<Element | null>(null), titleId = useId(), descriptionId = useId();
   useEffect(() => {
+    const element = dialog.current;
+    if (!element) return;
     previous.current = returnFocusRef?.current ?? returnFocus ?? document.activeElement;
     const fallback = fallbackFocusRef?.current;
+    const overflow = document.body.style.overflow;
+    element.showModal();
+    document.body.style.overflow = "hidden";
     keep.current?.focus();
     return () => {
       const target = previous.current;
+      element.close();
+      document.body.style.overflow = overflow;
       requestAnimationFrame(() => {
+        if (element.isConnected && element.open) return;
         if (target instanceof HTMLElement && target.isConnected && !target.matches(":disabled") && !target.closest("[inert]")) target.focus();
         if (document.activeElement !== target && fallback?.isConnected) fallback.focus();
       });
     };
   }, [returnFocus, returnFocusRef, fallbackFocusRef]);
-  return <section role="group" aria-label={title} className="my-5 rounded-xl border border-border bg-muted p-5" onKeyDown={event => { if (event.key === "Escape" && !busy) { event.preventDefault(); onKeep(); } }}>
-    <h3 className="font-semibold">{title}</h3><div className="mt-2 max-w-2xl text-sm leading-relaxed">{children}</div>
-    <div className="mt-4 flex flex-wrap gap-2"><button ref={keep} type="button" className={`${eventControl} border border-border`} disabled={busy} onClick={onKeep}>Keep working</button><button type="button" className={eventControl} disabled={busy} onClick={onConfirm}>{action}</button></div>
-  </section>;
+  return <dialog ref={dialog} aria-labelledby={titleId} aria-describedby={descriptionId} aria-busy={busy} className="m-auto max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-lg overflow-y-auto overscroll-contain rounded-2xl border border-border bg-card p-5 text-foreground shadow-xl backdrop:bg-black/60" onCancel={event => { event.preventDefault(); if (!busy) onKeep(); }}>
+    <h3 id={titleId} className="font-display text-2xl">{title}</h3><div id={descriptionId} className="mt-3 text-sm leading-relaxed">{children}</div>
+    <div className="mt-5 flex flex-wrap gap-2"><button ref={keep} type="button" className={`${eventControl} border border-border`} disabled={busy} onClick={() => { if (!busy) onKeep(); }}>Keep working</button><button type="button" className={`${eventControl} bg-accent text-accent-foreground`} disabled={busy} onClick={() => { if (!busy) onConfirm(); }}>{action}</button></div>
+  </dialog>;
 }

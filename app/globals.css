@@ -19,6 +19,9 @@
   --warning: #f59e0b;
   --info: #38bdf8;
   --datestamp: #ff9d45;
+  --motion-feedback: 140ms;
+  --motion-enter: 180ms;
+  --motion-ease: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .dark {
@@ -103,6 +106,71 @@ body {
 
 .app-content > main[class~="min-h-dvh"] {
   min-height: calc(100dvh - var(--app-nav-height, 0px) - var(--app-bottom-nav-height, 0px));
+}
+
+/* Individual scale preserves positioned controls' existing transforms. */
+:where(button, a[href], summary, [role="button"], [role="option"], input, textarea, select) {
+  transition-property: color, background-color, border-color, outline-color, box-shadow, opacity, scale, transform;
+  transition-duration: var(--motion-feedback);
+  transition-timing-function: var(--motion-ease);
+}
+
+:where(button:disabled, [aria-disabled="true"]):active {
+  scale: none;
+}
+
+@layer base {
+  :where(button, a[href], summary, [role="button"], [role="option"]):not(:disabled):not([aria-disabled="true"]) {
+    -webkit-tap-highlight-color: color-mix(in srgb, var(--accent) 18%, transparent);
+  }
+
+  :where(button, a[href], summary, [role="button"], input, textarea, select):focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 3px;
+  }
+
+  :where(button, [role="button"], [role="option"]):not(:disabled):not([aria-disabled="true"]):active {
+    background-image: linear-gradient(color-mix(in srgb, currentColor 12%, transparent), color-mix(in srgb, currentColor 12%, transparent));
+  }
+
+  :where(a[href], summary):not([aria-disabled="true"]):active {
+    opacity: 0.75;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    :where(button, [role="button"], [role="option"]):not(:disabled):not([aria-disabled="true"]):hover {
+      background-image: linear-gradient(color-mix(in srgb, currentColor 7%, transparent), color-mix(in srgb, currentColor 7%, transparent));
+    }
+
+    :where(a[href], summary):not([aria-disabled="true"]):hover {
+      text-decoration-color: currentColor;
+      opacity: 0.85;
+    }
+
+    :where(button, [role="button"], [role="option"]):not(:disabled):not([aria-disabled="true"]):hover:active {
+      background-image: linear-gradient(color-mix(in srgb, currentColor 12%, transparent), color-mix(in srgb, currentColor 12%, transparent));
+    }
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    :where(button, [role="button"]):not(:disabled):not([aria-disabled="true"]):active {
+      scale: 0.97;
+    }
+  }
+}
+
+@keyframes surface-enter {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Opacity keeps fixed dropdowns anchored correctly inside native dialogs. */
+:where(dialog[open], [role="listbox"], [role="tooltip"]) {
+  animation: surface-enter var(--motion-enter) var(--motion-ease);
+}
+
+dialog[open]::backdrop {
+  animation: surface-enter var(--motion-enter) ease-out;
 }
 
 /* ─── Booth Mode ──────────────────────────────────────── */
@@ -204,6 +272,14 @@ body {
 .scrollbar-hide { scrollbar-width: none; -ms-overflow-style: none; }
 
 @media (prefers-reduced-motion: reduce) {
+  :where(button, a[href], summary, [role="button"], [role="option"], input, textarea, select) {
+    transition-property: color, background-color, border-color, outline-color, box-shadow, opacity;
+    transition-duration: 100ms;
+  }
+  :where(button, a[href], [role="button"]):active { scale: none; }
+  :where(dialog[open], [role="listbox"], [role="tooltip"]), dialog[open]::backdrop {
+    animation-duration: 100ms;
+  }
   .fluid-orb { animation: none; }
   .hero-animate { animation: none; opacity: 1; }
   .countdown-pulse, .capture-flash, .strip-print { animation-duration: 0.01s; }

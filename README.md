@@ -2,7 +2,7 @@
 
 Create a keepsake on your own, make one with people elsewhere, or collect photos at an event. Zuychin Photobooth V2 combines a local capture/editor library with optional private cloud projects, live rooms, memories and event workflows.
 
-Package version: **2.0.0**, following the [approved V2 plan](V2_PLAN.md). The friends release enables local creation tools and the existing Together rooms, while unfinished online features use a shared incoming screen. See [development status](docs/development/V2_STATUS.md) for current checks and outstanding full-V2 work. New hosted features remain disabled by default; physical-phone testing was explicitly deferred, not passed.
+Package version: **2.0.0**, following the [approved V2 plan](V2_PLAN.md). Local release mode enables creation tools and the existing Together rooms; full mode permits individually enabled hosted features. See [development status](docs/development/V2_STATUS.md) for current deployment checks and outstanding full-V2 work. New hosted features remain disabled by default; physical-phone testing was explicitly deferred, not passed.
 
 The booth, editable projects and exports work locally without an account. Browser storage is best effort, so keep portable backups. Live-room originals travel over peer connections; optional cloud/event uploads use separate private scopes. Event gallery and wall publication require their own consent and approval, rather than inheriting couple or room access.
 
@@ -20,7 +20,7 @@ To enable hosted features later, follow the database/worker sequence below, fini
 
 ## Features
 
-- **Solo booth**: choose a 3, 5 or 10-second timer, camera, mirror and optional screen fill light. Classic keeps the original booth sequence; Flexible lets you review and retake individual shots. Imported photos can fill the remaining positions when camera access is unavailable.
+- **Solo booth**: choose a 3, 5 or 10-second timer, camera, mirror and optional screen fill light. Classic opens the editor after capture; Flexible stays for review. Both let you select one or several saved shots to retake or replace with imports while preserving the rest of the strip. On mobile, the shutter sits directly below the preview and secondary controls open in a sheet.
 - **Local projects**: autosave originals and edits on this device, resume after reload, rename, duplicate and keep an editable `.pbproject` backup. Browser storage is best effort; an exported backup remains important. Account drafts stay hidden after sign-out, with a separate choice to remove their local copies.
 - **Personal templates**: save a reusable frame, arrange bounded photo slots, text, stickers and PNG decorations, and move recipes between browsers with `.pbtemplate` files. Source photos stay out of recipes; captions and text are excluded from export by default.
 - **Visual packs**: preview 18 generated scenes and six materials, browse by category, keep favourites and download selected packs for offline use. Missing images fall back to built-in backgrounds. Capture and editing controls share a themed, keyboard-accessible dropdown.
