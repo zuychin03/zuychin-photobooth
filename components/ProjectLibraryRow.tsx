@@ -35,7 +35,7 @@ export function ProjectLibraryRow({ item, thumbnail, busy, onAction, onRecovery 
     if (recoveryOpen) { setRecoveryOpen(false); return; }
     setReading(true); setRecoveryError(null);
     try { setRecovery(await onRecovery(item)); setRecoveryOpen(true); }
-    catch (error) { setRecoveryError(error instanceof Error ? error.message : "Recovery files could not be opened"); }
+    catch (error) { setRecoveryError(error instanceof Error ? error.message : "Couldn't open the recovery files."); }
     finally { focusTarget.current = "recovery"; setReading(false); }
   };
   const originalFiles = recovery ? new Map([...recovery.media, ...(recovery.checkpoint?.media ?? [])]) : new Map<string, Blob>();
@@ -53,7 +53,7 @@ export function ProjectLibraryRow({ item, thumbnail, busy, onAction, onRecovery 
           <div className="min-w-0">
             <h2 className="break-words text-lg font-semibold">{item.name}</h2>
             <p className="mt-1 text-sm text-foreground/65">{item.scope.kind === "device" ? "On this device" : "Account draft on this device"}{date ? ` · Edited ${date}` : ""}</p>
-            {item.readOnly && <p className="mt-2 max-w-xl text-sm text-foreground/75">This draft needs a newer app or recovery. Your stored files are still available.</p>}
+            {item.readOnly && <p className="mt-2 max-w-xl text-sm text-foreground/75">This project can&apos;t be opened in this version of the app. Its files are still here under Recovery files.</p>}
           </div>
           {!item.readOnly && <button type="button" disabled={disabled} onClick={() => void run("resume")} className={`${control} bg-accent text-accent-foreground hover:bg-accent/90`} aria-label={`Continue ${item.name}`}>Continue <ArrowRight size={16} aria-hidden /></button>}
         </div>
@@ -72,21 +72,21 @@ export function ProjectLibraryRow({ item, thumbnail, busy, onAction, onRecovery 
           <button type="button" className={control} disabled={disabled} onClick={() => { focusTarget.current = "rename"; setEditing(false); }}>Cancel</button>
         </form>}
         {confirmDelete && <div className="mt-4" role="group" aria-label={`Confirm deletion of ${item.name}`}>
-          <p className="max-w-xl text-sm">Delete this project and its originals from this browser? This cannot be undone. Export a backup first if you want to keep it.</p>
+          <p className="max-w-xl text-sm">Delete this project and its photos from this browser? You can&apos;t undo this, so export a backup first if you might want it later.</p>
           <div className="mt-2 flex flex-wrap gap-2"><button type="button" className={`${control} bg-foreground text-background hover:bg-foreground/90`} disabled={disabled} onClick={() => void run("delete")}>Delete from this device</button><button data-row-focus="keep" type="button" className={control} disabled={disabled} onClick={() => { focusTarget.current = "delete"; setConfirmDelete(false); }}>Keep project</button></div>
         </div>}
         {recoveryError && <p role="alert" className="mt-3 text-sm text-foreground">{recoveryError}</p>}
       </div>
     </div>
     {recoveryOpen && recovery && <section className="mt-5 border-t border-border pt-4 sm:ml-29" aria-label={`Recovery files for ${item.name}`}>
-      <p className="max-w-2xl text-sm text-foreground/75">Keep these recovery files together. They include private account or camera details; use regular Export for sharing.</p>
+      <p className="max-w-2xl text-sm text-foreground/75">These are the raw files behind your project. They can include private account or camera details, so use Export if you want to share it.</p>
       <div className="mt-2 flex flex-wrap gap-1">
-        <button type="button" className={control} onClick={() => downloadProjectBlob(new Blob([recovery.kind === "current" ? JSON.stringify(recovery.project) : recovery.rawJson], { type: "application/json" }), projectDownloadName(item.name, "json"))}><Download size={15} aria-hidden /> Manifest</button>
-        {recovery.checkpoint && <button type="button" className={control} onClick={() => downloadProjectBlob(new Blob([recovery.checkpoint!.rawJson], { type: "application/json" }), projectDownloadName(`${item.name}-previous`, "json"))}><Download size={15} aria-hidden /> Previous manifest</button>}
-        {Array.from(originalFiles, ([id, blob], index) => <button type="button" key={id} className={control} onClick={() => downloadProjectBlob(blob, projectDownloadName(id, blob.type === "image/png" ? "png" : blob.type === "image/webp" ? "webp" : blob.type === "image/jpeg" ? "jpg" : "bin"))}><Download size={15} aria-hidden /> Original {index + 1}</button>)}
+        <button type="button" className={control} onClick={() => downloadProjectBlob(new Blob([recovery.kind === "current" ? JSON.stringify(recovery.project) : recovery.rawJson], { type: "application/json" }), projectDownloadName(item.name, "json"))}><Download size={15} aria-hidden /> Project data</button>
+        {recovery.checkpoint && <button type="button" className={control} onClick={() => downloadProjectBlob(new Blob([recovery.checkpoint!.rawJson], { type: "application/json" }), projectDownloadName(`${item.name}-previous`, "json"))}><Download size={15} aria-hidden /> Previous project data</button>}
+        {Array.from(originalFiles, ([id, blob], index) => <button type="button" key={id} className={control} onClick={() => downloadProjectBlob(blob, projectDownloadName(id, blob.type === "image/png" ? "png" : blob.type === "image/webp" ? "webp" : blob.type === "image/jpeg" ? "jpg" : "bin"))}><Download size={15} aria-hidden /> Photo {index + 1}</button>)}
       </div>
       {recovery.checkpoint && recovery.kind !== "unsupported" && <div className="mt-3">
-        {confirmRecovery ? <><p className="text-sm">Restore the previous saved settings? The current manifest will become the recovery checkpoint.</p><div className="mt-2 flex flex-wrap gap-2"><button type="button" className={`${control} bg-muted`} disabled={disabled} onClick={() => void run("recover")}><RotateCcw size={15} aria-hidden /> Restore previous save</button><button data-row-focus="cancelRecovery" type="button" className={control} disabled={disabled} onClick={() => { focusTarget.current = "recover"; setConfirmRecovery(false); }}>Cancel</button></div></> : <button data-row-focus="recover" type="button" className={control} disabled={disabled} onClick={() => { focusTarget.current = "cancelRecovery"; setConfirmRecovery(true); }}><RotateCcw size={15} aria-hidden /> Recover previous save</button>}
+        {confirmRecovery ? <><p className="text-sm">Go back to the previous save? The current data will be kept as a backup.</p><div className="mt-2 flex flex-wrap gap-2"><button type="button" className={`${control} bg-muted`} disabled={disabled} onClick={() => void run("recover")}><RotateCcw size={15} aria-hidden /> Yes, restore it</button><button data-row-focus="cancelRecovery" type="button" className={control} disabled={disabled} onClick={() => { focusTarget.current = "recover"; setConfirmRecovery(false); }}>Cancel</button></div></> : <button data-row-focus="recover" type="button" className={control} disabled={disabled} onClick={() => { focusTarget.current = "cancelRecovery"; setConfirmRecovery(true); }}><RotateCcw size={15} aria-hidden /> Restore previous save</button>}
       </div>}
     </section>}
   </li>;

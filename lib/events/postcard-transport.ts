@@ -44,5 +44,5 @@ export function createPostcardTransport(options: PostcardTransportOptions) {
     if (!response.ok) { const b = eventClientObject(value, ["error"]), code = String(b.error); throw new EventClientError(["access_denied", "identity_changed", "expired", "conflict", "capacity", "not_ready", "invalid_request", "rate_limited", "origin_denied", "unavailable", "update_required"].includes(code) ? code : "unavailable", response.status); }
     return value;
   }
-  return { run, request, bytes, assertActive, fetch: options.fetch ?? fetch, close() { lifetime.abort(); } };
+  return { run, request, bytes, assertActive, fetch: (input: RequestInfo | URL, init?: RequestInit) => (options.fetch ?? fetch)(input, init), close() { lifetime.abort(); } };
 }

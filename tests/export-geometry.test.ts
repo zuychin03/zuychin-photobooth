@@ -97,8 +97,8 @@ test("whole-pixel rounding does not claim a resource cap, but oversized cover cr
   const current = input(), base = templateFixture();
   current.template = { ...base, canvas: { width: 536, height: 1522 } };
   const print = sourceResolution(current, exportGeometry(current.template.canvas, "a4-contact"));
-  assert.ok(!print.warnings.some(warning => warning.includes("4096-pixel")));
+  assert.ok(!print.warnings.some(warning => warning.includes("4096 pixels")));
   current.template = { ...base, canvas: { width: 120, height: 4000 } };
   const cover = sourceResolution(current, exportGeometry(current.template.canvas, "square", { fit: "cover" }));
-  assert.ok(cover.warnings.some(warning => warning.includes("4096-pixel")));
+  assert.ok(cover.warnings.some(warning => warning.includes("4096 pixels")));
 });

@@ -67,11 +67,11 @@ export function AuthProvider({ children, accountsEnabled = true }: { children: R
       enabled,
       signOut: async (options = {}) => {
         const ownerId = user?.id;
-        if (ownerId && currentOwner.current !== ownerId) throw new Error("The active account changed. Reopen the sign-out options.");
+        if (ownerId && currentOwner.current !== ownerId) throw new Error("You switched accounts. Open sign out again.");
         authEpoch.current++;
         const { error } = await createClient().auth.signOut();
-        if (error) throw new Error("Sign-out could not be confirmed. No local drafts were removed. Please try again.");
-        if (currentOwner.current !== null && currentOwner.current !== ownerId) throw new Error("The active account changed. No local drafts were removed.");
+        if (error) throw new Error("Couldn't sign you out, so no drafts were deleted. Try again.");
+        if (currentOwner.current !== null && currentOwner.current !== ownerId) throw new Error("You switched accounts, so no drafts were deleted.");
         currentOwner.current = null;
         setUser(null);
         const result: SignOutResult = { localCopies: options.removeLocalCopies && ownerId ? "removed" : "kept", cleanup: null, cleanupError: false };

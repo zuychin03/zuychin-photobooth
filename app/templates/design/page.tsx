@@ -54,7 +54,7 @@ function Designer() {
   const templatesButton = useRef<HTMLButtonElement>(null), keepDesigning = useRef<HTMLButtonElement>(null);
   const leaveTrigger = useRef<HTMLElement | null>(null);
   const allowNavigation = (path: string) => {
-    if (working.current || busy) { setStatus("Wait for the current design action to finish before leaving."); return false; }
+    if (working.current || busy) { setStatus("Hang on a second, still saving your design."); return false; }
     if (!dirty) return true;
     leaveTrigger.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     setLeaveTo(path); return false;
@@ -72,18 +72,18 @@ function Designer() {
       setDesign(null); setError(null); setStatus(""); setDirty(false); setPast([]); setFuture([]);
       let source: TemplateDesign, stored: TemplateRecipe | null = null, files: ReadonlyMap<string, Blob>;
       if (id) {
-        if (accountScope && !owner) throw new Error("Sign in to the template owner's account, or return to your device templates.");
+        if (accountScope && !owner) throw new Error("This template belongs to an account. Sign in to that account to open it.");
         const shelf = await openTemplateShelf(accountScope ? { kind: "account", ownerId: owner! } : { kind: "device" });
         try {
           const loaded = await shelf.load(id);
-          if (!loaded || loaded.kind !== "current") throw new Error("This template needs recovery. Keep a raw backup from the template shelf.");
+          if (!loaded || loaded.kind !== "current") throw new Error("This template can't be opened here. Download its recovery files from My templates.");
           stored = loaded.recipe; source = templateFromRecipe(stored); files = loaded.decorations;
         } finally { shelf.close(); }
       } else {
         const active = await flushEditor(); source = templateFromProject(active ?? createProject()); files = getDecorationBlobs();
       }
       for (const media of source.decorations) {
-        const blob = files.get(media.id); if (!blob) throw new Error("A PNG decoration is missing");
+        const blob = files.get(media.id); if (!blob) throw new Error("One of the PNG decorations is missing.");
         const image = await projectImageToCanvas(blob, media);
         if (lifetime.current !== token) { image.width = image.height = 0; return; }
         decoded.set(media.id, image);
@@ -92,7 +92,7 @@ function Designer() {
       images.current = decoded; blobs.current = new Map(files);
       setRecipe(stored); setName(stored?.name ?? "My frame"); setDesign(source); setSelected(source.slots[0]?.id ?? null);
     };
-    void load().catch(error => { if (lifetime.current === token) setError(error instanceof Error ? error.message : "The designer could not open"); });
+    void load().catch(error => { if (lifetime.current === token) setError(error instanceof Error ? error.message : "Couldn't open the frame designer."); });
     const generation = lifetime;
     return () => { generation.current++; for (const image of decoded.values()) releaseCanvas(image); };
   }, [id, accountScope, owner, loading, hydrating, flushEditor, getDecorationBlobs]);
@@ -120,7 +120,7 @@ function Designer() {
           if (!active) return; value[role].push(shot ? await cutout(shot) : null);
         }
         if (active) setCuts({ sources: session.shots, value });
-      } catch { if (active) { setCuts(null); setStatus("Background removal is unavailable. Original photos are shown."); } }
+      } catch { if (active) { setCuts(null); setStatus("Background removal doesn't work here, so you're seeing the photos as they are."); } }
       finally { if (active) setSegmenting(false); }
     };
     void prepare(); return () => { active = false; };
@@ -164,7 +164,7 @@ function Designer() {
     if (!design) return;
     setPast(values => [...values, design].slice(-20)); setFuture([]); setDesign(next); setDirty(true); setError(null); setStatus("");
   };
-  const edit = (patch: Partial<TemplateDesign>) => { if (design) try { change(reviseTemplate(design, patch)); } catch (error) { setError(error instanceof Error ? error.message : "This change exceeds the template limits"); } };
+  const edit = (patch: Partial<TemplateDesign>) => { if (design) try { change(reviseTemplate(design, patch)); } catch (error) { setError(error instanceof Error ? error.message : "That goes over the template's limits."); } };
   const slot = design?.slots.find(item => item.id === selected), layer = design?.layers.find(item => item.id === selected), item = slot ?? layer;
   const updateSlot = (patch: Partial<TemplatePhotoSlot>) => { if (design && slot) edit({ slots: design.slots.map(value => value.id === slot.id ? Object.fromEntries(Object.entries({ ...value, ...patch }).filter(([, value]) => value !== undefined)) as unknown as TemplatePhotoSlot : value) }); };
   const updateLayer = (next: TemplateLayer) => { if (design) edit({ layers: design.layers.map(value => value.id === next.id ? next : value) }); };
@@ -176,7 +176,7 @@ function Designer() {
     if ("kind" in next) updateLayer(next); else updateSlot(next);
   };
   const makeRecipe = (copy = false) => {
-    if (!design) throw new Error("Open a design first");
+    if (!design) throw new Error("Open a design first.");
     const now = new Date().toISOString();
     return validateTemplateRecipe({ ...design, schemaVersion: 1, id: copy || !recipe ? crypto.randomUUID() : recipe.id, name,
       scope: recipe?.scope ?? scope, revision: copy || !recipe ? 0 : recipe.revision + 1, createdAt: copy || !recipe ? now : recipe.createdAt, updatedAt: now });
@@ -186,15 +186,15 @@ function Designer() {
     if (working.current) return;
     working.current = true;
     const token = lifetime.current; setBusy(true); setError(null);
-    const assertCurrent = () => { if (token !== lifetime.current) throw new Error("The active designer or account changed"); };
-    try { await action(assertCurrent); } catch (error) { if (token === lifetime.current) setError(error instanceof Error ? error.message : "The action could not finish. Your design is still here."); }
+    const assertCurrent = () => { if (token !== lifetime.current) throw new Error("You switched designs or accounts."); };
+    try { await action(assertCurrent); } catch (error) { if (token === lifetime.current) setError(error instanceof Error ? error.message : "That didn't work, but your design is still here."); }
     finally { if (token === lifetime.current && !navigatingToSaved.current) { working.current = false; setBusy(false); } }
   };
   const save = (copy = false) => work(async assertCurrent => {
     const next = makeRecipe(copy), files = filesForDesign(), shelf = await openTemplateShelf(next.scope);
     try {
       assertCurrent(); const saved = await shelf.save(next, files, copy ? null : recipe?.revision ?? null); assertCurrent();
-      setRecipe(saved); setDirty(false); setStatus("Template saved on this device.");
+      setRecipe(saved); setDirty(false); setStatus("Template saved.");
       if (id !== saved.id || accountScope !== (saved.scope.kind === "account")) {
         router.replace(`/templates/design?template=${encodeURIComponent(saved.id)}&scope=${saved.scope.kind}`, { scroll: false });
         navigatingToSaved.current = true;
@@ -213,12 +213,12 @@ function Designer() {
   if (!design) return <main className="mx-auto max-w-2xl p-8"><button className={button} onClick={() => router.push("/templates")}><ArrowLeft size={16} /> Templates</button><h1 className="mt-8 font-display text-3xl">Frame designer</h1><p className="mt-4" role={error ? "alert" : "status"}>{error ?? "Opening your design…"}</p></main>;
   return <main className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-8" aria-busy={busy}>
     <header className="flex flex-wrap items-center justify-between gap-4 border-b border-border pb-5">
-      <div><button ref={templatesButton} disabled={busy} className="mb-3 flex min-h-11 items-center gap-2 text-sm underline" onClick={() => go("/templates")}><ArrowLeft size={16} /> Templates</button><h1 className="font-display text-3xl sm:text-4xl">Frame designer</h1><p className="mt-2 max-w-xl text-sm text-muted-foreground">Make a frame to use again.</p></div>
+      <div><button ref={templatesButton} disabled={busy} className="mb-3 flex min-h-11 items-center gap-2 text-sm underline" onClick={() => go("/templates")}><ArrowLeft size={16} /> Templates</button><h1 className="font-display text-3xl sm:text-4xl">Frame designer</h1><p className="mt-2 max-w-xl text-sm text-muted-foreground">Make a frame you can reuse.</p></div>
       <div className="flex flex-wrap gap-2"><button className={button} disabled={busy} onClick={() => void save()}><Save size={16} /> Save template</button><button className={`${button} border-transparent bg-accent text-accent-foreground hover:bg-accent/90`} disabled={busy || !project || segmenting || curated.loading} onClick={() => void work(async assertCurrent => { assertCurrent(); await applyTemplate(design, filesForDesign()); assertCurrent(); setDirty(false); router.push("/customize"); })}>Apply to project</button></div>
     </header>
-    {leaveTo && <div role="group" aria-label="Unsaved template changes" className="my-4 border-y border-border py-4 text-sm"><p>Leave without saving this template? The project itself has not changed.</p><div className="mt-2 flex gap-4"><button ref={keepDesigning} disabled={busy} className={button} onClick={() => { setLeaveTo(null); const target = leaveTrigger.current; requestAnimationFrame(() => { if (target?.isConnected && !target.matches(":disabled") && !target.closest("[inert]")) target.focus(); else templatesButton.current?.focus(); }); }}>Keep designing</button><button disabled={busy} className={button} onClick={() => { if (!working.current) router.push(leaveTo); }}>Leave designer</button></div></div>}
+    {leaveTo && <div role="group" aria-label="Unsaved template changes" className="my-4 border-y border-border py-4 text-sm"><p>Leave without saving this template? Your project stays as it was.</p><div className="mt-2 flex gap-4"><button ref={keepDesigning} disabled={busy} className={button} onClick={() => { setLeaveTo(null); const target = leaveTrigger.current; requestAnimationFrame(() => { if (target?.isConnected && !target.matches(":disabled") && !target.closest("[inert]")) target.focus(); else templatesButton.current?.focus(); }); }}>Keep designing</button><button disabled={busy} className={button} onClick={() => { if (!working.current) router.push(leaveTo); }}>Leave designer</button></div></div>}
     {error && <p role="alert" className="my-4 rounded-xl bg-destructive/10 p-4 text-sm">{error}</p>}
-    <p role="status" className="my-4 text-sm text-muted-foreground">{busy ? "Working…" : status || (dirty ? "Unsaved template changes" : "Your design is ready to edit")}</p>
+    <p role="status" className="my-4 text-sm text-muted-foreground">{busy ? "Working…" : status || (dirty ? "Unsaved changes" : "Ready to edit")}</p>
     <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_360px]" inert={busy}>
       <section className="lg:sticky lg:top-6" aria-label="Frame preview">
         <div className="flex min-h-72 justify-center rounded-2xl bg-muted p-5 sm:p-8">
@@ -233,8 +233,8 @@ function Designer() {
         </div>
         <div className="mt-3 flex flex-wrap items-center justify-between gap-3"><p className="text-sm text-muted-foreground">{design.canvas.width} × {design.canvas.height} px · {design.slots.length}/16 photo slots</p><div className="flex gap-2"><button className={button} aria-label="Undo design change" disabled={!past.length} onClick={() => { setFuture(values => [design, ...values]); setDesign(past[past.length - 1]); setPast(past.slice(0, -1)); setDirty(true); }}><Undo2 size={18} /></button><button className={button} aria-label="Redo design change" disabled={!future.length} onClick={() => { setPast(values => [...values, design]); setDesign(future[0]); setFuture(future.slice(1)); setDirty(true); }}><Redo2 size={18} /></button></div></div>
         {segmenting && <p role="status" className="mt-2 text-sm">Preparing the scene preview…</p>}
-        {curated.fallback.length > 0 && <p className="mt-2 text-sm">Using a built-in fallback for {curated.fallback.join(", ")}.</p>}
-        {!project && <p className="mt-3 text-sm">Save this frame, then use it in a new project from Templates.</p>}
+        {curated.fallback.length > 0 && <p className="mt-2 text-sm">Couldn&apos;t load {curated.fallback.join(", ")}, so a built-in background is filling in.</p>}
+        {!project && <p className="mt-3 text-sm">Save this frame, then start a new project with it from My templates.</p>}
       </section>
       <div className="min-w-0 space-y-7">
         <section className="space-y-3"><label className="block text-sm font-medium">Template name<input className={`${field} mt-1`} value={name} maxLength={100} onChange={event => { setName(event.target.value); setDirty(true); }} /></label><div className="grid grid-cols-2 gap-3"><NumberField label="Canvas width" value={design.canvas.width} min={128} max={4096} change={width => edit({ canvas: { ...design.canvas, width } })} /><NumberField label="Canvas height" value={design.canvas.height} min={128} max={4096} change={height => edit({ canvas: { ...design.canvas, height } })} /></div></section>
@@ -242,11 +242,11 @@ function Designer() {
           <label className={`${button} relative cursor-pointer focus-within:outline-2 focus-within:outline-accent`}>PNG decoration<input className="sr-only" type="file" accept="image/png" aria-label="Add PNG decoration" disabled={design.decorations.length >= 8} onChange={event => {
             const file = event.target.files?.[0]; event.target.value = ""; if (!file) return;
             void work(async assertCurrent => {
-              if (file.size > 4 * 1024 * 1024) throw new Error("Choose a PNG smaller than 4 MiB");
+              if (file.size > 4 * 1024 * 1024) throw new Error("Choose a PNG under 4 MB.");
               const token = lifetime.current, info = await inspectProjectImage(file);
               const media = validateMediaResource({ ...info, id: crypto.randomUUID(), kind: "decoration", bytes: file.size });
               assertCurrent();
-              if (images.current.size >= RESOURCE_LIMITS.files || [...blobs.current.values()].reduce((sum, blob) => sum + blob.size, file.size) > RESOURCE_LIMITS.totalEncodedBytes || [...images.current.values()].reduce((sum, image) => sum + image.width * image.height, media.width * media.height) > RESOURCE_LIMITS.totalPixels) throw new Error("The design and its undo history have reached the image limit. Save and reopen this template before adding another decoration.");
+              if (images.current.size >= RESOURCE_LIMITS.files || [...blobs.current.values()].reduce((sum, blob) => sum + blob.size, file.size) > RESOURCE_LIMITS.totalEncodedBytes || [...images.current.values()].reduce((sum, image) => sum + image.width * image.height, media.width * media.height) > RESOURCE_LIMITS.totalPixels) throw new Error("That's as many images as the designer can hold, counting your undo history. Save and reopen the template to add another.");
               const image = await projectImageToCanvas(file, info); if (token !== lifetime.current) { image.width = image.height = 0; return; }
               const next: TemplateLayer = { id: crypto.randomUUID(), kind: "decoration", mediaId: media.id, fit: "contain", x: 0.1, y: 0.1, width: 0.3, height: 0.3, rotation: 0 };
               try { const changed = reviseTemplate(design, { decorations: [...design.decorations, media], layers: [...design.layers, next] }); blobs.current.set(media.id, file.slice(0, file.size, "image/png")); images.current.set(media.id, image); change(changed); setSelected(next.id); }
@@ -255,16 +255,16 @@ function Designer() {
           }} /></label></div>
           <Dropdown showLabel label="Selected item" value={selected ?? ""} options={[...design.slots.map((slot, index) => ({ value: slot.id, label: `Photo slot ${index + 1} · ${slot.role}${slot.sourceIndex + 1}` })), ...design.layers.map((layer, index) => ({ value: layer.id, label: `${layer.kind === "text" ? "Text" : layer.kind === "sticker" ? "Sticker" : "PNG"} ${index + 1}` }))]} onChange={setSelected} />
           {item && <><div className="grid grid-cols-2 gap-3">{(["x", "y", "width", "height"] as const).map(key => <NumberField key={key} label={`${key === "x" ? "Left" : key === "y" ? "Top" : key === "width" ? "Width" : "Height"} (%)`} value={Number((item[key] * 100).toFixed(2))} min={key === "x" || key === "y" ? 0 : 0.1} max={100} change={value => setBounds(key, value)} />)}</div>
-            {slot && <><div className="grid grid-cols-2 gap-3"><Dropdown showLabel label="Participant" value={slot.role} options={ROLES.map(role => ({ value: role, label: role }))} onChange={role => updateSlot({ role: role as Role, companions: slot.companions?.filter(source => source.role !== role) })} /><Dropdown showLabel label="Source photo" value={String(slot.sourceIndex)} options={[0, 1, 2, 3].map(index => ({ value: String(index), label: `Photo ${index + 1}` }))} onChange={value => updateSlot({ sourceIndex: Number(value) })} /></div>
+            {slot && <><div className="grid grid-cols-2 gap-3"><Dropdown showLabel label="Person" value={slot.role} options={ROLES.map(role => ({ value: role, label: role }))} onChange={role => updateSlot({ role: role as Role, companions: slot.companions?.filter(source => source.role !== role) })} /><Dropdown showLabel label="Source photo" value={String(slot.sourceIndex)} options={[0, 1, 2, 3].map(index => ({ value: String(index), label: `Photo ${index + 1}` }))} onChange={value => updateSlot({ sourceIndex: Number(value) })} /></div>
               <NumberField label="Photo zoom" value={slot.crop.zoom} min={1} max={4} change={zoom => updateSlot({ crop: { ...slot.crop, zoom } })} />
               <div className="grid grid-cols-2 gap-3"><NumberField label="Photo pan X" value={slot.crop.offsetX} min={-1} max={1} change={offsetX => updateSlot({ crop: { ...slot.crop, offsetX } })} /><NumberField label="Photo pan Y" value={slot.crop.offsetY} min={-1} max={1} change={offsetY => updateSlot({ crop: { ...slot.crop, offsetY } })} /></div>
               <Dropdown showLabel label="Photo rotation" value={String(slot.crop.rotation)} options={[0, 90, 180, 270].map(value => ({ value: String(value), label: `${value}°` }))} onChange={value => updateSlot({ crop: { ...slot.crop, rotation: Number(value) as 0 | 90 | 180 | 270 } })} />
               <label className="flex min-h-11 items-center gap-3 text-sm"><input type="checkbox" checked={slot.crop.mirror} onChange={event => updateSlot({ crop: { ...slot.crop, mirror: event.target.checked } })} /> Mirror photo</label>
-              <Dropdown showLabel label="Photo filter" value={slot.filterId ?? "inherit"} options={[{ value: "inherit", label: "Follow frame filter" }, ...FILTERS.map(filter => ({ value: filter.id, label: filter.name }))]} onChange={value => updateSlot({ filterId: value === "inherit" ? null : value })} />
-              {slot.companions?.length ? <p className="text-sm text-muted-foreground">Together cell: {slot.role} and {slot.companions.map(source => source.role).join(", ")}. Positions follow the saved scene placement.</p> : null}
+              <Dropdown showLabel label="Photo filter" value={slot.filterId ?? "inherit"} options={[{ value: "inherit", label: "Same as the frame" }, ...FILTERS.map(filter => ({ value: filter.id, label: filter.name }))]} onChange={value => updateSlot({ filterId: value === "inherit" ? null : value })} />
+              {slot.companions?.length ? <p className="text-sm text-muted-foreground">{slot.role} shares this slot with {slot.companions.map(source => source.role).join(", ")} in a Together scene. Their positions come from the scene placement.</p> : null}
             </>}
             {layer && <><NumberField label="Layer rotation (°)" value={layer.rotation} min={-180} max={180} change={rotation => updateLayer({ ...layer, rotation })} />
-              {layer.kind === "text" && <><label className="block text-sm font-medium">Text<textarea className={`${field} mt-1 min-h-24 py-2`} value={layer.text} maxLength={500} onChange={event => updateLayer({ ...layer, text: event.target.value })} /></label><Dropdown showLabel label="Typeface" value={layer.font} options={[{ value: "serif", label: "Fraunces" }, { value: "sans", label: "Geist" }, { value: "mono", label: "Geist Mono" }]} onChange={value => updateLayer({ ...layer, font: value as "serif" | "sans" | "mono" })} /><NumberField label="Text size (% of width)" value={layer.fontSize * 100} min={0.5} max={25} change={value => updateLayer({ ...layer, fontSize: value / 100 })} /><Dropdown showLabel label="Text alignment" value={layer.align} options={["left", "center", "right"].map(value => ({ value, label: value }))} onChange={value => updateLayer({ ...layer, align: value as "left" | "center" | "right" })} /><label className="flex min-h-11 items-center justify-between text-sm">Text colour<input type="color" value={layer.colour} onChange={event => updateLayer({ ...layer, colour: event.target.value })} className="h-11 w-16 rounded-md" /></label></>}
+              {layer.kind === "text" && <><label className="block text-sm font-medium">Text<textarea className={`${field} mt-1 min-h-24 py-2`} value={layer.text} maxLength={500} onChange={event => updateLayer({ ...layer, text: event.target.value })} /></label><Dropdown showLabel label="Typeface" value={layer.font} options={[{ value: "serif", label: "Fraunces" }, { value: "sans", label: "Geist" }, { value: "mono", label: "Geist Mono" }]} onChange={value => updateLayer({ ...layer, font: value as "serif" | "sans" | "mono" })} /><NumberField label="Text size (% of width)" value={layer.fontSize * 100} min={0.5} max={25} change={value => updateLayer({ ...layer, fontSize: value / 100 })} /><Dropdown showLabel label="Text alignment" value={layer.align} options={[{ value: "left", label: "Left" }, { value: "center", label: "Centre" }, { value: "right", label: "Right" }]} onChange={value => updateLayer({ ...layer, align: value as "left" | "center" | "right" })} /><label className="flex min-h-11 items-center justify-between text-sm">Text colour<input type="color" value={layer.colour} onChange={event => updateLayer({ ...layer, colour: event.target.value })} className="h-11 w-16 rounded-md" /></label></>}
               {layer.kind === "sticker" && <><Dropdown showLabel label="Sticker" value={layer.slug} options={STICKER_PACKS.flatMap(pack => pack.stickers.map(sticker => ({ value: sticker.slug, label: sticker.slug.replaceAll("_", " ") })))} onChange={slug => updateLayer({ ...layer, slug })} /><Dropdown showLabel label="Sticker style" value={layer.style} options={STICKER_STYLES.map(style => ({ value: style.id, label: style.name }))} onChange={style => updateLayer({ ...layer, style: style as typeof layer.style })} /></>}
               {layer.kind === "decoration" && <Dropdown showLabel label="Decoration fit" value={layer.fit} options={[{ value: "contain", label: "Show whole image" }, { value: "cover", label: "Fill and crop" }]} onChange={fit => updateLayer({ ...layer, fit: fit as "contain" | "cover" })} />}
               <div className="flex gap-2"><button className={button} onClick={() => edit({ layers: [layer, ...design.layers.filter(value => value.id !== layer.id)] })}>Send to back</button><button className={button} onClick={() => edit({ layers: [...design.layers.filter(value => value.id !== layer.id), layer] })}>Bring to front</button></div>
@@ -273,7 +273,7 @@ function Designer() {
         </section>
         <section className="space-y-3 border-t border-border pt-5"><h2 className="font-medium">Frame finish</h2><Dropdown showLabel label="Frame colour" value={design.look.frameId} options={FRAMES.map(frame => ({ value: frame.id, label: frame.name }))} onChange={frameId => edit({ look: { ...design.look, frameId } })} /><Dropdown showLabel label="Frame filter" value={design.look.filterId} options={FILTERS.map(filter => ({ value: filter.id, label: filter.name }))} onChange={filterId => edit({ look: { ...design.look, filterId } })} /><Dropdown showLabel label="Pattern" value={design.look.patternId} options={[{ value: "none", label: "None" }, ...PATTERNS.map(pattern => ({ value: pattern.id, label: pattern.name }))]} onChange={patternId => edit({ look: { ...design.look, patternId } })} /><label className="block text-sm font-medium">Default caption<input className={`${field} mt-1`} value={design.defaults.caption} maxLength={500} onChange={event => edit({ defaults: { ...design.defaults, caption: event.target.value } })} /></label><label className="flex min-h-11 items-center gap-3 text-sm"><input type="checkbox" checked={design.defaults.showDate} onChange={event => edit({ defaults: { ...design.defaults, showDate: event.target.checked } })} /> Show capture date</label></section>
         <VisualPackPicker sceneId={design.look.sceneId} materialId={design.look.materialId} onSceneChange={sceneId => edit({ look: { ...design.look, sceneId } })} onMaterialChange={materialId => edit({ look: { ...design.look, materialId } })} />
-        <section className="space-y-3 border-t border-border pt-5"><h2 className="font-medium">Save or share</h2><p className="text-sm text-muted-foreground">Recipes include PNG decorations, but no source photos. Captions and text are excluded unless selected below.</p><label className="flex min-h-11 items-center gap-3 text-sm"><input type="checkbox" checked={includeText} onChange={event => setIncludeText(event.target.checked)} /> Include captions and text in exported recipe</label><div className="flex flex-wrap gap-2"><button className={button} onClick={() => void work(async assertCurrent => { const file = await exportTemplateBundle(makeRecipe(true), filesForDesign(), { includeText }); assertCurrent(); downloadProjectBlob(file, projectDownloadName(name, "pbtemplate")); setStatus("Template file prepared."); })}><Download size={16} /> Export recipe</button>{recipe && <button className={button} onClick={() => void save(true)}>Save as a copy</button>}</div></section>
+        <section className="space-y-3 border-t border-border pt-5"><h2 className="font-medium">Save or share</h2><p className="text-sm text-muted-foreground">Exported templates include your PNG decorations, but not your photos. Captions and text are left out unless you tick the box below.</p><label className="flex min-h-11 items-center gap-3 text-sm"><input type="checkbox" checked={includeText} onChange={event => setIncludeText(event.target.checked)} /> Include captions and text in the export</label><div className="flex flex-wrap gap-2"><button className={button} onClick={() => void work(async assertCurrent => { const file = await exportTemplateBundle(makeRecipe(true), filesForDesign(), { includeText }); assertCurrent(); downloadProjectBlob(file, projectDownloadName(name, "pbtemplate")); setStatus("Template exported."); })}><Download size={16} /> Export template</button>{recipe && <button className={button} onClick={() => void save(true)}>Save as a copy</button>}</div></section>
       </div>
     </div>
   </main>;

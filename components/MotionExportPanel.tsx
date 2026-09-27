@@ -60,36 +60,36 @@ export function MotionExportPanel({ getFrames, name, delayMs = 500, warnings = [
       }
     } catch (failure) {
       if (alive.current) {
-        if (abort.signal.aborted) setNotice("Cancelled. Your still photos are unchanged.");
-        else setError(failure instanceof Error ? failure.message : "Motion export could not finish. Your still photos remain available.");
+        if (abort.signal.aborted) setNotice("Cancelled.");
+        else setError(failure instanceof Error ? failure.message : "Couldn't finish the loop. Your photos aren't affected.");
       }
     } finally { if (controller.current === abort) controller.current = null; if (alive.current) { setBusy(null); busyCallback.current?.(false); } }
   };
   const download = () => {
     if (!artifact || blocked) return;
     downloadProjectBlob(artifact.blob, projectDownloadName(`${name}-loop`, artifact.extension));
-    setNotice("The loop was sent to your browser's downloads.");
+    setNotice("Downloading now. Check your downloads folder.");
   };
   const share = async () => {
     if (!artifact || blocked) return;
     const file = new File([artifact.blob], projectDownloadName(`${name}-loop`, artifact.extension), { type: artifact.mime });
     if (!navigator.canShare?.({ files: [file] })) { download(); return; }
     try { await navigator.share({ files: [file], title: name }); }
-    catch (failure) { if (alive.current && !(failure instanceof DOMException && failure.name === "AbortError")) setError("Sharing did not finish. Download the loop instead."); }
+    catch (failure) { if (alive.current && !(failure instanceof DOMException && failure.name === "AbortError")) setError("Couldn't share it. Try downloading it instead."); }
   };
   const media = artifact && urls?.artifact === artifact ? urls : null;
   return <section aria-label="Motion export" className="space-y-4">
-    <Dropdown showLabel label="Motion format" value={format} disabled={blocked} onChange={value => { reset(); setFormat(value as typeof format); }} options={[
+    <Dropdown showLabel label="Format" value={format} disabled={blocked} onChange={value => { reset(); setFormat(value as typeof format); }} options={[
       { value: "gif", label: "GIF · animated image" },
       ...["mp4", "webm"].map(value => ({ value, label: `${value.toUpperCase()} · video`, disabled: !capabilities?.find(item => item.format === value)?.available })),
     ]} />
-    <div className="flex items-center gap-2 text-sm text-muted-foreground"><span>Silent GIF or video</span><HelpTooltip label="About motion formats">GIF uses up to 640 pixels on its longest edge and a limited colour palette. Video uses up to 1280 × 720 pixels. Check this browser before choosing a video format.</HelpTooltip></div>
+    <div className="flex items-center gap-2 text-sm text-muted-foreground"><span>GIFs and videos have no sound</span><HelpTooltip label="About loop formats">GIFs go up to 640 pixels on the longest side and use fewer colours. Videos go up to 1280 × 720. Check what your browser supports before you pick a video format.</HelpTooltip></div>
     <button type="button" disabled={blocked} onClick={() => void run(true)} className={`${control} border border-border`}>{busy === "checking" && <LoaderCircle size={16} className="animate-spin motion-reduce:animate-none" />}{capabilities ? "Check video formats again" : "Check video support"}</button>
-    {capabilities && <p role="status" className="text-sm text-muted-foreground">{capabilities.map(item => `${item.format.toUpperCase()}: ${item.available ? "ready, encoding and playback checked" : "unavailable in this browser"}`).join(". ")}.</p>}
+    {capabilities && <p role="status" className="text-sm text-muted-foreground">{capabilities.map(item => `${item.format.toUpperCase()}: ${item.available ? "works here" : "not supported in this browser"}`).join(". ")}.</p>}
     <label className="flex min-h-11 items-center gap-2 text-sm"><input type="checkbox" checked={boomerang} disabled={blocked} onChange={event => { reset(); setBoomerang(event.target.checked); }} className="h-4 w-4 accent-accent" /> Play forwards, then backwards</label>
     {warnings.map(warning => <p key={warning} className="text-sm text-muted-foreground">{warning}</p>)}
     {error && <p role="alert" className="text-sm text-destructive">{error}</p>}{notice && <p role="status" className="text-sm">{notice}</p>}
-    {busy && <div role="status" className="space-y-2 text-sm"><p>{busy === "checking" ? "Checking a small sample video. Keep this tab open…" : `Preparing your loop · ${progress}%`}</p>{busy === "encoding" && <progress value={progress} max={100} aria-label="Motion export progress" className="w-full accent-accent" />}<button type="button" onClick={() => controller.current?.abort()} className={`${control} border border-border`}>Cancel motion export</button></div>}
+    {busy && <div role="status" className="space-y-2 text-sm"><p>{busy === "checking" ? "Testing a short sample video. Keep this tab open…" : `Making your loop · ${progress}%`}</p>{busy === "encoding" && <progress value={progress} max={100} aria-label="Loop progress" className="w-full accent-accent" />}<button type="button" onClick={() => controller.current?.abort()} className={`${control} border border-border`}>Cancel</button></div>}
     {artifact && !busy ? <div className="space-y-3 border-t border-border pt-4">
       <p role="status" className="text-sm">{artifact.extension.toUpperCase()} ready · {byteLabel(artifact.bytes)} · {artifact.width} × {artifact.height} · {(artifact.durationMs / 1000).toFixed(1)} seconds</p>
       {artifact.warnings.map(warning => <p key={warning} className="text-sm text-muted-foreground">{warning}</p>)}
@@ -97,8 +97,8 @@ export function MotionExportPanel({ getFrames, name, delayMs = 500, warnings = [
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={playing ? media.animation : media.poster} alt={playing ? "Your animated photo loop" : "First frame of your photo loop"} className="mx-auto max-h-[45dvh] max-w-full rounded-lg" />
         <button type="button" disabled={disabled && !playing} onClick={() => setPlaying(value => !value)} className={`${control} border border-border`}>{playing ? <Pause size={16} /> : <Play size={16} />}{playing ? "Stop preview" : "Play preview"}</button>
-      </div> : <video src={media.animation} poster={media.poster} controls playsInline preload="metadata" aria-label="Preview your recorded loop" className="mx-auto max-h-[45dvh] max-w-full rounded-lg" />)}
+      </div> : <video src={media.animation} poster={media.poster} controls playsInline preload="metadata" aria-label="Loop preview" className="mx-auto max-h-[45dvh] max-w-full rounded-lg" />)}
       <div className="flex flex-wrap gap-2"><button type="button" disabled={blocked} onClick={download} className={`${control} flex-1 bg-accent text-accent-foreground`}><Download size={17} />Download {artifact.extension.toUpperCase()}</button><button type="button" disabled={blocked} onClick={() => void share()} className={`${control} border border-border`}><Share2 size={17} />Share</button></div>
-    </div> : !busy && <button type="button" disabled={blocked} onClick={() => void run()} className={`${control} w-full bg-accent text-accent-foreground`}>Prepare {format.toUpperCase()} loop</button>}
+    </div> : !busy && <button type="button" disabled={blocked} onClick={() => void run()} className={`${control} w-full bg-accent text-accent-foreground`}>Make {format.toUpperCase()}</button>}
   </section>;
 }

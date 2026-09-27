@@ -35,7 +35,7 @@ export async function runWeeklyRecapProbe() {
     });
     await run("Source revocation after native encode prevents publication", async () => {
       let refused = false; changed = false;
-      try { await renderWeeklyRecap(sources, "Revoked week", options, { ...ports, encode: async value => { const blob = await encode(value); changed = true; return blob; } }); } catch (error) { refused = error instanceof Error && error.message.includes("source photo changed"); }
+      try { await renderWeeklyRecap(sources, "Revoked week", options, { ...ports, encode: async value => { const blob = await encode(value); changed = true; return blob; } }); } catch (error) { refused = error instanceof Error && error.message === "One of the strips changed. Refresh the vault and try again."; }
       check(refused, "Revoked source output escaped"); changed = false; return "Final fresh source check refused the rendered PNG";
     });
     await run("Account change after native encode prevents publication", async () => {

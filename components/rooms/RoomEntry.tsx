@@ -86,28 +86,28 @@ export default function RoomEntry({ target, ownerScope, Workspace }: { target: V
 
   if (state) return <Workspace key={`${state.roomId}:${state.selfId}`} initial={state} />;
   const invalid = kind === "invalid", checking = !invalid && phase === "loading", busy = phase === "joining";
-  const title = invalid ? "Check the room link" : phase === "unavailable" ? "Live rooms are unavailable" : roomId || phase === "resume-offer" ? "Return to your room" : kind === "create" ? "Start a room together" : "Join your friends";
+  const title = invalid ? "Check the room link" : phase === "unavailable" ? "Live rooms aren't available" : roomId || phase === "resume-offer" ? "Back to your room" : kind === "create" ? "Start a room together" : "Join your friends";
   return (
     <main className="mx-auto flex w-full max-w-xl flex-1 flex-col px-5 py-6 sm:px-6 sm:py-10">
       <section aria-labelledby="room-entry-title" className="my-auto py-12">
         <h1 id="room-entry-title" className="text-balance font-display text-3xl font-semibold sm:text-4xl">{title}</h1>
-        {!invalid && phase !== "unavailable" && <p className="mt-4 leading-relaxed text-muted-foreground">{roomId ? "We’ll check this browser’s access before opening the room." : phase === "resume-offer" ? <>This browser already has access to room <strong className="font-mono text-foreground">{code}</strong>.</> : kind === "create" ? "Choose a name your friends will recognise. You’ll decide who joins your room." : <>You’re asking to join room <strong className="font-mono text-foreground">{code}</strong>. The host will let you in.</>}</p>}
-        {invalid && <p role="alert" className="mt-4 leading-relaxed">This room link is incomplete or invalid. Ask the host to share a new link, or enter the six-character code on the home page.</p>}
-        {checking && <p role="status" className="mt-8 flex items-center gap-3 text-sm"><LoaderCircle size={18} className="motion-safe:animate-spin" aria-hidden /> {roomId ? "Checking room access…" : "Checking live room availability…"}</p>}
+        {!invalid && phase !== "unavailable" && <p className="mt-4 leading-relaxed text-muted-foreground">{roomId ? "One moment while we reopen your room." : phase === "resume-offer" ? <>You&apos;re already in room <strong className="font-mono text-foreground">{code}</strong> on this browser.</> : kind === "create" ? "Pick a name your friends will recognise. You'll choose who gets in." : <>You’re asking to join room <strong className="font-mono text-foreground">{code}</strong>. The host will let you in.</>}</p>}
+        {invalid && <p role="alert" className="mt-4 leading-relaxed">This room link doesn&apos;t look right. Ask the host for a new one, or enter the room code on the home page.</p>}
+        {checking && <p role="status" className="mt-8 flex items-center gap-3 text-sm"><LoaderCircle size={18} className="motion-safe:animate-spin" aria-hidden /> {roomId ? "Checking room access…" : "Checking if live rooms are up…"}</p>}
         {phase === "resume-offer" && remembered && <div className="mt-8 space-y-5">
           <Link href={roomV2Url(remembered.code, remembered.roomId)} replace className={`${control} w-full bg-accent text-accent-foreground`}>Continue as {remembered.members.find(member => member.id === remembered.selfId)?.displayName ?? "yourself"}<ArrowRight size={18} aria-hidden /></Link>
-          <p className="text-sm leading-relaxed text-muted-foreground">Joining again with a different name replaces this browser’s current access{remembered.hostId === remembered.selfId ? ", including host controls" : ""}. Other open tabs may disconnect.</p>
+          <p className="text-sm leading-relaxed text-muted-foreground">Rejoining with a different name gives up your current spot{remembered.hostId === remembered.selfId ? ", including host controls" : ""}. Other tabs with this room open might disconnect.</p>
           <button onClick={() => setPhase("form")} className={`${control} w-full bg-muted`}>Use a different name</button>
         </div>}
         {(phase === "form" || busy) && !invalid && <form onSubmit={event => void submit(event)} className="mt-8 space-y-5" aria-busy={busy} noValidate>
           <div>
-            <label htmlFor="room-display-name" className="block text-sm font-semibold">Your display name</label>
+            <label htmlFor="room-display-name" className="block text-sm font-semibold">Your name</label>
             <input ref={nameInput} id="room-display-name" name="displayName" autoComplete="nickname" maxLength={40} value={name} disabled={busy} onChange={event => { setName(event.target.value); setNameError(false); setError(null); }} aria-invalid={nameError} aria-describedby={`room-name-help${nameError ? " room-entry-error" : ""}`} className="mt-2 min-h-12 w-full rounded-xl border border-border bg-card px-4 text-base outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50" />
-            <p id="room-name-help" className="mt-2 text-sm text-muted-foreground">Visible to people in this room. Up to 40 characters.</p>
+            <p id="room-name-help" className="mt-2 text-sm text-muted-foreground">Everyone in the room will see this. Up to 40 characters.</p>
           </div>
-          {kind === "join" && <p className="text-sm leading-relaxed">{remembered ? "This request replaces your current room access in this browser, including any host controls. Other open tabs may disconnect." : "If you have already joined this room in this browser, a new request replaces that access. Use your existing room tab to keep it."}</p>}
-          <button ref={submitButton} type="submit" disabled={busy} className={`${control} min-h-12 w-full bg-accent text-accent-foreground hover:brightness-105`}>{busy ? <><LoaderCircle size={18} className="motion-safe:animate-spin" aria-hidden /> {kind === "create" ? "Creating room…" : "Requesting to join…"}</> : <>{kind === "create" ? "Create room" : "Ask to join"}<ArrowRight size={18} aria-hidden /></>}</button>
-          <p className="text-sm leading-relaxed text-muted-foreground">Your camera and microphone stay off until you choose to use them.</p>
+          {kind === "join" && <p className="text-sm leading-relaxed">{remembered ? "Asking again gives up your current spot in this browser, including any host controls. Other tabs with this room open might disconnect." : "Already in this room in another tab? Asking again replaces that spot, so switch back to that tab instead."}</p>}
+          <button ref={submitButton} type="submit" disabled={busy} className={`${control} min-h-12 w-full bg-accent text-accent-foreground hover:brightness-105`}>{busy ? <><LoaderCircle size={18} className="motion-safe:animate-spin" aria-hidden /> {kind === "create" ? "Creating room…" : "Asking to join…"}</> : <>{kind === "create" ? "Create room" : "Ask to join"}<ArrowRight size={18} aria-hidden /></>}</button>
+          <p className="text-sm leading-relaxed text-muted-foreground">Your camera and mic stay off until you turn them on.</p>
         </form>}
         {error && <p id="room-entry-error" role="alert" className="mt-5 text-sm leading-relaxed">{error}</p>}
         {!invalid && (phase === "failed" || phase === "unavailable") && <div className="mt-6 flex flex-wrap gap-3">

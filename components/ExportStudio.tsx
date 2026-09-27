@@ -51,7 +51,7 @@ export default function ExportStudio({ input, name, solo, settings, onSettingsCh
     const canvas = preview.current;
     if (!canvas) return;
     try { renderExportPreview(canvas, input, profileId, options, 900); }
-    catch (failure) { queueMicrotask(() => { if (alive.current) setError(failure instanceof Error ? failure.message : "The export preview could not be drawn."); }); }
+    catch (failure) { queueMicrotask(() => { if (alive.current) setError(failure instanceof Error ? failure.message : "Couldn't draw the preview."); }); }
     return () => { canvas.width = canvas.height = 0; };
   }, [input, profileId, options, mode]);
 
@@ -74,41 +74,41 @@ export default function ExportStudio({ input, name, solo, settings, onSettingsCh
       if (alive.current && !job.signal.aborted) setPrepared({ file: result, input, options, profileId });
     } catch (failure) {
       if (alive.current) {
-        if (job.signal.aborted) setNotice("Export cancelled. Your saved photos are unchanged.");
-        else setError(failure instanceof Error ? failure.message : "The file could not be prepared. Try PNG or a smaller format.");
+        if (job.signal.aborted) setNotice("Export cancelled.");
+        else setError(failure instanceof Error ? failure.message : "Couldn't create the file. Try PNG or a smaller size.");
       }
     } finally { if (controller.current === job) controller.current = null; if (alive.current) setBusy(false); }
   };
   const download = () => {
     if (!artifact) return;
     downloadProjectBlob(artifact.blob, projectDownloadName(name, artifact.extension));
-    setNotice("The file was sent to your browser's downloads.");
+    setNotice("Downloading now. Check your downloads folder.");
   };
   const share = async () => {
     if (!artifact) return;
     const file = new File([artifact.blob], projectDownloadName(name, artifact.extension), { type: artifact.mime });
     if (!navigator.canShare?.({ files: [file] })) { download(); return; }
     try { await navigator.share({ files: [file], title: name }); }
-    catch (failure) { if (alive.current && !(failure instanceof DOMException && failure.name === "AbortError")) setError("Sharing did not finish. You can download the prepared file instead."); }
+    catch (failure) { if (alive.current && !(failure instanceof DOMException && failure.name === "AbortError")) setError("Couldn't share it. Try downloading it instead."); }
   };
 
   return <dialog ref={dialog} aria-labelledby="export-title" onCancel={event => { event.preventDefault(); close(); }}
     className="m-auto max-h-[92dvh] w-[calc(100%_-_2rem)] max-w-5xl overflow-y-auto rounded-2xl border border-border bg-card p-0 text-foreground shadow-2xl backdrop:bg-black/60">
-    <header className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-border bg-card p-5 sm:p-6"><div><h2 id="export-title" className="font-display text-3xl">Keep it your way</h2><p className="mt-2 text-sm text-muted-foreground">Choose a size and check the crop.</p></div><button type="button" onClick={close} aria-label="Close export studio" className={`${control} w-11 shrink-0 px-0`}><X size={20} /></button></header>
+    <header className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-border bg-card p-5 sm:p-6"><div><h2 id="export-title" className="font-display text-3xl">Export your strip</h2><p className="mt-2 text-sm text-muted-foreground">Pick a size and check the crop.</p></div><button type="button" onClick={close} aria-label="Close export" className={`${control} w-11 shrink-0 px-0`}><X size={20} /></button></header>
     <div className="flex flex-wrap gap-2 px-5 pt-5 sm:px-6" role="group" aria-label="Export type"><button type="button" aria-pressed={mode === "still"} disabled={busy} onClick={() => setMode("still")} className={`${control} ${mode === "still" ? "bg-foreground text-background" : "border border-border"}`}>Image or print</button><button type="button" aria-pressed={mode === "motion"} disabled={busy || !canAnimate} onClick={() => setMode("motion")} className={`${control} ${mode === "motion" ? "bg-foreground text-background" : "border border-border"}`}>Photo loop</button></div>
     {!canAnimate && <p className="px-5 pt-3 text-sm text-muted-foreground sm:px-6">Photo loops need at least two photos in a solo project.</p>}
-    {mode === "motion" ? <div className="mx-auto max-w-xl space-y-5 p-5 sm:p-6"><p className="text-sm text-muted-foreground">Cycle your photos through this frame. Originals and saved edits stay unchanged.</p><MotionExportPanel getFrames={getMotionFrames} name={name} /></div> : <>
+    {mode === "motion" ? <div className="mx-auto max-w-xl space-y-5 p-5 sm:p-6"><p className="text-sm text-muted-foreground">Plays your photos one after another inside this frame.</p><MotionExportPanel getFrames={getMotionFrames} name={name} /></div> : <>
     <div className="grid gap-6 p-5 sm:p-6 md:grid-cols-[minmax(0,1fr)_minmax(18rem,22rem)]">
-      <section aria-label="Export preview" className="min-w-0"><div className="flex min-h-64 items-center justify-center rounded-xl bg-muted p-4"><canvas ref={preview} role="img" aria-label="Preview of the exported file, including its crop and margins" className="max-h-[55dvh] max-w-full object-contain shadow-md" /></div><p className="mt-3 text-center text-sm tabular-nums">{geometry.width} × {geometry.height} {geometry.unit}{pdf ? " · PDF at 300 ppi target" : ""}</p>{pdf && <p className="mt-2 text-center text-sm text-muted-foreground">Print at actual size or 100%. Printer margins and colour can vary.</p>}</section>
+      <section aria-label="Export preview" className="min-w-0"><div className="flex min-h-64 items-center justify-center rounded-xl bg-muted p-4"><canvas ref={preview} role="img" aria-label="Preview of the exported file" className="max-h-[55dvh] max-w-full object-contain shadow-md" /></div><p className="mt-3 text-center text-sm tabular-nums">{geometry.width} × {geometry.height} {geometry.unit}{pdf ? " · PDF, aiming for 300 ppi" : ""}</p>{pdf && <p className="mt-2 text-center text-sm text-muted-foreground">Print at 100% (actual size). Margins and colours vary a little between printers.</p>}</section>
       <section aria-label="Export settings" className="min-w-0 space-y-4">
         <Dropdown showLabel label="Output size" value={profileId} options={[...STILL_PROFILES, ...PDF_PROFILES].map(item => ({ value: item.id, label: item.label }))} onChange={chooseProfile} disabled={busy} />
-        <Dropdown showLabel label="Fit" value={fit} options={[{ value: "contain", label: "Keep the whole frame" }, { value: "cover", label: "Fill the size and crop edges" }]} onChange={value => change({ fit: value as ProjectExportSettings["fit"] })} disabled={busy || profileId === "original"} />
+        <Dropdown showLabel label="Fit" value={fit} options={[{ value: "contain", label: "Show the whole strip" }, { value: "cover", label: "Fill the space and crop the edges" }]} onChange={value => change({ fit: value as ProjectExportSettings["fit"] })} disabled={busy || profileId === "original"} />
         {!pdf && <><Dropdown showLabel label="File format" value={format} options={[{ value: "png", label: "PNG · lossless" }, { value: "jpeg", label: "JPEG · smaller file" }]} onChange={value => change({ format: value as "png" | "jpeg" })} disabled={busy} />{format === "jpeg" && <label className="block text-sm font-medium">JPEG quality · {Math.round(quality * 100)}%<input type="range" min={.6} max={1} step={.02} value={quality} disabled={busy} onChange={event => change({ quality: Number(event.target.value) })} className="mt-2 min-h-11 w-full accent-accent" /></label>}</>}
         {pdf && <><label className="block text-sm font-medium">{profileId === "a4-contact" ? "Outer page margin" : "Safe margin"} · {margin} mm<input type="range" min={0} max={profileId === "a4-contact" ? 20 : 10} step={1} value={margin} disabled={busy} onChange={event => change({ marginMm: Number(event.target.value) })} className="mt-2 min-h-11 w-full accent-accent" /></label><label className="flex min-h-11 items-center gap-2 text-sm"><input type="checkbox" checked={cutMarks} disabled={busy} onChange={event => change({ cutMarks: event.target.checked })} className="h-4 w-4 accent-accent" /> Include cut marks</label>{profileId === "a4-contact" && <p className="text-sm text-muted-foreground">Three copies, each 50.8 × 152.4 mm, with a 2 mm safe margin.</p>}</>}
-        <div className="border-t border-border pt-4"><div className="flex items-center gap-2"><p className="text-sm font-medium">Photo detail</p><HelpTooltip label="About photo detail">A larger export cannot add detail to a low-resolution original. Cropping also reduces the detail available for printing.</HelpTooltip></div><p className="mt-1 text-sm text-muted-foreground">{pdf && resolution.minimumPpi !== null ? `Lowest effective resolution: ${Math.floor(resolution.minimumPpi)} ppi.` : resolution.minimumPixelRatio !== null ? `Smallest source supplies ${Math.round(resolution.minimumPixelRatio * 100)}% of the requested pixel detail.` : "Add photos to estimate the available detail."}</p>{resolution.warnings.length > 0 && <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-muted-foreground">{resolution.warnings.map(message => <li key={message}>{message}</li>)}</ul>}</div>
-        {saveError && <p role="alert" className="text-sm text-destructive">Export settings are not saved yet: {saveError} Preparing the file will retry the local save.</p>}{error && <p role="alert" className="text-sm text-destructive">{error}</p>}{notice && <p role="status" className="text-sm">{notice}</p>}
+        <div className="border-t border-border pt-4"><div className="flex items-center gap-2"><p className="text-sm font-medium">Photo detail</p><HelpTooltip label="About photo detail">Exporting bigger won&apos;t add detail to a small photo, and cropping in leaves less detail for printing.</HelpTooltip></div><p className="mt-1 text-sm text-muted-foreground">{pdf && resolution.minimumPpi !== null ? `Your lowest-detail photo prints at ${Math.floor(resolution.minimumPpi)} ppi.` : resolution.minimumPixelRatio !== null ? `Your smallest photo has ${Math.round(resolution.minimumPixelRatio * 100)}% of the detail this size needs.` : "Add photos to see how much detail you'll get."}</p>{resolution.warnings.length > 0 && <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-muted-foreground">{resolution.warnings.map(message => <li key={message}>{message}</li>)}</ul>}</div>
+        {saveError && <p role="alert" className="text-sm text-destructive">Your export settings haven&apos;t saved yet. {saveError} Creating the file will try again.</p>}{error && <p role="alert" className="text-sm text-destructive">{error}</p>}{notice && <p role="status" className="text-sm">{notice}</p>}
         {artifact ? <div className="space-y-3 border-t border-border pt-4"><p role="status" className="text-sm">{artifact.extension.toUpperCase()} ready · {byteLabel(artifact.bytes)}</p><div className="flex flex-wrap gap-2"><button type="button" onClick={download} className={`${control} flex-1 bg-accent text-accent-foreground`}><Download size={17} />Download {artifact.extension.toUpperCase()}</button><button type="button" onClick={() => void share()} className={`${control} border border-border`}><Share2 size={17} />Share</button></div></div>
-          : <div className="flex flex-wrap gap-2"><button type="button" onClick={() => void generate()} disabled={busy} className={`${control} flex-1 bg-accent text-accent-foreground`}>{busy && <LoaderCircle size={17} className="animate-spin motion-reduce:animate-none" />}{busy ? "Preparing file…" : "Prepare file"}</button>{busy && <button type="button" onClick={() => controller.current?.abort()} className={`${control} border border-border`}>Cancel</button>}</div>}
+          : <div className="flex flex-wrap gap-2"><button type="button" onClick={() => void generate()} disabled={busy} className={`${control} flex-1 bg-accent text-accent-foreground`}>{busy && <LoaderCircle size={17} className="animate-spin motion-reduce:animate-none" />}{busy ? "Creating file…" : "Create file"}</button>{busy && <button type="button" onClick={() => controller.current?.abort()} className={`${control} border border-border`}>Cancel</button>}</div>}
       </section>
     </div></>}
   </dialog>;

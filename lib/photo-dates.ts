@@ -59,7 +59,7 @@ export async function createPhotoDate(
     const { data: found, error } = await query.maybeSingle();
     if (error) throw error;
     if (options.signal?.aborted) throw new Error("The reminder action was cancelled.");
-    if (found && (found.couple_id !== coupleId || found.created_by !== userId || found.title !== data.title || Date.parse(found.scheduled_at) !== Date.parse(data.scheduledAt) || found.cadence !== data.cadence)) throw new Error("This reminder changed. Refresh before trying again.");
+    if (found && (found.couple_id !== coupleId || found.created_by !== userId || found.title !== data.title || Date.parse(found.scheduled_at) !== Date.parse(data.scheduledAt) || found.cadence !== data.cadence)) throw new Error("This reminder changed. Refresh and try again.");
     return Boolean(found);
   };
   if (await existing()) return;
@@ -67,7 +67,7 @@ export async function createPhotoDate(
   if (options.signal) query = query.abortSignal(options.signal);
   const { error } = await query;
   if (error && !(error.code === "23505" && await existing())) throw error;
-  if (options.signal?.aborted) throw new Error("The reminder action was cancelled. Refresh to check its status.");
+  if (options.signal?.aborted) throw new Error("Cancelled. Refresh to see if the reminder went through.");
 }
 
 export async function listPhotoDates(): Promise<PhotoDate[]> {
@@ -87,5 +87,5 @@ export async function deletePhotoDate(id: string, options: { signal?: AbortSigna
   if (options.signal) query = query.abortSignal(options.signal);
   const { error } = await query;
   if (error) throw error;
-  if (options.signal?.aborted) throw new Error("The reminder action was cancelled. Refresh to check its status.");
+  if (options.signal?.aborted) throw new Error("Cancelled. Refresh to see if the reminder went through.");
 }

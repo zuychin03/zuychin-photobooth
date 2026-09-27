@@ -258,7 +258,7 @@ Before enabling a hosted track:
 
 ### Separate maintenance responsibilities
 
-All worker endpoints require the exact `Authorization: Bearer <CRON_SECRET>` header and valid server configuration. Query secrets are rejected. The repository installs **no scheduler**.
+All worker endpoints require the exact `Authorization: Bearer <CRON_SECRET>` header and valid server configuration. Query secrets are rejected. The repository includes a disabled Cloudflare scheduler; provisioning its code does not activate maintenance.
 
 | Endpoint | Responsibility and scheduling boundary |
 | --- | --- |
@@ -266,6 +266,19 @@ All worker endpoints require the exact `Authorization: Bearer <CRON_SECRET>` hea
 | `GET /api/reminders` | Existing legacy dates, versioned rituals and opted-in event expiry reminders share a five-occurrence/45-second pass budget. Baseline cadence is 15 minutes; provider timeouts and uncertain acknowledgements remain explicit. |
 | `GET /api/projects/maintenance` | Dedicated project original verification and cleanup, at most one job in each lane per invocation. Reservations must finish within ten minutes, so the operator must schedule and load-test enough bounded passes for admitted uploads. It is not processed by the legacy media endpoint. Route allowance is 120 seconds; hosting support is not implied. |
 | `GET /api/events/maintenance` | Dedicated event verification/cleanup with a 90-second application deadline and 120-second route allowance. Scheduler starts must occur at least every 60 seconds, including safe overlapping invocation support. A verified pass renews a 150-second heartbeat; absent/stale health blocks new reservation/upload minting. |
+
+Scheduler source is [`workers/maintenance-scheduler/index.ts`](workers/maintenance-scheduler/index.ts), with [`wrangler.jsonc`](workers/maintenance-scheduler/wrangler.jsonc) and [focused tests](tests/cloudflare-scheduler.test.ts). It calls only `https://photobooth.zuychin.me`, awaits every due request, refuses redirects and aborts each request after 120 seconds. Logs contain only the job, HTTP status and outcome; `http_ok` means HTTP acknowledgement, not proof of delivery or an empty queue. The two schedules are disjoint: `* * * * *` dispatches events/projects only; `*/15 * * * *` dispatches media/reminders only. Never also schedule the `/api/retention` alias.
+
+On 27/09/2026 the reviewed module was provisioned in Cloudflare (initial code version prefix `743f8207`), with workers.dev and preview URLs disabled. After the hosted migration and preservation checks passed, only the scheduler and media switches were enabled with the quarter-hour trigger. Events, projects and reminders remain off. The existing `CRON_SECRET` was entered by the operator and confirmed encrypted; actual scheduled authentication and execution are still awaiting verification. Vercel had no configured cron jobs.
+
+The checked-in configuration keeps `crons: []`, no public routes, compatibility date `2026-09-27`, and all five switches set to the string `"false"`. An authorised operator using authenticated Wrangler can provision the disabled configuration and enter the secret interactively:
+
+```sh
+wrangler deploy --config workers/maintenance-scheduler/wrangler.jsonc
+wrangler secret put CRON_SECRET --config workers/maintenance-scheduler/wrangler.jsonc
+```
+
+Alternatively, use the Cloudflare dashboard module editor and Settings. Enter `CRON_SECRET` as a **secret**, matching the application's server secret; do not paste it into source or a command argument. After the activation checks pass, set `SCHEDULER_ENABLED="true"` and only the reviewed job switches (`EVENTS_ENABLED`, `PROJECTS_ENABLED`, `MEDIA_ENABLED`, `REMINDERS_ENABLED`) to `"true"`, then add their matching cron expressions. Initial legacy-only activation needs only `*/15 * * * *`, media and reminders; event/project switches stay off. For CLI-managed changes, edit the reviewed configuration and redeploy it; its disabled defaults will otherwise replace dashboard settings. Keep worker execution available for accepted recovery and cleanup during an admission pause. Verify real cadence, overlap, hosting request duration and job outcomes before advertising upload readiness; deployment alone proves none of these.
 
 The [event worker runbook](docs/development/P7_EVENT_WORKER_RUNBOOK.md) specifies the bounded runner, bootstrap, provisional two-pending global admission ceiling, measured-throughput gate and revision-fenced admission pause/rollback. Both `scripts/run-event-worker.ts` and `scripts/control-event-admission.ts` default to zero-network dry-run. The pause survives verified cleanup passes; it blocks new reservations and upload URLs while retaining exact reservation replays, uploaded-byte finalisation, private reads and cleanup. An accepted reservation without a usable upload URL must wait for deliberate resume within its unchanged deadline or expire safely. Fifteen-minute legacy maintenance cannot satisfy the event ten-minute completion window. A scheduler that skips starts during a long invocation is insufficient. Current provider/hosting support and throughput are **not verified** by local SQL or synthetic UI tests.
 

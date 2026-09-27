@@ -104,7 +104,7 @@ function TimelineContent() {
   }, [user]);
   useAppNavigationGuard(() => {
     if (busy || recapBusy || signingOut || dateForm || datePending || unpairTarget) {
-      setErr("Finish the current work or close the reminder form before leaving. Unconfirmed reminders need the same retry."); return false;
+      setErr("Finish what you're doing or close the reminder form before you leave. If a reminder didn't go through, retry it first."); return false;
     }
     return true;
   });
@@ -159,28 +159,28 @@ function TimelineContent() {
     let resume: (() => void) | undefined;
     try {
       resume = await boothSession.suspendForSignOut();
-      if (activeOwner.current !== owner) throw new Error("The active account changed. Open sign-out again for this account.");
+      if (activeOwner.current !== owner) throw new Error("You switched accounts. Open sign out again for this account.");
       setSignOutResult(await signOut({ removeLocalCopies }));
-    } catch (error) { setSignOutError(error instanceof Error ? error.message : "Sign-out could not finish. Please try again."); }
+    } catch (error) { setSignOutError(error instanceof Error ? error.message : "Couldn't sign you out. Try again."); }
     finally { resume?.(); setSigningOut(false); }
   };
 
   const signOutPanel = <section className="rounded-2xl border border-border bg-card p-5" aria-labelledby="sign-out-title">
-    <h2 ref={signOutHeading} tabIndex={-1} id="sign-out-title" className="font-display text-xl font-semibold outline-none">{signOutResult ? "You are signed out" : "Sign out of this account?"}</h2>
+    <h2 ref={signOutHeading} tabIndex={-1} id="sign-out-title" className="font-display text-xl font-semibold outline-none">{signOutResult ? "You're signed out" : "Sign out of this account?"}</h2>
     {signOutResult ? <>
-      <p className="mt-3 text-sm">{signOutResult.localCopies === "kept" ? "Your account drafts are hidden on this device. They will reappear when you sign in to the same account." : signOutResult.cleanupError ? "Sign-out finished, but local draft removal could not be completed. Remaining drafts are hidden. Sign in again and use My projects to review them." : `${signOutResult.cleanup?.removed ?? 0} account draft${signOutResult.cleanup?.removed === 1 ? "" : "s"} removed from this browser.`}</p>
-      {Boolean(signOutResult.cleanup?.retained) && <p className="mt-2 text-sm">{signOutResult.cleanup!.retained} draft{signOutResult.cleanup!.retained === 1 ? " was" : "s were"} kept hidden because the format needs recovery, the project changed, or removal could not finish. Sign in again to keep recovery backups.</p>}
-      {signOutResult.cleanup?.incomplete && <p className="mt-2 text-sm">Not every removal could be verified. Sign in again to review any remaining local drafts.</p>}
-      {signOutResult.roomCleanup && <p className="mt-2 text-sm">Private room checkpoints and temporary transfers for this account were removed from this browser.</p>}
+      <p className="mt-3 text-sm">{signOutResult.localCopies === "kept" ? "Your account drafts are hidden on this device. They'll come back when you sign in to this account again." : signOutResult.cleanupError ? "You're signed out, but some drafts couldn't be deleted from this device. They're hidden for now, so sign in again and check My projects." : `Deleted ${signOutResult.cleanup?.removed ?? 0} account draft${signOutResult.cleanup?.removed === 1 ? "" : "s"} from this browser.`}</p>
+      {Boolean(signOutResult.cleanup?.retained) && <p className="mt-2 text-sm">{signOutResult.cleanup!.retained} draft{signOutResult.cleanup!.retained === 1 ? " was" : "s were"} hidden instead of deleted. Sign in again if you want to download recovery files.</p>}
+      {signOutResult.cleanup?.incomplete && <p className="mt-2 text-sm">We couldn&apos;t confirm every draft was deleted. Sign in again to check.</p>}
+      {signOutResult.roomCleanup && <p className="mt-2 text-sm">Room data for this account was cleared from this browser too.</p>}
       <button type="button" onClick={() => router.replace("/")} className="mt-4 min-h-11 rounded-xl bg-accent px-4 text-sm font-semibold text-accent-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">Back to booth</button>
     </> : <>
-      <p className="mt-3 max-w-xl text-sm text-foreground/75">Account drafts are stored in this browser. Keep them hidden for next time, or remove their local copies. Export important projects before removing them.</p>
-      <p className="mt-2 max-w-xl text-sm text-foreground/75">Device projects and cloud memories stay available. Drafts that need recovery or a newer app will be kept hidden.</p>
-      {boothSession.storageStatus === "error" && <p className="mt-3 text-sm font-medium">Some recent edits were not saved. Keeping drafts retains their last saved checkpoint; go back and export or retry before leaving if you need those edits.</p>}
+      <p className="mt-3 max-w-xl text-sm text-foreground/75">Your account drafts are saved in this browser. You can hide them until you sign in again, or delete them from this device. Export anything important before deleting.</p>
+      <p className="mt-2 max-w-xl text-sm text-foreground/75">Your device projects and cloud memories aren&apos;t affected. Drafts that can&apos;t be opened in this version stay hidden either way.</p>
+      {boothSession.storageStatus === "error" && <p className="mt-3 text-sm font-medium">Some recent edits didn&apos;t save. If you keep your drafts, they&apos;ll go back to the last save. Go back and export or retry first if you need those edits.</p>}
       {signOutError && <p role="alert" className="mt-3 text-sm font-medium">{signOutError}</p>}
-      {signingOut ? <p role="status" className="mt-4 flex items-center gap-2 text-sm"><Loader2 size={16} className="animate-spin motion-reduce:animate-none" aria-hidden /> Finishing sign-out and your local draft choice…</p> : <div className="mt-4 flex flex-wrap gap-2">
+      {signingOut ? <p role="status" className="mt-4 flex items-center gap-2 text-sm"><Loader2 size={16} className="animate-spin motion-reduce:animate-none" aria-hidden /> Signing you out…</p> : <div className="mt-4 flex flex-wrap gap-2">
         <button type="button" onClick={() => void finishSignOut(false)} className="min-h-11 rounded-xl bg-accent px-4 text-sm font-semibold text-accent-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">Sign out and keep drafts</button>
-        <button type="button" onClick={() => void finishSignOut(true)} className="min-h-11 rounded-xl border border-border px-4 text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">Sign out and remove local copies</button>
+        <button type="button" onClick={() => void finishSignOut(true)} className="min-h-11 rounded-xl border border-border px-4 text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">Sign out and delete drafts from this device</button>
         {user && <button type="button" onClick={() => { setSignOutOpen(false); requestAnimationFrame(() => vaultHeading.current?.focus()); }} className="min-h-11 rounded-xl px-4 text-sm font-medium hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">Cancel</button>}
       </div>}
     </>}
@@ -227,14 +227,14 @@ function TimelineContent() {
     try {
       const result = await setStripKept(strip.id, kept, mediaRequest(key));
       if (result.pending) {
-        setKeepNote("Your archive change is queued. Refresh shortly to check whether it has finished.");
+        setKeepNote("On its way. Refresh in a bit to check it went through.");
       } else {
         setStrips(list => list.map(value => value.id === strip.id ? { ...value, kept: result.kept } : value));
         mediaRequests.current.delete(key);
-        setKeepNote(result.kept && result.pushed ? "Your strip is archived." : "Your archive change is complete.");
+        setKeepNote(result.kept && result.pushed ? "Your strip is archived." : "All done.");
       }
     } catch (error) {
-      setKeepNote(error instanceof Error ? error.message : "The archive change failed. Please try again.");
+      setKeepNote(error instanceof Error ? error.message : "Couldn't update that strip. Try again.");
     } finally {
       setMediaBusy(null);
     }
@@ -247,14 +247,14 @@ function TimelineContent() {
     setKeepNote(null);
     try {
       const result = await deleteStrip(strip, mediaRequest(key));
-      if (result.pending) setKeepNote("Deletion is queued. The strip stays visible until cleanup is confirmed. Refresh shortly to check.");
+      if (result.pending) setKeepNote("Deleting now. The strip stays visible until it's fully gone, so refresh in a bit.");
       else {
         setStrips(list => list.filter(value => value.id !== strip.id));
         mediaRequests.current.delete(key);
-        setKeepNote("The strip has been deleted.");
+        setKeepNote("Strip deleted.");
       }
     } catch (error) {
-      setKeepNote(error instanceof Error ? error.message : "Deletion failed. Please try again.");
+      setKeepNote(error instanceof Error ? error.message : "Couldn't delete the strip. Try again.");
     } finally {
       setMediaBusy(null);
     }
@@ -263,13 +263,13 @@ function TimelineContent() {
   const runVaultAction = async (operation: (signal: AbortSignal, check: () => void) => Promise<void>) => {
     if (!user || actionWork.current) return;
     const owner = user.id, job = new AbortController(); actionWork.current = job; setBusy(true); setErr(null);
-    const check = () => { if (job.signal.aborted || activeOwner.current !== owner) throw new Error("The active account changed. Refresh the vault."); };
+    const check = () => { if (job.signal.aborted || activeOwner.current !== owner) throw new Error("You switched accounts. Refresh the vault."); };
     try {
       check(); const { data, error } = await createClient().auth.getSession(); check();
       if (error || data.session?.user.id !== owner) throw new Error("Sign in again before changing the vault.");
       await operation(job.signal, check);
     } catch (error) {
-      if (activeOwner.current === owner && !job.signal.aborted) setErr(error instanceof Error ? error.message : "The change could not be confirmed. Refresh and try again.");
+      if (activeOwner.current === owner && !job.signal.aborted) setErr(error instanceof Error ? error.message : "Couldn't confirm that change. Refresh and try again.");
     } finally {
       if (actionWork.current === job) actionWork.current = null;
       if (activeOwner.current === owner && !job.signal.aborted) setBusy(false);
@@ -281,20 +281,20 @@ function TimelineContent() {
 
   const handleUnpair = (target?: { coupleId: string; ownerId: string }) => runVaultAction(async (_signal, check) => {
     if (!couple) return;
-    if (target && (target.coupleId !== couple.id || target.ownerId !== user?.id || !couple.member_b)) throw new Error("The pairing changed. Refresh before trying again.");
+    if (target && (target.coupleId !== couple.id || target.ownerId !== user?.id || !couple.member_b)) throw new Error("Your pairing changed. Refresh and try again.");
     recapWork.current?.abort();
     await unpair(couple.id);
     check();
     setUnpairTarget(null); setCouple(null);
     await refresh();
-    check(); setKeepNote("Pairing ended. Your own saved strips and local originals remain.");
+    check(); setKeepNote("You're no longer paired. Your own strips and photos are still here.");
     requestAnimationFrame(() => vaultHeading.current?.focus());
   });
 
   const addDate = () => runVaultAction(async (signal, check) => {
     if (!user || !couple || !dateForm?.title || !dateForm.when) return;
     const fingerprint = JSON.stringify([user.id, couple.id, dateForm]);
-    if (dateRequest.current && dateRequest.current.fingerprint !== fingerprint) throw new Error("Confirm the pending reminder before starting another.");
+    if (dateRequest.current && dateRequest.current.fingerprint !== fingerprint) throw new Error("Finish setting up the last reminder before you add another.");
     if (dateRequest.current?.fingerprint !== fingerprint) dateRequest.current = { fingerprint, id: crypto.randomUUID() };
     setDatePending(true);
     await createPhotoDate(user.id, couple.id, {
@@ -316,22 +316,22 @@ function TimelineContent() {
     if (!user || recapWork.current) return;
     const owner = user.id, originalCouple = couple?.id ?? null, job = new AbortController(); recapWork.current = job;
     let downloaded = false;
-    const check = () => { if (job.signal.aborted || activeOwner.current !== owner || document.hidden) throw new Error("Recap cancelled. Refresh the vault before trying again."); };
+    const check = () => { if (job.signal.aborted || activeOwner.current !== owner || document.hidden) throw new Error("Recap cancelled. Refresh the vault and try again."); };
     setRecapBusy(true); setKeepNote(null);
     try {
       const now = new Date();
       const weekStrips = strips.filter((s) => s.layout_id !== "recap" && sameIsoWeek(new Date(s.created_at), now) && s.url);
       if (weekStrips.length === 0) return;
       const supabase = createClient(), origin = process.env.NEXT_PUBLIC_SUPABASE_URL;
-      if (!origin) throw new Error("Private photo downloads are unavailable here.");
-      const assertAccount = async () => { check(); const { data, error } = await supabase.auth.getSession(); check(); if (error || data.session?.user.id !== owner) throw new Error("The active account changed. Reopen your vault."); };
+      if (!origin) throw new Error("Photo downloads don't work here.");
+      const assertAccount = async () => { check(); const { data, error } = await supabase.auth.getSession(); check(); if (error || data.session?.user.id !== owner) throw new Error("You switched accounts. Reopen your vault."); };
       const sources = weekStrips.map(strip => ({ id: strip.id, async resolve(signal: AbortSignal) {
         await assertAccount();
         const { data, error } = await supabase.from("pb_strips").select("id,owner,couple_id,storage_path,created_at,purged").eq("id", strip.id).abortSignal(signal).maybeSingle(); check();
-        if (error || !data || data.purged || data.owner !== strip.owner || data.couple_id !== strip.couple_id || data.storage_path !== strip.storage_path || data.created_at !== strip.created_at) throw new Error("A source photo is no longer available. Refresh the vault.");
-        if (data.owner !== owner) { const current = await getMyCouple(owner, signal); check(); if (!current || current.id !== data.couple_id || ![current.member_a, current.member_b].includes(data.owner)) throw new Error("Access to a shared photo changed. Refresh the vault."); }
+        if (error || !data || data.purged || data.owner !== strip.owner || data.couple_id !== strip.couple_id || data.storage_path !== strip.storage_path || data.created_at !== strip.created_at) throw new Error("One of the strips isn't available anymore. Refresh the vault.");
+        if (data.owner !== owner) { const current = await getMyCouple(owner, signal); check(); if (!current || current.id !== data.couple_id || ![current.member_a, current.member_b].includes(data.owner)) throw new Error("Your access to one of the shared strips changed. Refresh the vault."); }
         const signed = await supabase.storage.from("photobooth-strips").createSignedUrl(data.storage_path, 60); check();
-        if (signed.error || !signed.data?.signedUrl) throw new Error("A source photo could not be opened. Refresh and try again.");
+        if (signed.error || !signed.data?.signedUrl) throw new Error("Couldn't open one of the strips. Refresh and try again.");
         return { url: weeklyStripUrl(signed.data.signedUrl, origin.replace(/\/$/, ""), data.storage_path), fingerprint: JSON.stringify(data) };
       } }));
       const weekOf = startOfIsoWeek(now).toLocaleDateString(undefined, {
@@ -346,12 +346,12 @@ function TimelineContent() {
       finally { setTimeout(() => URL.revokeObjectURL(url), 30000); }
       for (const source of sources) { await source.resolve(job.signal); check(); }
       const currentCouple = await getMyCouple(owner, job.signal); await assertAccount();
-      if ((currentCouple?.id ?? null) !== originalCouple) throw new Error("Pairing changed. The downloaded recap was not saved to the vault.");
+      if ((currentCouple?.id ?? null) !== originalCouple) throw new Error("Your pairing changed, so the recap was downloaded but not saved to the vault.");
       check(); await saveStrip(owner, originalCouple, blob, { layoutId: "recap", caption: `${title} recap` }, { id: mediaRequest(`recap:${weekOf}:${weekStrips.map(strip => strip.id).join(",")}`) }); check();
-      setKeepNote("Your recap was sent to downloads and saved to the Shared Vault.");
+      setKeepNote("Recap downloaded and saved to the Shared Vault.");
       await refresh();
     } catch (error) {
-      if (activeOwner.current === owner && recapWork.current === job) setKeepNote(job.signal.aborted ? "Recap cancelled. No further download or save will start." : `${downloaded ? "Your recap was sent to downloads, but its vault save could not be confirmed. " : ""}${error instanceof Error ? error.message : "The recap could not finish. Your original strips are unchanged. Refresh and try again."}`);
+      if (activeOwner.current === owner && recapWork.current === job) setKeepNote(job.signal.aborted ? "Recap cancelled." : `${downloaded ? "Recap downloaded, but we couldn't confirm it saved to the vault. " : ""}${error instanceof Error ? error.message : "Couldn't finish the recap. Refresh and try again."}`);
     } finally {
       if (recapWork.current === job) { recapWork.current = null; if (activeOwner.current === owner) setRecapBusy(false); }
     }
@@ -569,7 +569,7 @@ function TimelineContent() {
               >
                 {busy ? "Saving…" : datePending ? "Retry this reminder" : "Set reminder"}
               </button>
-              {datePending && !busy && <p className="text-sm">This reminder has not been confirmed. Retry the same request before creating another. Once confirmed, you can delete it from the list.</p>}
+              {datePending && !busy && <p className="text-sm">This reminder didn&apos;t go through yet. Retry it before you add another. Once it&apos;s saved, you can delete it from the list.</p>}
               <p className="text-xs text-muted-foreground">
                 Both of you get an email when it&apos;s time.
               </p>
@@ -709,8 +709,8 @@ function UnpairConfirmation({ busy, error, onCancel, onConfirm }: { busy: boolea
   return <dialog ref={dialog} aria-labelledby="unpair-title" aria-describedby="unpair-description" onCancel={event => { event.preventDefault(); if (!busy) onCancel(); }} className="m-auto max-h-[calc(100dvh_-_2rem)] w-[calc(100%_-_2rem)] max-w-lg overflow-y-auto rounded-2xl border border-border bg-card p-5 text-foreground shadow-xl backdrop:bg-black/50">
     <h2 id="unpair-title" className="font-display text-xl font-semibold">End this pairing?</h2>
     <div id="unpair-description" className="mt-3 space-y-2 text-sm leading-relaxed">
-      <p>You will lose access to each other’s strips. Shared relays and photo dates will be removed, and relay photo cleanup will be queued.</p>
-      <p>Each person keeps their own saved strips and local originals. Save any finished relay to your vault or export it first.</p>
+      <p>You&apos;ll lose access to each other&apos;s strips, and your shared relays and photo dates will be deleted.</p>
+      <p>You&apos;ll each keep your own strips and photos. Save or export any finished relays first.</p>
     </div>
     {error && <p role="alert" className="mt-3 text-sm text-destructive">{error}</p>}
     {busy && <p role="status" className="mt-3 text-sm">Ending the pairing…</p>}

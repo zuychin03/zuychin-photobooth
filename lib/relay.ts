@@ -30,7 +30,7 @@ export function validateRelayMeta(meta: RelayMeta, frameCount = meta.shots): voi
   if (!layout || layout.shots !== meta.shots || !Number.isInteger(meta.shots) || meta.shots < 1 || meta.shots > 4
     || frameCount !== meta.shots || !FILTERS.some(filter => filter.id === meta.filterId)
     || (meta.sceneId !== null && !SCENES.some(scene => scene.id === meta.sceneId))) {
-    throw new Error("The relay layout, frame count or look is not valid.");
+    throw new Error("Something's wrong with this relay's layout or look.");
   }
 }
 
@@ -61,7 +61,7 @@ export async function createRelay(
     if (error) throw cloudWriteError(error);
     if (!data) return null;
     if (data.initiator !== userId || data.couple_id !== coupleId || data.layout_id !== meta.layoutId || data.filter_id !== meta.filterId || data.scene_id !== meta.sceneId || data.shots !== meta.shots || !data.a_done) {
-      throw new Error("This save ID belongs to a different relay. Start a new relay save.");
+      throw new Error("Something went wrong with this save. Start a new relay.");
     }
     return id;
   }, async () => {
@@ -79,25 +79,25 @@ export async function completeRelay(userId: string, relay: Relay, frames: HTMLCa
   requireUuid(userId);
   requireUuid(relay.id);
   validateRelayMeta({ layoutId: relay.layout_id, filterId: relay.filter_id, sceneId: relay.scene_id, shots: relay.shots }, frames.length);
-  if (relay.initiator === userId || !relay.a_done) throw new Error("This relay is not ready for your half.");
+  if (relay.initiator === userId || !relay.a_done) throw new Error("This relay isn't ready for your half yet.");
   const supabase = createClient();
   const paths = frames.map((_, shot) => framePath(userId, relay.id, "B", shot));
   await withUploadIntent(supabase, { requestId: requestId ?? await relayUploadRequestId(relay.id, userId), sourceId: relay.id, sourceType: "relay", owner: userId, paths }, async () => {
     const { data, error } = await supabase.from("pb_relays").select("*").eq("id", relay.id).maybeSingle();
     if (error) throw cloudWriteError(error);
-    if (!data) throw new Error("This relay is no longer available.");
+    if (!data) throw new Error("This relay isn't available anymore.");
     if (data.couple_id !== relay.couple_id || data.initiator !== relay.initiator || data.shots !== relay.shots || data.layout_id !== relay.layout_id || data.filter_id !== relay.filter_id || data.scene_id !== relay.scene_id) {
-      throw new Error("This relay has changed. Reload it before trying again.");
+      throw new Error("This relay changed. Reload it and try again.");
     }
     if (data.b_done && data.partner === userId && data.status === "complete") return true;
-    if (data.status !== "pending" || data.b_done) throw new Error("This relay has already been completed.");
+    if (data.status !== "pending" || data.b_done) throw new Error("This relay is already finished.");
     return null;
   }, async () => {
     await uploadFrames(supabase, paths, frames);
     const { data, error } = await supabase.from("pb_relays")
       .update({ partner: userId, b_done: true, status: "complete" }).eq("id", relay.id).eq("status", "pending").eq("b_done", false).select("id");
     if (error) throw cloudWriteError(error);
-    if (data?.length !== 1) throw new Error("This relay changed before the save completed. Reload it to check its status.");
+    if (data?.length !== 1) throw new Error("This relay changed while saving. Reload it to see where it's at.");
     return true;
   });
 }
@@ -122,10 +122,10 @@ export async function deleteRelay(id: string): Promise<{ pending: true }> {
   const supabase = createClient();
   const capabilities = await supabase.rpc("pb_lifecycle_capabilities");
   if (capabilities.error) throw cloudWriteError(capabilities.error);
-  if (capabilities.data?.version !== 1 || capabilities.data?.ready !== true) throw new Error("Relay cleanup is unavailable until this deployment's storage setup is complete.");
+  if (capabilities.data?.version !== 1 || capabilities.data?.ready !== true) throw new Error("Relays can't be cancelled yet because storage isn't set up.");
   const { data, error } = await supabase.from("pb_relays").delete().eq("id", id).select("id");
   if (error) throw cloudWriteError(error);
-  if (data?.length !== 1) throw new Error("Relay cancellation could not be confirmed. Reload to check its status.");
+  if (data?.length !== 1) throw new Error("Couldn't confirm the relay was cancelled. Reload to check.");
   return { pending: true };
 }
 
@@ -144,7 +144,7 @@ export async function loadRelayShots(relay: Relay): Promise<ShotStore> {
     if (!uid) return out;
     for (let i = 0; i < relay.shots; i++) {
       const signed = await supabase.storage.from(BUCKET).createSignedUrl(framePath(uid, relay.id, role, i), 3600);
-      if (signed.error || !signed.data?.signedUrl) throw new Error("A relay photo could not be opened. Please try again.");
+      if (signed.error || !signed.data?.signedUrl) throw new Error("Couldn't open a relay photo. Try again.");
       const response = await fetch(signed.data.signedUrl, { signal: AbortSignal.timeout(20_000) });
       const blob = await readBoundedImage(response);
       out.push(await blobToCanvas(blob));

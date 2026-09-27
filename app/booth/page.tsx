@@ -56,9 +56,9 @@ export default function BoothPage() {
   const getMotionVideo = useCallback(() => ready ? videoRef.current : null, [ready, videoRef]);
   const motionKey = project ? `${project.scope.kind === "account" ? project.scope.ownerId : "device"}:${project.id}` : null;
   useAppNavigationGuard(() => {
-    if (pending) { setFailure("Download or discard the unsaved photo before leaving this page."); return false; }
-    if (operation.current || busy || downloadingPending) { setFailure("Wait for the current photo action to finish before leaving."); return false; }
-    if (motionProject && motionProject === motionKey) { setFailure("Close the motion studio before leaving."); return false; }
+    if (pending) { setFailure("A photo hasn't saved yet. Download it or discard it before you leave."); return false; }
+    if (operation.current || busy || downloadingPending) { setFailure("Hang on a second, the booth is still busy."); return false; }
+    if (motionProject && motionProject === motionKey) { setFailure("Close the loop recorder before you leave."); return false; }
     return true;
   });
   const layout = getLayout(session.layoutId);
@@ -110,13 +110,13 @@ export default function BoothPage() {
     starting.current = true;
     const generation = ++startupGeneration.current;
     void startProject().catch(error => {
-      if (mounted.current && generation === startupGeneration.current) setFailure(error instanceof Error ? error.message : "Could not create a draft. Your existing projects are unchanged.");
+      if (mounted.current && generation === startupGeneration.current) setFailure(error instanceof Error ? error.message : "Couldn't start a new project. Your other projects are still there.");
     }).finally(() => { if (generation === startupGeneration.current) starting.current = false; });
   }, [hydrating, project, startProject]);
 
-  const explain = (error: unknown) => error instanceof Error ? error.message : "Could not save this shot. Keep this page open and try again.";
+  const explain = (error: unknown) => error instanceof Error ? error.message : "Couldn't save that shot. Keep this page open and try again.";
   const persist = useCallback(async (index: number, canvas: HTMLCanvasElement) => {
-    if (!project) throw new Error("Open a draft before capturing");
+    if (!project) throw new Error("Open a project before taking photos.");
     setPending({ index, canvas, projectId: project.id });
     await setShot("A", index, canvas);
     if (!cancelled.current) setPending(null);
@@ -139,7 +139,7 @@ export default function BoothPage() {
         pause,
         countdown: value => { if (!cancelled.current) { setCount(value); if (value !== null) playTick(); } },
         capture: () => {
-          if (video.readyState < 2 || !video.videoWidth || !video.videoHeight) throw new Error("The camera is not ready. Try again or import a photo.");
+          if (video.readyState < 2 || !video.videoWidth || !video.videoHeight) throw new Error("The camera isn't ready yet. Try again, or import a photo.");
           const shot = captureFrame(video, capture.mirror);
           playShutter(); setFlash(value => value + 1); return shot;
         },
@@ -189,8 +189,8 @@ export default function BoothPage() {
     setDownloadingPending(true);
     try {
       const blob = "blob" in pending ? pending.blob : await new Promise<Blob>((resolve, reject) => {
-        const timer = setTimeout(() => reject(new Error("Photo download encoding timed out. Your captured photo is still here.")), 10_000);
-        try { pending.canvas.toBlob(value => { clearTimeout(timer); if (value) resolve(value); else reject(new Error("Photo download encoding failed. Your captured photo is still here.")); }, "image/png"); }
+        const timer = setTimeout(() => reject(new Error("The download took too long. Your photo is still here.")), 10_000);
+        try { pending.canvas.toBlob(value => { clearTimeout(timer); if (value) resolve(value); else reject(new Error("Couldn't get the download ready. Your photo is still here.")); }, "image/png"); }
         catch (error) { clearTimeout(timer); reject(error); }
       });
       if (!mounted.current || generation !== downloadGeneration.current) return;
@@ -239,14 +239,14 @@ export default function BoothPage() {
     operation.current = true; setBusy(true); setFailure(null);
     try {
       const previous = await flushEditor();
-      if (!mounted.current || !previous || previous.id !== project?.id) throw new Error("The active project changed before another round could start.");
+      if (!mounted.current || !previous || previous.id !== project?.id) throw new Error("You switched projects before the next round could start.");
       const roundCapture = previous.capture;
       const design = previous.editor.template ? templateFromProject(previous) : null;
       const decorations = design ? getDecorationBlobs() : new Map<string, Blob>();
       const nextId = crypto.randomUUID();
       await startProject({ id: nextId, capture: { ...roundCapture }, editor: { layoutId: previous.editor.layoutId, filterId: previous.editor.filterId, story: (design ? Math.max(...Object.values(design.requiredSources)) : getLayout(previous.editor.layoutId).shots) === 4 ? previous.editor.story : null } }, true);
       if (design) {
-        if (!mounted.current || (await flushEditor())?.id !== nextId) throw new Error("The active project changed before its template could be restored. Your previous project is still saved.");
+        if (!mounted.current || (await flushEditor())?.id !== nextId) throw new Error("You switched projects before the template could be added. Your last project is still saved.");
         await applyTemplate(design, decorations);
       }
     }
@@ -257,7 +257,7 @@ export default function BoothPage() {
   return (
     <main className="booth-mode flex min-h-dvh flex-col bg-background md:h-[calc(100dvh-var(--app-nav-height,0px))] md:flex-row md:items-stretch md:justify-center md:overflow-hidden">
       <div className={`relative flex min-h-[42dvh] flex-1 items-center justify-center p-4 pt-16 sm:p-6 sm:pt-16 md:min-h-0 md:max-w-4xl ${capture?.fillLight ? "bg-white" : ""}`}>
-        {hydrating || !capture ? <div className="space-y-3 text-center"><p role="status">{failure ?? "Restoring your draft…"}</p>{failure && !hydrating && <button onClick={() => { setFailure(null); void startProject().catch(error => setFailure(explain(error))); }} className="min-h-11 rounded-xl bg-accent px-4 text-accent-foreground">Try creating a draft again</button>}</div> : error ? (
+        {hydrating || !capture ? <div className="space-y-3 text-center"><p role="status">{failure ?? "Opening your project…"}</p>{failure && !hydrating && <button onClick={() => { setFailure(null); void startProject().catch(error => setFailure(explain(error))); }} className="min-h-11 rounded-xl bg-accent px-4 text-accent-foreground">Try again</button>}</div> : error ? (
           <div className="flex flex-col items-center justify-center gap-4 px-4 text-center">
             <p className="text-lg font-semibold">{error === "denied" ? "Camera access was blocked" : error === "no-camera" ? "No camera found" : "Couldn't start the camera"}</p>
             <p className="max-w-sm text-sm text-muted-foreground">{error === "denied" ? "Allow camera access in your browser settings, or import photos below." : "Choose another camera or import photos below."}</p>
@@ -273,15 +273,15 @@ export default function BoothPage() {
         )}
       </div>
       <div className="z-40 flex shrink-0 flex-col gap-4 p-4 pb-6 md:w-96 md:overflow-y-auto md:p-6">
-        {(failure || storageError) && <div role="alert" className="rounded-xl border border-destructive p-3 text-sm"><p>{failure ?? storageError}</p>{pending && <><p className="mt-2">This shot is still on this page. Retry saving it or download a separate copy. It is not saved to your project yet.</p><button disabled={busy || downloadingPending} onClick={() => void retryPending()} className="mt-2 min-h-11 rounded-lg bg-foreground px-4 text-background">Retry saving shot</button><button disabled={busy || downloadingPending} onClick={() => void downloadUnsavedPhoto()} className="mt-1 min-h-11 px-3 text-sm underline underline-offset-4">{downloadingPending ? "Preparing download…" : "Download unsaved photo"}</button><button disabled={busy || downloadingPending} onClick={() => { setPending(null); setFailure(null); }} className="mt-1 min-h-11 px-3 text-sm underline underline-offset-4">Discard this unsaved shot</button></>}</div>}
+        {(failure || storageError) && <div role="alert" className="rounded-xl border border-destructive p-3 text-sm"><p>{failure ?? storageError}</p>{pending && <><p className="mt-2">This shot hasn&apos;t saved to your project yet. Try saving it again, or download a copy.</p><button disabled={busy || downloadingPending} onClick={() => void retryPending()} className="mt-2 min-h-11 rounded-lg bg-foreground px-4 text-background">Try saving again</button><button disabled={busy || downloadingPending} onClick={() => void downloadUnsavedPhoto()} className="mt-1 min-h-11 px-3 text-sm underline underline-offset-4">{downloadingPending ? "Getting the download ready…" : "Download this photo"}</button><button disabled={busy || downloadingPending} onClick={() => { setPending(null); setFailure(null); }} className="mt-1 min-h-11 px-3 text-sm underline underline-offset-4">Discard it</button></>}</div>}
         {capture && <>
-          {project?.editor.template ? <p className="text-sm text-muted-foreground">Your saved frame uses {requiredShots} photos. Change its photo slots in the frame designer.</p> : <div className="flex flex-wrap gap-2">
+          {project?.editor.template ? <p className="text-sm text-muted-foreground">Your template takes {requiredShots} photos. You can change that in the frame designer.</p> : <div className="flex flex-wrap gap-2">
             {LAYOUTS.filter(item => item.mode === "solo").map(item => <button key={item.id} disabled={busy || Boolean(pending) || Boolean((project?.capturedAt || project?.media.some(item => item.kind === "photo")))} onClick={() => void changeLayout(item.id)} className={`min-h-11 rounded-full px-4 text-sm font-medium disabled:opacity-60 ${session.layoutId === item.id ? "bg-foreground text-background" : "bg-muted text-muted-foreground"}`}>{item.name} · {item.shots}</button>)}
           </div>}
-          {curated.loading && <p role="status" className="text-sm text-muted-foreground">Loading your selected artwork…</p>}
-          {curated.fallback.length > 0 && <p role="status" className="text-sm text-muted-foreground">Using a built-in fallback for {curated.fallback.join(", ")}. Your original photos are saved independently.</p>}
+          {curated.loading && <p role="status" className="text-sm text-muted-foreground">Loading artwork…</p>}
+          {curated.fallback.length > 0 && <p role="status" className="text-sm text-muted-foreground">Couldn&apos;t load {curated.fallback.join(", ")}, so a built-in background is filling in.</p>}
           {project && <div id="photo-story" ref={storyAnchor} tabIndex={-1} aria-label="Photo story" className="scroll-mt-4 rounded-xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"><StoryGuide plan={project.editor.story ?? null} members={project.participants.map(person => ({ id: person.id, name: "You" }))} activeStep={busy ? storyIndex : undefined} disabled={busy || Boolean(pending) || Boolean((project.capturedAt !== null || project.media.some(item => item.kind === "photo"))) || Boolean(project.editor.template && requiredShots !== 4)} onChange={story => void changeStory(story)} /></div>}
-          {project?.editor.story && <p className="text-xs leading-relaxed text-muted-foreground">Preview your prompts before starting. The timer applies to each pose.</p>}
+          {project?.editor.story && <p className="text-xs leading-relaxed text-muted-foreground">Flip through the prompts before you start. The timer runs before each pose.</p>}
           <CaptureSettings value={capture} cameras={cameras} disabled={busy || Boolean(pending)} onChange={patch => void changeCapture(patch)} />
           <FilterBar value={session.filterId} onChange={id => { if (!busy && !pending) void update({ filterId: id }).catch(error => setFailure(explain(error))); }} layoutClass="scrollbar-hide overflow-x-auto md:flex-wrap md:overflow-visible" />
           <p role="status" className="text-sm text-muted-foreground">{requiredShots - missing.length} of {requiredShots} shots saved{busy ? (count ? ". Get ready…" : ". Saving…") : ""}</p>
@@ -295,12 +295,12 @@ export default function BoothPage() {
             </div>)}
           </div>
           {!complete && <div className="flex items-center justify-center gap-5">
-            <button onClick={() => void shoot()} disabled={!ready || busy || Boolean(pending) || curated.loading} aria-label={missing.length === requiredShots ? "Start shooting" : "Capture remaining shots"} className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full border-4 border-foreground/70 bg-accent transition active:scale-95 disabled:opacity-40"><span className="h-14 w-14 rounded-full bg-white/90" /></button>
+            <button onClick={() => void shoot()} disabled={!ready || busy || Boolean(pending) || curated.loading} aria-label={missing.length === requiredShots ? "Start shooting" : "Take the remaining shots"} className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full border-4 border-foreground/70 bg-accent transition active:scale-95 disabled:opacity-40"><span className="h-14 w-14 rounded-full bg-white/90" /></button>
             <label className={`relative flex min-h-12 cursor-pointer items-center gap-2 rounded-xl border border-border px-4 font-semibold focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-ring ${busy || pending ? "opacity-40" : ""}`}><ImagePlus size={18} /> Import photos<input type="file" accept="image/jpeg,image/png,image/webp" multiple disabled={busy || Boolean(pending)} className="sr-only" onChange={event => { void onUpload(event.target.files); event.target.value = ""; }} /></label>
           </div>}
-          {complete && <><button disabled={busy || Boolean(pending)} onClick={() => router.push("/customize")} className="min-h-12 rounded-xl bg-accent px-5 font-semibold text-accent-foreground">Edit this strip</button><button disabled={busy || Boolean(pending)} onClick={() => void nextRound()} className="min-h-11 text-sm font-medium underline underline-offset-4">Next round with these settings</button></>}
-          {!complete && <p className="text-center text-sm text-muted-foreground">Use camera shots, imported photos, or both.</p>}
-          <button ref={motionTrigger} type="button" disabled={!ready || busy || Boolean(pending)} onClick={() => setMotionProject(motionKey)} className="min-h-11 rounded-xl border border-border px-4 text-sm font-medium disabled:opacity-40">Record a short solo loop</button>
+          {complete && <><button disabled={busy || Boolean(pending)} onClick={() => router.push("/customize")} className="min-h-12 rounded-xl bg-accent px-5 font-semibold text-accent-foreground">Edit this strip</button><button disabled={busy || Boolean(pending)} onClick={() => void nextRound()} className="min-h-11 text-sm font-medium underline underline-offset-4">Go again with the same settings</button></>}
+          {!complete && <p className="text-center text-sm text-muted-foreground">You can mix camera shots and imported photos.</p>}
+          <button ref={motionTrigger} type="button" disabled={!ready || busy || Boolean(pending)} onClick={() => setMotionProject(motionKey)} className="min-h-11 rounded-xl border border-border px-4 text-sm font-medium disabled:opacity-40">Record a short loop</button>
           {project && <ThenNowStudio key={`${project.scope.kind}:${project.scope.kind === "account" ? project.scope.ownerId : "device"}:${project.id}`} project={project} disabled={captureBusy || Boolean(pending)} onBusyChange={setReferenceBusy} />}
         </>}
       </div>

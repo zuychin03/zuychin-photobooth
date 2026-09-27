@@ -111,9 +111,9 @@ export function sourceResolution(input: ComposeInput, geometry: ExportGeometry):
   const ratios = sources.flatMap(item => item.pixelsPerOutputPixel === null ? [] : [item.pixelsPerOutputPixel]);
   const minimumPixelRatio = ratios.length ? Math.min(...ratios) : null;
   const warnings: string[] = [];
-  if (sources.some(item => item.missing)) warnings.push("Some photo slots are empty. Their placeholders will be exported.");
-  if (minimumPixelRatio !== null && minimumPixelRatio < .99) warnings.push(geometry.unit === "mm" ? "Some photo crops render below 300 ppi at this print size." : "Some photo crops are enlarged beyond their source resolution.");
+  if (sources.some(item => item.missing)) warnings.push("Some photo slots are empty, so they'll show up blank in the export.");
+  if (minimumPixelRatio !== null && minimumPixelRatio < .99) warnings.push(geometry.unit === "mm" ? "Some photos will print below 300 ppi at this size, so they might look soft." : "Some photos are zoomed in past their full resolution, so they might look blurry.");
   const requestedWidth = size.width * unitScale * pixelsPerUnit, requestedHeight = size.height * unitScale * pixelsPerUnit;
-  if (requestedWidth > RESOURCE_LIMITS.photoEdge || requestedHeight > RESOURCE_LIMITS.photoEdge || requestedWidth * requestedHeight > RESOURCE_LIMITS.photoPixels) warnings.push("The composition raster is capped by the 4096-pixel / 12-MiPixel export limit.");
+  if (requestedWidth > RESOURCE_LIMITS.photoEdge || requestedHeight > RESOURCE_LIMITS.photoEdge || requestedWidth * requestedHeight > RESOURCE_LIMITS.photoPixels) warnings.push("This export is scaled down to fit the size limit of 4096 pixels or 12 megapixels.");
   return { sources, minimumPpi: geometry.unit === "mm" && minimumPixelRatio !== null ? minimumPixelRatio * PRINT_PPI : null, minimumPixelRatio, warnings };
 }

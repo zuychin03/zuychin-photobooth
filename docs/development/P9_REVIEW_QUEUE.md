@@ -4,7 +4,17 @@ Prepared 23/09/2026 from the approved plan, route/component source and recorded 
 
 For current work, use the [reconciled acceptance queue, 25/09/2026](V2_STATUS.md#current-acceptance-queue-reconciled-25092026). The original route/component tables below are historical coverage inventories, not a fresh instruction to rerun every passing workflow. The detailed feature report, synthetic cloud versions, kiosk queue, dropdown fallback, media session, worker update and local rollback already have receipts. Reopen a case only for a relevant source change, a new failure or the explicitly missing genuine-service boundary.
 
-## Latest local follow-up, 24/09/2026
+## Genuine-service follow-up, 27/09/2026
+
+The [resumed acceptance receipt](V2_STATUS.md#resumed-genuine-service-acceptance-27092026) closes immediate challenge sharing, partial consent/reveal/withdrawal, two-person remote postcard delivery, private photo download after event closure and remove-local-copies sign-out with an empty library after re-login. Native postcard testing exposed two repaired gaps: a bound native fetch receiver and a missing private receipt copy action. The local production build and 17 HTTPS API checks passed for the retained full-feature source with those fixes. Danny subsequently set and unlocked the kiosk PIN himself; genuine sign-out, protected route redirects, closed-event admission refusal and protected exit all passed. Current-workspace integration separately passes 1,152 tests, 25 rehearsal checks, TypeScript, ESLint and an exact-source production build, with targeted rendered review of the newer copy. Native HTTPS authentication/secure receipt-cookie checks remain blocked by the in-app browser rejecting the local certificate; the temporary Windows trust entry was removed after testing. Physical-device checks remain deferred. These results supersede the corresponding pending items in the historical inventory below. No new commit, deployment or hosted change was made.
+
+## Limited release evidence, 26/09/2026
+
+The authorised friends release and Together correction are deployed. Commit `107a0a1f8b6e9ad40347f82c6076c7fb2dd1e160` passed [GitHub Checks](https://github.com/zuychin03/zuychin-photobooth/actions/runs/36215826179), including install, whole check, rehearsal tests and production build; Vercel reports a successful production deployment for the same commit. Current local evidence includes 1,148 tests and the corrected desktop/320/375 px Together entry. This supersedes older statements that no remote CI or deployment has occurred.
+
+The deployment exposes local creation and existing live rooms. New V2 room entry, Events, cloud projects, memories and accounts remain gated. It therefore closes the exact-commit CI requirement for this limited release, not the full authenticated/provider/device/event matrix. The generated deployment preview requires Vercel sign-in, so no remote browser workflow is claimed from the deployment status. Remaining local tests and their pending approval/handoff boundaries stay in the reconciled queue above.
+
+## Local follow-up, 24/09/2026
 
 The [template recovery and framework error receipt](V2_UI_UX_REVIEW.md#template-recovery-and-framework-error-follow-up-24092026) now closes those two specific rendered gaps: actual read-only row controls, privacy warning, confirmation focus and the real framework retry flow passed desktop/narrow inspection. OS download delivery and assistive technology remain unverified. The existing lab route is reused; no additional route was introduced.
 

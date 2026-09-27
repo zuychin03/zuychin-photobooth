@@ -24,7 +24,7 @@ export class ExportJob {
   }
   check() {
     if (this.options.signal?.aborted) throw new DOMException("Export cancelled", "AbortError");
-    if (Date.now() >= this.deadline) throw new Error("Export timed out. Your original photos are unchanged.");
+    if (Date.now() >= this.deadline) throw new Error("The export timed out. Try again, or pick a smaller size.");
   }
   async wait<T>(pending: Promise<T>): Promise<T> {
     this.check();
@@ -32,7 +32,7 @@ export class ExportJob {
       const signal = this.options.signal;
       const cleanup = () => { clearTimeout(timer); signal?.removeEventListener("abort", abort); };
       const abort = () => { cleanup(); reject(new DOMException("Export cancelled", "AbortError")); };
-      const timer = setTimeout(() => { cleanup(); reject(new Error("Export timed out. Your original photos are unchanged.")); }, Math.max(1, this.deadline - Date.now()));
+      const timer = setTimeout(() => { cleanup(); reject(new Error("The export timed out. Try again, or pick a smaller size.")); }, Math.max(1, this.deadline - Date.now()));
       signal?.addEventListener("abort", abort, { once: true });
       pending.then(value => { cleanup(); try { this.check(); resolve(value); } catch (error) { reject(error); } }, error => { cleanup(); reject(error); });
     });
@@ -51,10 +51,10 @@ export async function encodeExportCanvas(canvas: HTMLCanvasElement, format: "png
   if (!["png", "jpeg"].includes(format) || !Number.isFinite(quality) || quality < .1 || quality > 1) throw new Error("Invalid image encoding settings");
   const mime = format === "png" ? "image/png" : "image/jpeg";
   const blob = await job.wait(new Promise<Blob>((resolve, reject) => {
-    canvas.toBlob(value => value ? resolve(value) : reject(new Error("Image encoding failed. Your original photos are unchanged.")), mime, quality);
+    canvas.toBlob(value => value ? resolve(value) : reject(new Error("Image encoding failed. Try again, or pick a different format.")), mime, quality);
   }));
-  if (blob.type !== mime || !blob.size) throw new Error("The browser returned an unexpected image format");
-  if (blob.size > RESOURCE_LIMITS.totalEncodedBytes) throw new Error("Export exceeds the 64 MiB file limit");
+  if (blob.type !== mime || !blob.size) throw new Error("Your browser returned an unexpected image format. Try PNG instead.");
+  if (blob.size > RESOURCE_LIMITS.totalEncodedBytes) throw new Error("This export would be over the 64 MB file limit. Try a smaller size or JPEG.");
   return blob;
 }
 export function composeExportSource(input: ComposeInput, geometry: ExportGeometry, job: ExportJob): HTMLCanvasElement {
@@ -65,7 +65,7 @@ export function composeExportSource(input: ComposeInput, geometry: ExportGeometr
 }
 export function paintExportGeometry(canvas: HTMLCanvasElement, source: HTMLCanvasElement, geometry: ExportGeometry, background = "#ffffff") {
   const ctx = canvas.getContext("2d");
-  if (!ctx) throw new Error("Canvas drawing is unavailable");
+  if (!ctx) throw new Error("Your browser couldn't draw the image.");
   ctx.save();
   try {
     ctx.fillStyle = background; ctx.fillRect(0, 0, canvas.width, canvas.height);

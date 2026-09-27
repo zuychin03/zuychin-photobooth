@@ -1,0 +1,21 @@
+{
+  "name": "zuychin-photobooth-maintenance",
+  "main": "index.ts",
+  "compatibility_date": "2026-09-27",
+  "workers_dev": false,
+  "preview_urls": false,
+  "routes": [],
+  "triggers": {
+    // Activate only after the matching database, app environment and backup checks.
+    // Approved schedules: ["* * * * *", "*/15 * * * *"]. Removing this key does not disable deployed triggers.
+    "crons": []
+  },
+  "vars": {
+    "SCHEDULER_ENABLED": "false",
+    "EVENTS_ENABLED": "false",
+    "PROJECTS_ENABLED": "false",
+    "MEDIA_ENABLED": "false",
+    "REMINDERS_ENABLED": "false"
+  }
+  // Provision CRON_SECRET through Cloudflare Secrets; never add it to this file.
+}

@@ -79,7 +79,7 @@ test("completed stable-ID retry creates no duplicate upload or metadata", async 
 test("an unavailable finish RPC reports uncertainty and never authorises a fresh retry ID", async () => {
   const client: UploadRpc = { rpc: async name => name === "pb_register_upload" ? { data: intentRow(), error: null } : { data: null, error: { message: "fixture offline" } } };
   await assert.rejects(withUploadIntent(client, intent, async () => null, async () => SOURCE), error => {
-    assert.match((error as Error).message, /could not be confirmed/);
+    assert.match((error as Error).message, /Couldn't confirm/);
     assert.ok(!("restartRequired" in (error as object)));
     return true;
   });
@@ -106,11 +106,11 @@ test("immutable retry accepts identical uploaded bytes and refuses to replace di
 });
 
 test("relay downloads reject HTTP errors, non-images and oversized chunked bodies", async () => {
-  await assert.rejects(readBoundedImage(new Response("missing", { status: 404 })), /could not be downloaded/);
-  await assert.rejects(readBoundedImage(new Response("html", { headers: { "Content-Type": "text/html" } })), /unsupported/);
+  await assert.rejects(readBoundedImage(new Response("missing", { status: 404 })), /Couldn't download a relay photo/);
+  await assert.rejects(readBoundedImage(new Response("html", { headers: { "Content-Type": "text/html" } })), /size or format we can't use/);
   let cancelled = false;
   const stream = new ReadableStream({ start(controller) { controller.enqueue(new Uint8Array(MAX_UPLOAD_BYTES + 1)); }, cancel() { cancelled = true; } });
-  await assert.rejects(readBoundedImage(new Response(stream, { headers: { "Content-Type": "image/jpeg" } })), /exceeds/);
+  await assert.rejects(readBoundedImage(new Response(stream, { headers: { "Content-Type": "image/jpeg" } })), /too big/);
   assert.equal(cancelled, true);
   assert.equal((await readBoundedImage(new Response(photo(), { headers: { "Content-Type": "image/png" } }))).size, photo().size);
 });
@@ -155,7 +155,7 @@ test("actual strip saver with missing migration performs no Storage requests", a
     paths.push(url.pathname);
     return Response.json({ code: "PGRST202", message: "fixture missing migration" }, { status: 404 });
   });
-  await assert.rejects(saveStrip(OWNER, null, photo(), { layoutId: "strip4", caption: "fixture" }, { id: SOURCE }), /storage setup is complete/);
+  await assert.rejects(saveStrip(OWNER, null, photo(), { layoutId: "strip4", caption: "fixture" }, { id: SOURCE }), /isn't set up/);
   assert.equal(paths.length, 1);
   assert.ok(paths[0].endsWith("pb_register_upload"));
 });
@@ -198,7 +198,7 @@ test("actual relay creation registers all owned frames before upload and queues 
     if (url.pathname.endsWith("pb_relays")) return Response.json(null);
     throw new Error(`unexpected fixture route ${url.pathname}`);
   });
-  await assert.rejects(createRelay(OWNER, OTHER, { layoutId: "duo-split", filterId: "none", sceneId: null, shots: 4 }, frames, { id: SOURCE }), /Cloud saving failed/);
+  await assert.rejects(createRelay(OWNER, OTHER, { layoutId: "duo-split", filterId: "none", sceneId: null, shots: 4 }, frames, { id: SOURCE }), /Couldn't save to the cloud/);
   assert.deepEqual(events, ["register", "upload", "upload", "upload", "upload", "insert", "cleanup"]);
   assert.equal(frames.length, 4);
   assert.equal(frames[0].width, 8);
@@ -207,7 +207,7 @@ test("actual relay creation registers all owned frames before upload and queues 
 test("a complete intent whose reference cannot be read remains uncertain", async () => {
   const client: UploadRpc = { rpc: async () => ({ data: intentRow("complete"), error: null }) };
   await assert.rejects(withUploadIntent(client, intent, async () => null, async () => SOURCE), error => {
-    assert.match((error as Error).message, /could not be confirmed/);
+    assert.match((error as Error).message, /Couldn't confirm/);
     assert.ok(!("restartRequired" in (error as object)));
     return true;
   });
@@ -254,7 +254,7 @@ test("relay cancellation requires the cleanup migration before deleting metadata
     methods.push(init?.method ?? "GET");
     return Response.json({ code: "PGRST202", message: "fixture missing migration" }, { status: 404 });
   });
-  await assert.rejects(deleteRelay(SOURCE), /storage setup is complete/);
+  await assert.rejects(deleteRelay(SOURCE), /isn't set up/);
   assert.ok(!methods.includes("DELETE"));
 });
 
@@ -265,6 +265,6 @@ test("upload completion is fenced to its registered generation", async () => {
     generations.push(args.p_generation);
     return { data: null, error: { message: "PB_UPLOAD_GENERATION_MISMATCH" } };
   } };
-  await assert.rejects(withUploadIntent(client, intent, async () => null, async () => SOURCE), /could not be confirmed/);
+  await assert.rejects(withUploadIntent(client, intent, async () => null, async () => SOURCE), /Couldn't confirm/);
   assert.deepEqual(generations, [3, 3]);
 });

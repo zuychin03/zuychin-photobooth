@@ -127,10 +127,10 @@ function CustomizeWorkspace({ project }: { project: PhotoProject }) {
   const [capChoices, setCapChoices] = useState<TimelineStrip[] | null>(null);
   useAppNavigationGuard(() => {
     if (restoring || saving || saveState === "saving" || discardingEdits || exportOpen) {
-      setSaveError("Finish the current action or close the export studio before leaving."); return false;
+      setSaveError("Wait for this to finish, or close the export window, before you leave."); return false;
     }
     if (draft.pending || draft.error || storageStatus === "saving") {
-      setActiveTool("project"); setSaveError("Save or discard the unsaved edits before leaving."); return false;
+      setActiveTool("project"); setSaveError("Some edits haven't saved yet. Save or discard them before you leave."); return false;
     }
     return true;
   });
@@ -188,13 +188,13 @@ function CustomizeWorkspace({ project }: { project: PhotoProject }) {
       const next = await (direction === "undo" ? undo() : redo());
       draft.replaceFromProject(next.editor);
       setSelected(null);
-    } catch (error) { setSaveError(error instanceof Error ? error.message : "History could not be restored"); }
+    } catch (error) { setSaveError(error instanceof Error ? error.message : "Couldn't undo or redo that change."); }
     finally { setRestoring(false); }
   };
 
   const navigate = async (path: string) => {
     try { await draft.flush(); router.push(path); }
-    catch (error) { setSaveError(error instanceof Error ? error.message : "Save your pending edits before leaving"); }
+    catch (error) { setSaveError(error instanceof Error ? error.message : "Your latest edits haven't saved yet. Try again before you leave."); }
   };
 
   const discardEdits = async () => {
@@ -203,7 +203,7 @@ function CustomizeWorkspace({ project }: { project: PhotoProject }) {
       const saved = await openProject(project.id, project.scope);
       draft.discardUnsaved(); draft.replaceFromProject(saved.editor);
       setDiscardingEdits(false); setSaveError(null); setSelected(null);
-    } catch (error) { setSaveError(error instanceof Error ? error.message : "Saved edits could not be restored"); }
+    } catch (error) { setSaveError(error instanceof Error ? error.message : "Couldn't bring back your saved edits."); }
     finally { setRestoring(false); }
   };
 
@@ -340,7 +340,7 @@ function CustomizeWorkspace({ project }: { project: PhotoProject }) {
   };
 
   const addSticker = (def: StickerDef) => {
-    if (stickers.length >= 32) { setSaveError("This project already has 32 stickers. Remove one before adding another."); return; }
+    if (stickers.length >= 32) { setSaveError("You've hit the 32-sticker limit. Remove one to add another."); return; }
     const key = nextKey.current++;
     setStickers((list) => [
       ...list,
@@ -378,12 +378,12 @@ function CustomizeWorkspace({ project }: { project: PhotoProject }) {
   };
 
   const prepareExport = async () => {
-    if (!hasShots) throw new Error("Add a photo or redo the previous capture before exporting a strip.");
-    if (curated.loading) throw new Error("Wait for the selected artwork to finish loading before exporting.");
-    if (editor.template?.slots.some(slot => [slot, ...(slot.companions ?? [])].some(source => !session.shots[source.role]?.[source.sourceIndex]))) throw new Error("Import the missing template photos before exporting.");
+    if (!hasShots) throw new Error("There are no photos to export. Add some, or press Redo to bring the last ones back.");
+    if (curated.loading) throw new Error("The artwork is still loading. Try exporting again in a moment.");
+    if (editor.template?.slots.some(slot => [slot, ...(slot.companions ?? [])].some(source => !session.shots[source.role]?.[source.sourceIndex]))) throw new Error("Some template spots are still empty. Add those photos, then export.");
     try { await draft.flush(); }
-    catch { setSaveError("This export includes edits that have not saved on this device. Keep the file, then retry saving."); }
-    if (sceneId && (!cutouts || segmenting)) throw new Error("Wait for the Together scene to finish, or switch it off before exporting.");
+    catch { setSaveError("Your latest edits haven't saved on this device yet. They're in this export, so keep the file and try saving again."); }
+    if (sceneId && (!cutouts || segmenting)) throw new Error("The Together scene is still being set up. Wait for it, or turn the scene off to export now.");
     if (stickerStyle === "noto" || theme?.stickerStyle === "noto" || editor.template?.layers.some(layer => layer.kind === "sticker" && layer.style === "noto")) await ensureNotoFont(getComputedStyle(document.documentElement).getPropertyValue("--font-noto-emoji").trim());
     if (stickerStyle !== "noto") {
       await preloadStickers(stickerStyle, stickers.map((s) => s.slug));
@@ -392,7 +392,7 @@ function CustomizeWorkspace({ project }: { project: PhotoProject }) {
       await preloadStickers(theme.stickerStyle, theme.decor.map((d) => d.slug));
     }
     for (const layer of editor.template?.layers ?? []) if (layer.kind === "sticker" && layer.style !== "noto") await preloadStickers(layer.style, [layer.slug]);
-    if (!mounted.current) throw new Error("The editor was closed before export finished");
+    if (!mounted.current) throw new Error("The editor closed before the export finished.");
   };
 
   const exportBlob = async () => { await prepareExport(); return stripToBlob({ ...input, stickers }, 2); };
@@ -400,7 +400,7 @@ function CustomizeWorkspace({ project }: { project: PhotoProject }) {
   const openExportStudio = async () => {
     setSaving(true); setSaveError(null);
     try { await prepareExport(); if (mounted.current) setExportOpen(true); }
-    catch (error) { if (mounted.current) setSaveError(error instanceof Error ? error.message : "The export tools could not open."); }
+    catch (error) { if (mounted.current) setSaveError(error instanceof Error ? error.message : "Couldn't open the export options."); }
     finally { if (mounted.current) setSaving(false); }
   };
 
@@ -416,7 +416,7 @@ function CustomizeWorkspace({ project }: { project: PhotoProject }) {
       a.click();
       setTimeout(() => URL.revokeObjectURL(url), 30_000);
     } catch (error) {
-      setSaveError(error instanceof Error ? error.message : "The strip could not be exported");
+      setSaveError(error instanceof Error ? error.message : "Couldn't export the strip.");
     } finally {
       setSaving(false);
     }
@@ -426,13 +426,13 @@ function CustomizeWorkspace({ project }: { project: PhotoProject }) {
     setSaving(true); setSaveError(null);
     try {
       try { await draft.flush(); }
-      catch { setSaveError("The backup includes edits that have not saved on this device. Keep the file, then retry saving."); }
+      catch { setSaveError("Your latest edits haven't saved on this device yet. They're in this backup, so keep the file and try saving again."); }
       const blob = await exportProject(editor);
       if (!mounted.current) return;
       const url = URL.createObjectURL(blob), link = document.createElement("a");
       link.href = url; link.download = projectDownloadName(project.name, "pbproject"); link.click();
       setTimeout(() => URL.revokeObjectURL(url), 30_000);
-    } catch (error) { setSaveError(error instanceof Error ? error.message : "Project backup failed"); }
+    } catch (error) { setSaveError(error instanceof Error ? error.message : "Couldn't back up the project."); }
     finally { setSaving(false); }
   };
 
@@ -447,7 +447,7 @@ function CustomizeWorkspace({ project }: { project: PhotoProject }) {
         await download();
       }
     } catch (error) {
-      if (!(error instanceof DOMException && error.name === "AbortError")) setSaveError(error instanceof Error ? error.message : "Sharing failed. Try downloading the strip instead.");
+      if (!(error instanceof DOMException && error.name === "AbortError")) setSaveError(error instanceof Error ? error.message : "Couldn't share it. Try downloading the strip instead.");
     } finally {
       setSaving(false);
     }
@@ -471,7 +471,7 @@ function CustomizeWorkspace({ project }: { project: PhotoProject }) {
       setSaveState("saved");
     } catch (error) {
       if (error instanceof UploadSaveError && error.restartRequired) saveIdentity.current = null;
-      setSaveError(error instanceof Error ? error.message : "Cloud saving failed. Your photos remain here; please try again.");
+      setSaveError(error instanceof Error ? error.message : "Couldn't save to the Shared Vault. Your photos are still here, so try again.");
       setSaveState("idle");
     }
   };
@@ -502,11 +502,11 @@ function CustomizeWorkspace({ project }: { project: PhotoProject }) {
     try {
       const result = await deleteStrip(strip);
       if (result.pending) {
-        setSaveError("Deletion is queued. Check your vault before trying another cloud save. Your current photos remain here.");
+        setSaveError("That strip is queued for deletion. Check your vault before you try saving again. Your photos are still here.");
         return;
       }
     } catch (error) {
-      setSaveError(error instanceof Error ? error.message : "Deletion failed. Your current photos remain here.");
+      setSaveError(error instanceof Error ? error.message : "Couldn't delete that strip. Your photos are still here.");
       return;
     }
     await persistStrip();
@@ -563,7 +563,7 @@ function CustomizeWorkspace({ project }: { project: PhotoProject }) {
               <ArrowLeft size={16} /> {isShared && !session.roomCode ? "Back" : hasShots ? "Retake" : "Add photos"}
             </button>
             <h1 className="text-lg font-semibold" style={{ fontFamily: "var(--font-fraunces)" }}>
-              Make it yours
+              Edit your strip
             </h1>
           </div>
           <div className="flex items-center gap-2">
@@ -571,7 +571,7 @@ function CustomizeWorkspace({ project }: { project: PhotoProject }) {
             <button type="button" aria-label="Undo edit" disabled={!project.history.past.length || draft.pending} onClick={() => void applyHistory("undo")} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-border disabled:opacity-30"><Undo2 size={18} /></button>
             <button type="button" aria-label="Redo edit" disabled={!project.history.future.length || draft.pending} onClick={() => void applyHistory("redo")} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-border disabled:opacity-30"><Redo2 size={18} /></button>
           </div>
-          <p role="status" className="text-sm text-muted-foreground">{draft.error || storageError ? "Changes need attention" : draft.pending || storageStatus === "saving" ? "Saving on this device…" : "Saved on this device"}</p>
+          <p role="status" className="text-sm text-muted-foreground">{draft.error || storageError ? "Some changes didn't save" : draft.pending || storageStatus === "saving" ? "Saving on this device…" : "Saved on this device"}</p>
         </div>
         <div ref={toolScroll} className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto overscroll-contain p-4 md:p-5" aria-label="Editing tools">
           <div className={toolClass("project")}>
@@ -580,12 +580,12 @@ function CustomizeWorkspace({ project }: { project: PhotoProject }) {
             <button type="button" onClick={() => void navigate("/templates")} className="min-h-11 rounded-lg border border-border px-3 text-sm">Templates</button>
             <button type="button" onClick={() => void navigate("/templates/design")} className="min-h-11 rounded-lg border border-border px-3 text-sm">Frame designer</button>
             {!isShared && <button type="button" onClick={() => void navigate("/booth#then-now")} className="min-h-11 rounded-lg border border-border px-3 text-sm">Then &amp; now</button>}
-            <button onClick={() => void downloadProject()} disabled={saving} className="min-h-11 text-sm text-muted-foreground underline underline-offset-4 disabled:opacity-50">Back up editable project</button>
+            <button onClick={() => void downloadProject()} disabled={saving} className="min-h-11 text-sm text-muted-foreground underline underline-offset-4 disabled:opacity-50">Back up this project</button>
           </div>
           </div>
-          {!hasShots && <p className="text-sm">No active photos in this version. Redo the previous capture to restore it, or choose Add photos. Your original files remain in the project backup.</p>}
-          {(draft.error || storageError) && <div role="alert" className="text-sm"><p>{draft.error ?? storageError}</p><div className="flex flex-wrap gap-4"><button className="mt-2 min-h-11 text-accent underline" onClick={() => void draft.flush().catch(error => setSaveError(error.message))}>Retry local save</button>{draft.error && <button className="mt-2 min-h-11 underline" onClick={() => setDiscardingEdits(true)}>Discard unsaved edits</button>}</div></div>}
-          {discardingEdits && <div className="border-y border-border py-3 text-sm"><p>Restore the last saved edits? Unsaved changes will be removed. Back up your editable project first if you want to keep them.</p><div className="mt-2 flex gap-4"><button className="min-h-11 text-destructive underline" onClick={() => void discardEdits()}>Restore saved edits</button><button className="min-h-11 underline" onClick={() => setDiscardingEdits(false)}>Keep editing</button></div></div>}
+          {!hasShots && <p className="text-sm">This version has no photos. Press Redo to bring them back, or choose Add photos.</p>}
+          {(draft.error || storageError) && <div role="alert" className="text-sm"><p>{draft.error ?? storageError}</p><div className="flex flex-wrap gap-4"><button className="mt-2 min-h-11 text-accent underline" onClick={() => void draft.flush().catch(error => setSaveError(error.message))}>Try saving again</button>{draft.error && <button className="mt-2 min-h-11 underline" onClick={() => setDiscardingEdits(true)}>Discard unsaved edits</button>}</div></div>}
+          {discardingEdits && <div className="border-y border-border py-3 text-sm"><p>Go back to your last saved edits? Anything that hasn&apos;t saved will be lost. Back up the project first if you want to keep it.</p><div className="mt-2 flex gap-4"><button className="min-h-11 text-destructive underline" onClick={() => void discardEdits()}>Go back to saved edits</button><button className="min-h-11 underline" onClick={() => setDiscardingEdits(false)}>Keep editing</button></div></div>}
           <div className={toolClass("photos")}>
             {editor.template ? <><TemplateSourcePanel project={project} onImport={async (role, index, file) => { await draft.flush(); await importShot(role, index, file); }} /><button className="min-h-11 text-left text-sm underline" onClick={() => setField("template", null)}>Use the standard layout</button></> : <PhotoEditPanel project={project} editor={editor} change={draft.patch} reorder={async order => { await draft.flush(); await editProject({}, order); }} />}
           </div>
@@ -593,8 +593,8 @@ function CustomizeWorkspace({ project }: { project: PhotoProject }) {
           <div className={toolClass("scene")}>
           <VisualPackPicker sceneId={sceneId} materialId={editor.materialId ?? null} onSceneChange={setSceneId} onMaterialChange={id => setField("materialId", id)} />
           </div>
-          {curated.loading && <p role="status" className="text-sm text-muted-foreground">Loading selected artwork…</p>}
-          {curated.fallback.length > 0 && <p role="status" className="text-sm">Artwork unavailable: {curated.fallback.join(", ")}. A built-in background will be used in your preview and export.</p>}
+          {curated.loading && <p role="status" className="text-sm text-muted-foreground">Loading artwork…</p>}
+          {curated.fallback.length > 0 && <p role="status" className="text-sm">Couldn&apos;t load {curated.fallback.join(", ")}, so a built-in background will be used instead.</p>}
 
           <div className={toolClass("look")}>
           <section>
@@ -708,12 +708,12 @@ function CustomizeWorkspace({ project }: { project: PhotoProject }) {
               </h2>
               {segmenting && (
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Preparing the background cutouts…
+                  Cutting out the background…
                 </p>
               )}
               {segFailed && (
                 <p className="mt-1 text-xs text-destructive">
-                  Couldn&apos;t run the background cutout on this device.
+                  Couldn&apos;t cut out the background on this device.
                 </p>
               )}
               {sceneId && cutouts && !editor.template && (
@@ -845,7 +845,7 @@ function CustomizeWorkspace({ project }: { project: PhotoProject }) {
             <button
               onClick={() => setShowDate((d) => !d)}
               aria-pressed={showDate}
-              aria-label="Toggle datestamp"
+              aria-label="Show date stamp"
               className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border transition ${
                 showDate
                   ? "border-datestamp bg-datestamp/15 text-datestamp"
@@ -948,8 +948,8 @@ function CustomizeWorkspace({ project }: { project: PhotoProject }) {
               </div>
             ) : (
               <p className="rounded-xl bg-muted/60 px-3 py-2 text-sm text-muted-foreground">
-                There are no unkept strips of yours available to discard. Kept
-                memories stay protected here. Download this strip or wait for the weekly reset.
+                None of your strips from this week can be swapped out. Kept strips
+                stay put, and you can&apos;t remove your partner&apos;s. Download this one instead, or wait for the weekly reset.
               </p>
             )}
           </div>

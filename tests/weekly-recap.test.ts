@@ -46,7 +46,7 @@ test("wrong MIME, excessive declared bytes and oversized PNG header refuse nativ
 test("account change or source replacement during encoding prevents returning private output", async () => {
   for (const mode of ["account", "source"]) {
     const f = await fixture(); f.ports.encode = async () => { if (mode === "account") f.revoke(); else f.change(); return new Blob([f.bytes], { type: "image/png" }); };
-    await assert.rejects(renderWeeklyRecap(f.sources, "Week", f.options, f.ports), mode === "account" ? /account_changed/ : /source photo changed/);
+    await assert.rejects(renderWeeklyRecap(f.sources, "Week", f.options, f.ports), mode === "account" ? /account_changed/ : /strips changed/);
     assert(f.canvases.every(c => c.width === 0));
   }
 });
@@ -54,7 +54,7 @@ test("cancelled native decode stays occupied until its late bitmap closes, then 
   const f = await fixture(1), abort = new AbortController(); let finish!: (value: Awaited<ReturnType<WeeklyRecapPorts["decode"]>>) => void, began!: () => void, closed = false;
   const started = new Promise<void>(resolve => { began = resolve; }); f.ports.decode = () => new Promise(resolve => { finish = resolve; began(); });
   const task = renderWeeklyRecap(f.sources, "Week", { ...f.options, signal: abort.signal }, f.ports); await started; abort.abort();
-  await assert.rejects(task, /cancelled/); await assert.rejects(renderWeeklyRecap(f.sources, "Week", f.options, f.ports), /still settling/);
+  await assert.rejects(task, /cancelled/); await assert.rejects(renderWeeklyRecap(f.sources, "Week", f.options, f.ports), /still finishing up/);
   finish({ width: 2030, height: 1184, close() { closed = true; } }); await new Promise(resolve => setImmediate(resolve));
   assert(closed); assert(!f.calls.includes("compose"));
   const retry = await fixture(1); await renderWeeklyRecap(retry.sources, "Week", retry.options, retry.ports);
@@ -63,6 +63,6 @@ test("native timeout refuses output and keeps the late encoder allocation until 
   const f = await fixture(1); let finish!: (blob: Blob) => void;
   f.ports.encode = () => new Promise(resolve => { finish = resolve; });
   await assert.rejects(renderWeeklyRecap(f.sources, "Week", { ...f.options, nativeTimeoutMs: 5 }, f.ports), /too long/);
-  await assert.rejects(renderWeeklyRecap(f.sources, "Week", f.options, f.ports), /still settling/); assert(f.canvases.some(c => c.width > 0));
+  await assert.rejects(renderWeeklyRecap(f.sources, "Week", f.options, f.ports), /still finishing up/); assert(f.canvases.some(c => c.width > 0));
   finish(new Blob([f.bytes], { type: "image/png" })); await new Promise(resolve => setImmediate(resolve)); assert(f.canvases.every(c => c.width === 0));
 });

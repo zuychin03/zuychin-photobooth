@@ -13,13 +13,13 @@ export class TemplateStorageError extends Error {
 function fail(code: TemplateStorageError["code"], message: string): never { throw new TemplateStorageError(code, message); }
 function current(record: StoredTemplate): TemplateRecipe {
   const parsed = parseTemplateRecipe(record.rawJson);
-  if (parsed.kind !== "current") fail("readonly", "This template requires a newer app; preserve its raw backup");
+  if (parsed.kind !== "current") fail("readonly", "This template needs a newer version of the app. Download its recovery files to keep it safe.");
   if (parsed.recipe.id !== record.id || parsed.recipe.revision !== record.revision || templateScopeKey(parsed.recipe.scope) !== record.scopeKey) fail("readonly", "Stored template identity is inconsistent");
   return parsed.recipe;
 }
 export function assertTemplateWrite(previous: TemplateRecipe | null, next: TemplateRecipe, expectedRevision: number | null, scope: TemplateScope): void {
   if (templateScopeKey(next.scope) !== templateScopeKey(scope)) fail("scope", "Template belongs to another local scope");
-  if ((previous?.revision ?? null) !== expectedRevision) fail("conflict", "Template changed in another tab; reload or duplicate your edits");
+  if ((previous?.revision ?? null) !== expectedRevision) fail("conflict", "This template changed in another tab. Reload, or duplicate it to keep your edits.");
   if (next.revision !== (expectedRevision === null ? 0 : expectedRevision + 1)) fail("conflict", "Template revision must advance exactly once");
   if (previous && (previous.id !== next.id || templateScopeKey(previous.scope) !== templateScopeKey(next.scope) || previous.createdAt !== next.createdAt || next.updatedAt < previous.updatedAt)) fail("scope", "Template identity and creation time cannot change");
 }
@@ -36,13 +36,13 @@ export interface TemplateShelf {
 }
 export async function openTemplateShelf(scope: TemplateScope, options: { indexedDB?: IDBFactory; databaseName?: string; timeoutMs?: number; inspect?: TemplateImageInspector; now?: () => string } = {}): Promise<TemplateShelf> {
   const scoped = templateScopeKey(scope), factory = options.indexedDB ?? globalThis.indexedDB, timeout = options.timeoutMs ?? 10_000;
-  if (!factory) fail("unavailable", "Template storage is unavailable; export your recipe before leaving");
+  if (!factory) fail("unavailable", "Template storage is unavailable in this browser. Export your template before you leave.");
   if (!Number.isFinite(timeout) || timeout < 1 || timeout > 60_000) fail("timeout", "Invalid storage timeout");
   const inspect = options.inspect ?? inspectProjectImage, now = options.now ?? (() => new Date().toISOString());
   const db = await new Promise<IDBDatabase>((resolve, reject) => {
     const request = factory.open(options.databaseName ?? TEMPLATE_DATABASE_NAME, 1);
     let expired = false, blocked = false;
-    const timer = setTimeout(() => { expired = true; reject(new TemplateStorageError(blocked ? "blocked" : "timeout", "Template storage did not open; close other template tabs and retry")); }, timeout);
+    const timer = setTimeout(() => { expired = true; reject(new TemplateStorageError(blocked ? "blocked" : "timeout", "Template storage did not open. Close any other tabs with this app open and try again.")); }, timeout);
     request.onblocked = () => { blocked = true; };
     request.onupgradeneeded = () => {
       if (expired) { request.transaction?.abort(); return; }
@@ -56,12 +56,12 @@ export async function openTemplateShelf(scope: TemplateScope, options: { indexed
   db.onversionchange = close; db.onclose = () => { closed = true; };
   const keyFor = (id: string) => `${scoped}/${templateId(id)}`;
   function transaction<T>(mode: IDBTransactionMode, work: (store: IDBObjectStore, receive: <V>(request: IDBRequest<V>, apply: (value: V) => void) => void, finish: (value: T) => void) => void): Promise<T> {
-    if (closed) return Promise.reject(new TemplateStorageError("closed", "Template storage was closed; reopen it before saving"));
+    if (closed) return Promise.reject(new TemplateStorageError("closed", "Template storage closed. Reload the page before saving."));
     return new Promise<T>((resolve, reject) => {
       const tx = db.transaction("templates", mode);
       let result: T, finished = false, failure: unknown;
       const abort = (error: unknown) => { failure = error; try { tx.abort(); } catch { reject(error); } };
-      const timer = setTimeout(() => abort(new TemplateStorageError("timeout", "Template save timed out and was not confirmed")), timeout);
+      const timer = setTimeout(() => abort(new TemplateStorageError("timeout", "Saving the template took too long, so it might not have saved.")), timeout);
       tx.oncomplete = () => { clearTimeout(timer); if (finished) resolve(result); else reject(new Error("Template transaction completed without a result")); };
       tx.onabort = () => { clearTimeout(timer); reject(failure ?? tx.error ?? new DOMException("Template transaction aborted", "AbortError")); };
       tx.onerror = () => {};
@@ -79,7 +79,7 @@ export async function openTemplateShelf(scope: TemplateScope, options: { indexed
     scope: Object.freeze(validateTemplateScope(scope)), close,
     list: () => transaction("readonly", (store, receive, finish) => receive(store.index("scopeKey").getAll(scoped), (records: StoredTemplate[]) => finish(records.map(record => {
       try { const recipe = current(requireRecord(record, record.id)); return { id: recipe.id, name: recipe.name, revision: recipe.revision, updatedAt: recipe.updatedAt, readOnly: false }; }
-      catch { return { id: record.id, name: "Template requiring recovery or a newer app", revision: record.revision, updatedAt: null, readOnly: true }; }
+      catch { return { id: record.id, name: "Unknown template", revision: record.revision, updatedAt: null, readOnly: true }; }
     }).sort((a, b) => (b.updatedAt ?? "").localeCompare(a.updatedAt ?? ""))))),
     load: async id => {
       const value = await getRecord(id); if (!value) return null;
@@ -113,20 +113,20 @@ export async function openTemplateShelf(scope: TemplateScope, options: { indexed
     },
     rename: async (id, name, expected) => {
       const loaded = await shelf.load(id);
-      if (!loaded) fail("missing", "Template not found");
-      if (loaded.kind !== "current") fail("readonly", "Unsupported templates remain read-only");
+      if (!loaded) fail("missing", "Couldn't find this template.");
+      if (loaded.kind !== "current") fail("readonly", "This template can't be changed in this version of the app.");
       return shelf.save(validateTemplateRecipe({ ...loaded.recipe, name, revision: expected + 1, updatedAt: now() }), loaded.decorations, expected);
     },
     duplicate: async (id, options = {}) => {
       const loaded = await shelf.load(id);
-      if (!loaded) fail("missing", "Template not found");
-      if (loaded.kind !== "current") fail("readonly", "Unsupported templates remain read-only");
+      if (!loaded) fail("missing", "Couldn't find this template.");
+      if (loaded.kind !== "current") fail("readonly", "This template can't be changed in this version of the app.");
       const timestamp = now();
       return shelf.save(validateTemplateRecipe({ ...loaded.recipe, id: options.id ?? crypto.randomUUID(), name: options.name ?? `${loaded.recipe.name.slice(0, 90)} copy`, revision: 0, createdAt: timestamp, updatedAt: timestamp }), loaded.decorations, null);
     },
     delete: (id, expected) => transaction("readwrite", (store, receive, finish) => receive(store.get(keyFor(id)), (value: StoredTemplate | undefined) => {
       const record = requireRecord(value, id);
-      if (record.revision !== expected) fail("conflict", "Template changed in another tab; reload before deleting");
+      if (record.revision !== expected) fail("conflict", "This template changed in another tab. Reload before deleting it.");
       store.delete(record.key); finish(undefined);
     })),
     exportRaw: async id => {

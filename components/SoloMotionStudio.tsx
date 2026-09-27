@@ -41,7 +41,7 @@ export default function SoloMotionStudio({ getVideo, mirror, filterId, name, clo
   const record = async () => {
     if (abort.current) return;
     const video = getVideo();
-    if (!video) { setError("The camera is no longer ready. Close the loop studio and try the camera again."); return; }
+    if (!video) { setError("The camera stopped. Close this window and start the camera again."); return; }
     const job = new AbortController(); abort.current = job;
     setRecording(true); setCountdown(null); setError(null);
     let timer: ReturnType<typeof setInterval> | undefined;
@@ -53,16 +53,16 @@ export default function SoloMotionStudio({ getVideo, mirror, filterId, name, clo
       const result = await captureSoloFrames(video, { mirror, filterId, signal: job.signal });
       if (alive.current && !job.signal.aborted) setCapture(result);
     } catch (failure) {
-      if (alive.current) setError(job.signal.aborted ? "Recording cancelled. Your still photos are unchanged." : failure instanceof Error ? failure.message : "The loop could not be captured. You can still take photos.");
+      if (alive.current) setError(job.signal.aborted ? "Recording cancelled." : failure instanceof Error ? failure.message : "Couldn't record the loop. You can still take photos.");
     } finally { clearInterval(timer); if (abort.current === job) abort.current = null; if (alive.current) setRecording(false); }
   };
   return <dialog ref={dialog} aria-labelledby="solo-motion-title" onCancel={event => { event.preventDefault(); close(); }} className="m-auto max-h-[92dvh] w-[calc(100%_-_2rem)] max-w-xl overflow-y-auto rounded-2xl border border-border bg-card p-0 text-foreground shadow-2xl backdrop:bg-black/60">
-    <header className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-border bg-card p-5"><div><h2 id="solo-motion-title" className="font-display text-3xl">A moment in motion</h2><p className="mt-2 text-sm text-muted-foreground">A two-second loop using your mirror and filter.</p></div><button type="button" onClick={close} aria-label="Close motion studio" className={`${control} w-11 shrink-0 px-0`}><X size={20} /></button></header>
+    <header className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-border bg-card p-5"><div><h2 id="solo-motion-title" className="font-display text-3xl">Record a loop</h2><p className="mt-2 text-sm text-muted-foreground">Two seconds of video, with your mirror and filter.</p></div><button type="button" onClick={close} aria-label="Close loop recorder" className={`${control} w-11 shrink-0 px-0`}><X size={20} /></button></header>
     <div className="space-y-5 p-5">
-      <p className="text-sm text-muted-foreground">Silent and temporary. Download before closing; your saved photos are unaffected.</p>
-      {!capture && <div className="relative overflow-hidden rounded-xl bg-black"><video ref={livePreview} muted playsInline aria-label="Solo motion camera preview" className="max-h-[40dvh] w-full object-contain" style={{ transform: mirror ? "scaleX(-1)" : undefined, filter: getFilter(filterId).css }} />{recording && <p role="status" className="absolute right-3 bottom-3 rounded-lg bg-black/80 px-3 py-2 text-sm text-white">{countdown === null ? "Preparing loop…" : `Recording · ${countdown.toFixed(1)} s left`}</p>}</div>}
+      <p className="text-sm text-muted-foreground">Loops have no sound and aren&apos;t saved to your project, so download yours before you close this.</p>
+      {!capture && <div className="relative overflow-hidden rounded-xl bg-black"><video ref={livePreview} muted playsInline aria-label="Camera preview" className="max-h-[40dvh] w-full object-contain" style={{ transform: mirror ? "scaleX(-1)" : undefined, filter: getFilter(filterId).css }} />{recording && <p role="status" className="absolute right-3 bottom-3 rounded-lg bg-black/80 px-3 py-2 text-sm text-white">{countdown === null ? "Getting ready…" : `Recording · ${countdown.toFixed(1)} s left`}</p>}</div>}
       {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
-      {capture ? <><p className="text-sm">{capture.frameCount} frames captured · {capture.width} × {capture.height} pixels</p><MotionExportPanel getFrames={getFrames} name={name} delayMs={Math.max(1000 / 12, Math.min(2000, capture.elapsedMs / capture.frameCount))} warnings={capture.warnings} /><button type="button" onClick={() => { setCapture(null); setError(null); }} className={`${control} border border-border`}>Discard loop and record again</button></> : <div className="flex gap-2"><button type="button" disabled={recording} onClick={() => void record()} className={`${control} flex-1 bg-accent text-accent-foreground`}><Circle size={16} fill="currentColor" />{recording ? "Recording…" : "Record 2-second loop"}</button>{recording && <button type="button" onClick={() => abort.current?.abort()} className={`${control} border border-border`}>Cancel recording</button>}</div>}
+      {capture ? <><p className="text-sm">{capture.frameCount} frames captured · {capture.width} × {capture.height} pixels</p><MotionExportPanel getFrames={getFrames} name={name} delayMs={Math.max(1000 / 12, Math.min(2000, capture.elapsedMs / capture.frameCount))} warnings={capture.warnings} /><button type="button" onClick={() => { setCapture(null); setError(null); }} className={`${control} border border-border`}>Record again</button></> : <div className="flex gap-2"><button type="button" disabled={recording} onClick={() => void record()} className={`${control} flex-1 bg-accent text-accent-foreground`}><Circle size={16} fill="currentColor" />{recording ? "Recording…" : "Record 2-second loop"}</button>{recording && <button type="button" onClick={() => abort.current?.abort()} className={`${control} border border-border`}>Cancel</button>}</div>}
     </div>
   </dialog>;
 }

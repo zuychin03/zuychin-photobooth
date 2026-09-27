@@ -43,7 +43,7 @@ function NewRelayAccountPage() {
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
   useAppNavigationGuard(() => {
-    if ((originals.length > 0 && !originalsSaved) || step === "saving") { setError("Wait for the current work and save your originals before leaving."); return false; }
+    if ((originals.length > 0 && !originalsSaved) || step === "saving") { setError("Hang on until your photos finish saving before you leave."); return false; }
     return true;
   });
   const [pendingUpload, setPendingUpload] = useState<{ id: string; frames: HTMLCanvasElement[] } | null>(null);
@@ -63,7 +63,7 @@ function NewRelayAccountPage() {
         setCaptureId(draftId);
         if (loaded) { setLayoutId(loaded.project.editor.layoutId); setFilterId(loaded.project.editor.filterId); setOriginals(loaded.originals); setInitialOriginals(loaded.originals); setOriginalsSaved(true); setStep("shoot"); }
       }
-    }).catch(() => { if (current() && !cancelled) setError("Your pairing could not be loaded. Please refresh and try again."); }).finally(() => { if (current() && !cancelled) setChecked(true); });
+    }).catch(() => { if (current() && !cancelled) setError("Couldn't load your pairing. Refresh and try again."); }).finally(() => { if (current() && !cancelled) setChecked(true); });
     return () => { cancelled = true; };
   }, [user, loading, scope]);
 
@@ -98,7 +98,7 @@ function NewRelayAccountPage() {
       } catch (failure) {
         if (!current()) return;
         if (failure instanceof UploadSaveError && failure.restartRequired) setPendingUpload({ id: crypto.randomUUID(), frames });
-        setError(failure instanceof Error ? failure.message : "Your half could not be saved. Your photos remain on this page.");
+        setError(failure instanceof Error ? failure.message : "Couldn't save your half. Your photos are still on this page.");
         setStep("failed");
       } finally { if (!current()) for (const frame of frames) frame.width = frame.height = 0; }
     },
@@ -145,7 +145,7 @@ function NewRelayAccountPage() {
           filterId={filterId}
           initialOriginals={initialOriginals}
           onCheckpoint={async blobs => {
-            const current = scope.capture(); if (!current() || !user || !captureId) throw new Error("Your relay page changed.");
+            const current = scope.capture(); if (!current() || !user || !captureId) throw new Error("This page changed. Reload and try again.");
             await saveRelayOriginals({ id: captureId, ownerId: user.id, layoutId, filterId, role: "A", shots: layout.shots, originals: blobs, active: current });
           }}
           onDone={onShot}

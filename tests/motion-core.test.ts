@@ -103,7 +103,7 @@ test("capture cancellation and byte exhaustion propagate without claiming a comp
   let now = 0, calls = 0;
   await assert.rejects(collectMotionFrames({ now: () => now, check() { if (calls === 2) throw new DOMException("Cancelled", "AbortError"); }, pause: async ms => { now += ms; }, capture: async () => { calls++; return new Blob(["x"], { type: "image/jpeg" }); } }, 2000, 12), { name: "AbortError" });
   now = 0;
-  await assert.rejects(collectMotionFrames({ now: () => now, check() {}, pause: async ms => { now += ms; }, capture: async () => new Blob([new Uint8Array(6 * 1024 * 1024)], { type: "image/jpeg" }) }, 2000, 12), /10 MiB/);
+  await assert.rejects(collectMotionFrames({ now: () => now, check() {}, pause: async ms => { now += ms; }, capture: async () => new Blob([new Uint8Array(6 * 1024 * 1024)], { type: "image/jpeg" }) }, 2000, 12), /10 MB limit/);
 });
 test("recording sustains a held frame at no more than12 emissions per second, including the final hold", async () => {
   let now = 0; const emissions: number[] = [];

@@ -39,7 +39,7 @@ export function RoleCapture({ shots, filterId, onDone, onCheckpoint, initialOrig
   useEffect(() => { if (!unsaved) return; const warn = (event: BeforeUnloadEvent) => event.preventDefault(); window.addEventListener("beforeunload", warn); return () => window.removeEventListener("beforeunload", warn); }, [unsaved]);
   useEffect(() => { onUnsavedChange?.(unsaved || shooting); return () => onUnsavedChange?.(false); }, [onUnsavedChange, unsaved, shooting]);
   useAppNavigationGuard(() => {
-    if (unsaved || shooting) { setCaptureError("Finish capturing and save your originals before leaving."); return false; }
+    if (unsaved || shooting) { setCaptureError("Finish taking your photos and let them save before you leave."); return false; }
     return true;
   }, !synthetic);
   const active = () => !cancelled.current;
@@ -60,7 +60,7 @@ export function RoleCapture({ shots, filterId, onDone, onCheckpoint, initialOrig
     if (running.current || relayOriginalEncoder.busy) return;
     running.current = true; setShooting(true); setCaptureError(null);
     try { await operation(); }
-    catch (failure) { if (active()) setCaptureError(failure instanceof Error ? failure.message : "Your photo is retained. Retry saving or keep a local copy."); }
+    catch (failure) { if (active()) setCaptureError(failure instanceof Error ? failure.message : "Your photo is still here. Try saving again, or download a copy."); }
     finally { running.current = false; if (active()) { setCount(null); setShooting(false); } }
   };
   const run = () => perform(async () => {
@@ -69,10 +69,10 @@ export function RoleCapture({ shots, filterId, onDone, onCheckpoint, initialOrig
       const index = checkpointed.current;
       if (!frames.current[index]) {
         const video = videoRef.current;
-        if (!video || !ready) throw new Error("Retry the camera or import the remaining photos.");
+        if (!video || !ready) throw new Error("Try the camera again, or import the rest of your photos.");
         for (let c = 3; c >= 1; c--) { if (!active()) return; setCount(c); playTick(); await sleep(1000); }
         setCount(null); if (!active()) return;
-        if (video.videoWidth > 4096 || video.videoHeight > 4096 || video.videoWidth * video.videoHeight > 12 * 1024 * 1024) throw new Error("This camera resolution exceeds the photo limit. Import smaller originals instead.");
+        if (video.videoWidth > 4096 || video.videoHeight > 4096 || video.videoWidth * video.videoHeight > 12 * 1024 * 1024) throw new Error("Your camera's photos are too big. Import smaller photos instead.");
         frames.current.push(captureFrame(video, facing === "user")); setUnsaved(true); playShutter(); setFlash(value => value + 1);
       }
       if (!originals.current[index]) {
@@ -88,7 +88,7 @@ export function RoleCapture({ shots, filterId, onDone, onCheckpoint, initialOrig
   });
   const importPhotos = (files: File[]) => perform(async () => {
     const remaining = shots - checkpointed.current;
-    if (files.length !== remaining || remaining < 1) throw new Error(`Choose exactly ${remaining} remaining ${remaining === 1 ? "photo" : "photos"}.`);
+    if (files.length !== remaining || remaining < 1) throw new Error(`Pick exactly ${remaining} more ${remaining === 1 ? "photo" : "photos"}.`);
     await ensureFrames();
     for (const file of files) {
       const decoded = await importRelayPhotos([file], 1, active);
@@ -105,18 +105,18 @@ export function RoleCapture({ shots, filterId, onDone, onCheckpoint, initialOrig
   return <div className="relative flex h-full min-h-0 flex-col">
     {!error && <div className="relative min-h-48 flex-1 overflow-hidden"><CameraPreview videoRef={attachVideo} mirror={facing === "user"} filterCss={getFilter(filterId).css} />{!ready && <p className="absolute inset-0 flex items-center justify-center">Starting camera…</p>}<Countdown value={count} /><CaptureFlash trigger={flash} />{canFlip && !shooting && <button onClick={toggleFacing} aria-label="Switch camera" className="glass-card absolute top-4 right-4 flex h-11 w-11 items-center justify-center rounded-full"><SwitchCamera size={20} /></button>}</div>}
     <div className="flex flex-col items-center gap-3 p-4 pb-6">
-      {error && <><p>Camera unavailable. Retry access or import your photos.</p><button disabled={shooting || nativeBusy} onClick={retry} className={control}>Try camera again</button></>}
-      <p role="status" className="text-center text-sm">{progress} of {shots} originals saved on this device.{shooting ? " Saving each photo before continuing…" : ""}</p>
+      {error && <><p>Can&apos;t use your camera. Try again, or import your photos.</p><button disabled={shooting || nativeBusy} onClick={retry} className={control}>Try camera again</button></>}
+      <p role="status" className="text-center text-sm">{progress} of {shots} photos saved on this device.{shooting ? " Saving as you go…" : ""}</p>
       {captureError && <p role="alert" className="max-w-sm text-center text-sm text-destructive">{captureError}</p>}
-      {nativeBusy && !shooting && <p role="status" className="max-w-sm text-sm">The image encoder is still finishing. Your photo is retained; retry becomes available when it settles.</p>}
+      {nativeBusy && !shooting && <p role="status" className="max-w-sm text-sm">Still processing your photo. You can try again in a moment.</p>}
       {shownOriginals.length > 0 && <RelayOriginalRecovery originals={shownOriginals} saved={!unsaved} />}
-      {captureError && <button disabled={shooting || nativeBusy} className={control} onClick={() => void run()}>{unsaved && shownOriginals.length === progress ? "Retry preparation and continue" : "Retry saving and continue"}</button>}
-      {unsaved && !shooting && <><p className="max-w-sm text-sm">{unsaved && shownOriginals.length === progress ? "The current photo is still on this page. Retry preparation to create its original download; previously saved photos remain in My projects." : "The current photo and its original download are available on this page. Retry saving; previously saved photos remain in My projects."}</p>{discarding ? <div role="alertdialog" aria-label="Discard unsaved relay photo"><p>Discard only the unsaved photo? Previously saved originals remain.</p><button autoFocus disabled={nativeBusy} className={control} onClick={() => setDiscarding(false)}>Keep photo</button><button disabled={nativeBusy} className={control} onClick={discard}>Discard unsaved photo</button></div> : <button disabled={nativeBusy} className={control} onClick={() => setDiscarding(true)}>Discard unsaved photo</button>}</>}
+      {captureError && <button disabled={shooting || nativeBusy} className={control} onClick={() => void run()}>{unsaved && shownOriginals.length === progress ? "Try again and continue" : "Try saving again and continue"}</button>}
+      {unsaved && !shooting && <><p className="max-w-sm text-sm">{unsaved && shownOriginals.length === progress ? "This photo is still on this page. Try again to get it ready to download. Your earlier photos are safe in My projects." : "This photo is still on this page, and you can download it here. Try saving again. Your earlier photos are safe in My projects."}</p>{discarding ? <div role="alertdialog" aria-label="Discard unsaved photo"><p>Discard just this unsaved photo? Your saved ones stay.</p><button autoFocus disabled={nativeBusy} className={control} onClick={() => setDiscarding(false)}>Keep photo</button><button disabled={nativeBusy} className={control} onClick={discard}>Discard unsaved photo</button></div> : <button disabled={nativeBusy} className={control} onClick={() => setDiscarding(true)}>Discard unsaved photo</button>}</>}
       {!shooting && <CaptureFeedbackSettings />}
-      {remaining > 0 && <label className={control}>Import {remaining} remaining {remaining === 1 ? "photo" : "photos"}<input className="mt-2 block max-w-full text-sm" type="file" accept="image/png,image/jpeg,image/webp" multiple disabled={shooting || nativeBusy || unsaved} onChange={event => { const files = Array.from(event.target.files ?? []); event.target.value = ""; if (files.length) void importPhotos(files); }} /><span className="mt-1 block text-xs">Choose exactly {remaining} {remaining === 1 ? "image" : "images"}, up to 10 MiB each. Originals stay unchanged.</span></label>}
+      {remaining > 0 && <label className={control}>Import {remaining} remaining {remaining === 1 ? "photo" : "photos"}<input className="mt-2 block max-w-full text-sm" type="file" accept="image/png,image/jpeg,image/webp" multiple disabled={shooting || nativeBusy || unsaved} onChange={event => { const files = Array.from(event.target.files ?? []); event.target.value = ""; if (files.length) void importPhotos(files); }} /><span className="mt-1 block text-xs">Pick exactly {remaining} {remaining === 1 ? "image" : "images"}, up to 10 MB each.</span></label>}
       {synthetic && remaining > 0 && <button disabled={shooting || nativeBusy || unsaved} className={control} onClick={() => void importPhotos(rehearsalPhotos!.slice(progress))}>Import synthetic photos</button>}
       {!shooting && hint && <p className="text-center text-sm text-muted-foreground">{hint}</p>}
-      {!shooting && !captureError && <button disabled={nativeBusy || (remaining > 0 && (!ready || unsaved))} onClick={() => void run()} className="min-h-13 rounded-full bg-accent px-6 py-3 font-semibold text-accent-foreground disabled:opacity-40">{remaining === 0 ? "Continue with saved originals" : progress ? "Continue shooting" : "Start shooting"}</button>}
+      {!shooting && !captureError && <button disabled={nativeBusy || (remaining > 0 && (!ready || unsaved))} onClick={() => void run()} className="min-h-13 rounded-full bg-accent px-6 py-3 font-semibold text-accent-foreground disabled:opacity-40">{remaining === 0 ? "Continue with saved photos" : progress ? "Continue shooting" : "Start shooting"}</button>}
     </div>
   </div>;
 }

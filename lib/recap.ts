@@ -35,7 +35,7 @@ export function composeRecap(sources: Source[], title: string, scale = 1, annual
   canvas.height = outputHeight;
   try {
   const ctx = canvas.getContext("2d");
-  if (!ctx) throw new Error("The recap canvas is unavailable.");
+  if (!ctx) throw new Error("Your browser couldn't draw the recap.");
   ctx.scale(renderScale, renderScale);
 
   ctx.fillStyle = BG;
@@ -66,7 +66,7 @@ export function composeRecap(sources: Source[], title: string, scale = 1, annual
 }
 
 export function weeklyRecapGeometry(sources: readonly { width: number; height: number }[], scale = 2) {
-  if (!sources.length || sources.length > WEEKLY_RECAP_LIMITS.sources || !Number.isFinite(scale) || scale <= 0 || scale > 2 || sources.some(s => !Number.isInteger(s.width) || !Number.isInteger(s.height) || s.width < 1 || s.height < 1 || s.width > 4096 || s.height > 4096 || s.width * s.height > 12 * 1024 * 1024)) throw new Error("Choose up to 20 supported strips for this recap.");
+  if (!sources.length || sources.length > WEEKLY_RECAP_LIMITS.sources || !Number.isFinite(scale) || scale <= 0 || scale > 2 || sources.some(s => !Number.isInteger(s.width) || !Number.isInteger(s.height) || s.width < 1 || s.height < 1 || s.width > 4096 || s.height > 4096 || s.width * s.height > 12 * 1024 * 1024)) throw new Error("Pick up to 20 strips for this recap.");
   const count = sources.length;
   const cols = Math.min(count, MAX_COLS);
   const rows = Math.ceil(count / cols);
@@ -94,7 +94,7 @@ function composeAnnualRecap(sources: Source[], title: string, scale: number, lab
   const { cellWidth, cellHeight, caption, cols, width, height, outputWidth: w, outputHeight: h } = annualRecapGeometry(sources.length, scale, Math.max(...sources.map(srcW)), Math.max(...sources.map(srcH)));
   const canvas = document.createElement("canvas"); canvas.width = w; canvas.height = h;
   try {
-    const ctx = canvas.getContext("2d"); if (!ctx) throw new Error("Recap canvas is unavailable");
+    const ctx = canvas.getContext("2d"); if (!ctx) throw new Error("Your browser couldn't draw the recap.");
     ctx.scale(scale, scale); ctx.fillStyle = BG; ctx.fillRect(0, 0, width, height); ctx.fillStyle = INK; ctx.textAlign = "center"; ctx.textBaseline = "middle";
     ctx.font = `600 52px ${fontVar("--font-fraunces", "Georgia, serif")}`; ctx.fillText(title, width / 2, PAD + HEADER_H / 2, width - PAD * 2);
     sources.forEach((source, index) => {
@@ -111,7 +111,7 @@ export function recapToBlob(sources: Source[], title: string, scale = 2): Promis
   const canvas = composeRecap(sources, title, scale);
   return new Promise((resolve, reject) => {
     try { canvas.toBlob(
-      (blob) => { canvas.width = canvas.height = 0; if (blob?.size && blob.size <= WEEKLY_RECAP_LIMITS.outputBytes) resolve(blob); else reject(new Error("The recap could not be encoded within its size limit.")); },
+      (blob) => { canvas.width = canvas.height = 0; if (blob?.size && blob.size <= WEEKLY_RECAP_LIMITS.outputBytes) resolve(blob); else reject(new Error("Couldn't fit the recap within its size limit.")); },
       "image/png",
     ); } catch (error) { canvas.width = canvas.height = 0; reject(error); }
   });
@@ -128,28 +128,28 @@ export interface WeeklyRecapPorts {
 const weeklyNative: WeeklyRecapPorts = {
   fetch: (...args) => fetch(...args), decode: blob => createImageBitmap(blob), canvas: () => document.createElement("canvas"),
   compose: (sources, title) => composeRecap(sources, title, 2),
-  encode: canvas => new Promise((resolve, reject) => canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error("Recap encoding failed.")), "image/png")),
+  encode: canvas => new Promise((resolve, reject) => canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error("Couldn't create the recap image.")), "image/png")),
 };
 export function weeklyStripUrl(value: string, origin: string, path: string) {
   const base = new URL(origin), url = new URL(value);
-  if (base.origin !== origin || base.username || base.password || base.protocol !== "https:" && !(base.protocol === "http:" && ["localhost", "127.0.0.1", "[::1]"].includes(base.hostname)) || !/^[a-f0-9-]{36}\/[a-f0-9-]{36}\.png$/.test(path) || url.origin !== origin || url.username || url.password || url.hash || url.pathname !== `/storage/v1/object/sign/photobooth-strips/${path}` || [...url.searchParams.keys()].some(key => key !== "token") || url.searchParams.getAll("token").length !== 1 || !url.searchParams.get("token")) throw new Error("The private photo address could not be verified.");
+  if (base.origin !== origin || base.username || base.password || base.protocol !== "https:" && !(base.protocol === "http:" && ["localhost", "127.0.0.1", "[::1]"].includes(base.hostname)) || !/^[a-f0-9-]{36}\/[a-f0-9-]{36}\.png$/.test(path) || url.origin !== origin || url.username || url.password || url.hash || url.pathname !== `/storage/v1/object/sign/photobooth-strips/${path}` || [...url.searchParams.keys()].some(key => key !== "token") || url.searchParams.getAll("token").length !== 1 || !url.searchParams.get("token")) throw new Error("Couldn't verify the photo link.");
   return url.href;
 }
 let weeklyOccupied = false;
 export function renderWeeklyRecap(sources: readonly WeeklyRecapSource[], title: string, options: { signal?: AbortSignal; assertActive(): void; timeoutMs?: number; nativeTimeoutMs?: number }, ports: WeeklyRecapPorts = weeklyNative): Promise<{ blob: Blob; width: number; height: number }> {
   const items = [...sources], timeout = options.timeoutMs ?? WEEKLY_RECAP_LIMITS.timeoutMs, nativeTimeout = options.nativeTimeoutMs ?? WEEKLY_RECAP_LIMITS.nativeTimeoutMs;
-  if (!items.length || items.length > WEEKLY_RECAP_LIMITS.sources || new Set(items.map(s => s.id)).size !== items.length || typeof title !== "string" || [...title].length > 120 || !Number.isInteger(timeout) || timeout < 1 || timeout > WEEKLY_RECAP_LIMITS.timeoutMs || !Number.isInteger(nativeTimeout) || nativeTimeout < 1 || nativeTimeout > WEEKLY_RECAP_LIMITS.nativeTimeoutMs) return Promise.reject(new Error("Choose up to 20 supported strips for this recap."));
-  if (weeklyOccupied) return Promise.reject(new Error("The previous recap is still settling. Try again shortly."));
+  if (!items.length || items.length > WEEKLY_RECAP_LIMITS.sources || new Set(items.map(s => s.id)).size !== items.length || typeof title !== "string" || [...title].length > 120 || !Number.isInteger(timeout) || timeout < 1 || timeout > WEEKLY_RECAP_LIMITS.timeoutMs || !Number.isInteger(nativeTimeout) || nativeTimeout < 1 || nativeTimeout > WEEKLY_RECAP_LIMITS.nativeTimeoutMs) return Promise.reject(new Error("Pick up to 20 strips for this recap."));
+  if (weeklyOccupied) return Promise.reject(new Error("The last recap is still finishing up. Try again in a moment."));
   const controller = new AbortController(); let failure: Error | undefined, rejectStop!: (error: Error) => void;
   const stopped = new Promise<never>((_, reject) => { rejectStop = reject; });
   const stop = (message: string) => { if (!failure) { failure = new Error(message); controller.abort(); rejectStop(failure); } };
-  const abort = () => stop("Recap cancelled. Your saved strips are unchanged.");
+  const abort = () => stop("Recap cancelled.");
   const check = () => { if (failure) throw failure; if (options.signal?.aborted) throw new Error("Recap cancelled."); options.assertActive(); };
   try { check(); } catch (error) { return Promise.reject(error); }
   weeklyOccupied = true; options.signal?.addEventListener("abort", abort, { once: true });
   const timer = setTimeout(() => stop("The recap took too long. Try again with fewer strips."), timeout);
   const native = async <T,>(work: () => Promise<T>, dispose?: (result: T) => void) => {
-    check(); const timer = setTimeout(() => stop("The image processor took too long. Try again shortly."), nativeTimeout);
+    check(); const timer = setTimeout(() => stop("Your browser took too long to process the images. Try again in a moment."), nativeTimeout);
     try { const result = await work(); try { check(); } catch (error) { dispose?.(result); throw error; } return result; } finally { clearTimeout(timer); }
   };
   const task = (async () => {
@@ -158,23 +158,23 @@ export function renderWeeklyRecap(sources: readonly WeeklyRecapSource[], title: 
       for (const source of items) {
         check(); const resolved = await source.resolve(controller.signal); check(); fingerprints.push(resolved.fingerprint);
         const response = await ports.fetch(resolved.url, { signal: controller.signal, credentials: "omit", redirect: "error", cache: "no-store", referrerPolicy: "no-referrer" });
-        try { check(); if (!response.ok || response.redirected || response.url && response.url !== resolved.url || response.headers.get("content-type")?.split(";", 1)[0] !== "image/png") throw new Error("A source photo is unavailable. Refresh the vault before trying again."); }
+        try { check(); if (!response.ok || response.redirected || response.url && response.url !== resolved.url || response.headers.get("content-type")?.split(";", 1)[0] !== "image/png") throw new Error("One of the strips isn't available. Refresh the vault and try again."); }
         catch (error) { void response.body?.cancel().catch(() => {}); throw error; }
         const bytes = await readRetainedBody(response, WEEKLY_RECAP_LIMITS.sourceBytes, controller.signal); check();
         const info = inspectRetainedPngHeader(bytes), bitmap = await native(() => ports.decode(new Blob([bytes], { type: "image/png" })), bitmap => bitmap.close());
         try {
-          if (bitmap.width !== info.width || bitmap.height !== info.height) throw new Error("A source photo could not be verified.");
+          if (bitmap.width !== info.width || bitmap.height !== info.height) throw new Error("Couldn't verify one of the strips.");
           const canvas = ports.canvas(); thumbnails.push(canvas);
           const scale = Math.min(1, 640 / bitmap.width, 640 / bitmap.height); canvas.width = Math.max(1, Math.round(bitmap.width * scale)); canvas.height = Math.max(1, Math.round(bitmap.height * scale));
-          const context = canvas.getContext("2d"); if (!context) throw new Error("The recap canvas is unavailable.");
+          const context = canvas.getContext("2d"); if (!context) throw new Error("Your browser couldn't draw the recap.");
           context.drawImage(bitmap as ImageBitmap, 0, 0, canvas.width, canvas.height); check();
         } finally { bitmap.close(); }
       }
       check(); output = ports.compose(thumbnails, title);
-      if (!Number.isInteger(output.width) || !Number.isInteger(output.height) || output.width < 1 || output.height < 1 || output.width > 4096 || output.height > 4096 || output.width * output.height > 12 * 1024 * 1024) throw new Error("The recap exceeds the output limit.");
+      if (!Number.isInteger(output.width) || !Number.isInteger(output.height) || output.width < 1 || output.height < 1 || output.width > 4096 || output.height > 4096 || output.width * output.height > 12 * 1024 * 1024) throw new Error("The recap came out too big.");
       const width = output.width, height = output.height, blob = await native(() => ports.encode(output!));
-      if (blob.type !== "image/png" || !blob.size || blob.size > WEEKLY_RECAP_LIMITS.outputBytes) throw new Error("The recap exceeds the file size limit.");
-      for (let index = 0; index < items.length; index++) { const current = await items[index].resolve(controller.signal); check(); if (current.fingerprint !== fingerprints[index]) throw new Error("A source photo changed. Refresh the vault before trying again."); }
+      if (blob.type !== "image/png" || !blob.size || blob.size > WEEKLY_RECAP_LIMITS.outputBytes) throw new Error("The recap file is too big.");
+      for (let index = 0; index < items.length; index++) { const current = await items[index].resolve(controller.signal); check(); if (current.fingerprint !== fingerprints[index]) throw new Error("One of the strips changed. Refresh the vault and try again."); }
       check(); return { blob, width, height };
     } finally {
       if (output) output.width = output.height = 0;

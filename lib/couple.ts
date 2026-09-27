@@ -83,7 +83,7 @@ export async function saveStrip(
   requireUuid(userId);
   if (coupleId) requireUuid(coupleId);
   if ((!LAYOUTS.some(layout => layout.id === meta.layoutId) && meta.layoutId !== "recap") || meta.caption.length > 2000) {
-    throw new Error("The strip layout or caption is not valid.");
+    throw new Error("Something's wrong with this strip's layout or caption.");
   }
   const supabase = createClient();
   const id = identity.id ?? crypto.randomUUID();
@@ -93,7 +93,7 @@ export async function saveStrip(
     if (error) throw cloudWriteError(error);
     if (!data) return null;
     if (data.owner !== userId || data.storage_path !== path || data.couple_id !== coupleId || data.layout_id !== meta.layoutId || data.caption !== (meta.caption || null)) {
-      throw new Error("This save ID belongs to a different strip. Start a new save.");
+      throw new Error("Something went wrong with this save. Start a new one.");
     }
     return id;
   }, async () => {
@@ -136,9 +136,9 @@ export async function setStripKept(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ id, kept, requestId }),
   });
-  if (!res.ok) throw new Error("The archive change could not be confirmed. Please refresh and try again.");
+  if (!res.ok) throw new Error("Couldn't confirm that change. Refresh and try again.");
   const data = await res.json() as { kept?: boolean; pushed?: boolean; pending?: boolean; jobId?: string };
-  if (typeof data.kept !== "boolean" || typeof data.pushed !== "boolean" || typeof data.pending !== "boolean") throw new Error("The archive response could not be confirmed.");
+  if (typeof data.kept !== "boolean" || typeof data.pushed !== "boolean" || typeof data.pending !== "boolean") throw new Error("Couldn't confirm that change.");
   return { kept: data.kept, pushed: data.pushed, pending: data.pending, jobId: data.jobId };
 }
 
@@ -147,9 +147,9 @@ export async function deleteStrip(strip: StripRow, requestId = crypto.randomUUID
   const response = await fetch(`/api/media/strips/${strip.id}`, {
     method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ requestId }),
   });
-  if (!response.ok) throw new Error("Deletion could not be confirmed. Please refresh and try again.");
-  if (response.status !== 200 && response.status !== 202) throw new Error("The deletion response could not be confirmed.");
+  if (!response.ok) throw new Error("Couldn't confirm the deletion. Refresh and try again.");
+  if (response.status !== 200 && response.status !== 202) throw new Error("Couldn't confirm the deletion.");
   const result = await response.json() as { pending?: boolean; deleted?: boolean };
-  if (result.pending !== (response.status === 202) || (response.status === 200 && result.deleted !== true)) throw new Error("The deletion response could not be confirmed.");
+  if (result.pending !== (response.status === 202) || (response.status === 200 && result.deleted !== true)) throw new Error("Couldn't confirm the deletion.");
   return { pending: response.status === 202 };
 }

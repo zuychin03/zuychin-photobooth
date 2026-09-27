@@ -23,7 +23,7 @@ function PackThumbnail({ choice }: { choice: Choice }) {
     {/* Fixed local thumbnails use their measured delivery files directly. */}
     {/* eslint-disable-next-line @next/next/no-img-element */}
     {choice.asset && !failed && <img src={choice.asset.thumbnail.path} alt="" loading="lazy" decoding="async" width={choice.asset.thumbnail.width} height={choice.asset.thumbnail.height} onError={() => setFailed(true)} className="h-full w-full object-cover" />}
-    {failed && <span className="absolute inset-x-0 bottom-0 bg-card/95 px-2 py-1 text-xs text-foreground">Built-in fallback</span>}
+    {failed && <span className="absolute inset-x-0 bottom-0 bg-card/95 px-2 py-1 text-xs text-foreground">Built-in version</span>}
   </span>;
 }
 
@@ -54,9 +54,9 @@ function PackPreview({ choice, disabled, apply, close }: { choice: Choice; disab
     return () => { active = false; loader.dispose(); target.width = target.height = 0; };
   }, [choice]);
   return <dialog ref={dialog} aria-labelledby={title} onCancel={event => { event.preventDefault(); close(); }} onClick={event => { if (event.target === event.currentTarget) close(); }} className="m-auto w-[calc(100%_-_2rem)] max-w-xl max-h-[calc(100dvh_-_2rem)] overflow-auto rounded-2xl bg-card p-5 text-foreground shadow-xl backdrop:bg-black/50">
-    <div className="mb-4 flex items-start justify-between gap-4"><h3 id={title} className="font-display text-2xl">{choice.name}</h3><button type="button" onClick={close} className={`${controls} -mr-2 w-11 shrink-0`} aria-label="Close asset preview"><X size={20} /></button></div>
+    <div className="mb-4 flex items-start justify-between gap-4"><h3 id={title} className="font-display text-2xl">{choice.name}</h3><button type="button" onClick={close} className={`${controls} -mr-2 w-11 shrink-0`} aria-label="Close preview"><X size={20} /></button></div>
     <canvas ref={canvas} width={choice.asset?.kind === "material" ? 640 : 768} height={choice.asset?.kind === "material" ? 640 : 512} className="block max-h-[48dvh] w-full rounded-xl object-contain" role="img" aria-label={`${choice.name} full preview`} />
-    <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{status === "loading" ? "Loading the full image…" : status === "fallback" ? "The image is unavailable. This built-in fallback will keep your photos usable; the original theme will load when available." : choice.asset?.kind === "material" ? "Frame texture. Check your caption is readable." : "Your layout may crop this backdrop. Check it after applying."}</p>
+    <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{status === "loading" ? "Loading the full image…" : status === "fallback" ? "Couldn't load this image, so you're seeing a built-in version. The real one will show up once it loads." : choice.asset?.kind === "material" ? "A texture for your frame. Make sure your caption is still easy to read." : "Your layout might crop this background, so check it after you apply it."}</p>
     <div className="mt-5 flex flex-wrap justify-end gap-2"><button type="button" className={`${controls} bg-muted`} onClick={close}>Cancel</button><button type="button" disabled={disabled || status === "loading"} className={`${controls} bg-accent text-accent-foreground`} onClick={apply}>{status === "loading" && <LoaderCircle size={16} className="animate-spin motion-reduce:animate-none" />}Apply {choice.asset?.kind === "material" ? "material" : "scene"}</button></div>
   </dialog>;
 }
@@ -75,17 +75,17 @@ export function VisualPackPicker({ sceneId, materialId, onSceneChange, onMateria
   const toggleFavourite = (id: string) => {
     const next = favourites.includes(id) ? favourites.filter(value => value !== id) : [...favourites, id];
     setFavourites(next);
-    if (!writeAssetFavourites(next)) setNotice("Favourites are available for this visit. Browser storage could not save them for next time.");
+    if (!writeAssetFavourites(next)) setNotice("Your favourites will work for now, but this browser couldn't save them for next time.");
   };
   const cache = async (action: "cache" | "clear") => {
     if (category === "favourites") return;
     setCacheBusy(true); setNotice(null);
-    try { await requestAssetPack(action, category); setNotice(action === "cache" ? "This pack is saved for offline use in this browser. The browser may clear it when storage is needed." : "This pack’s offline copy is cleared. Project photos and settings are unchanged."); }
-    catch (error) { setNotice(error instanceof Error ? error.message : "The offline pack could not be updated. Try again online."); }
+    try { await requestAssetPack(action, category); setNotice(action === "cache" ? "Saved for offline use in this browser. It might get cleared if the browser needs space." : "Offline copy removed."); }
+    catch (error) { setNotice(error instanceof Error ? error.message : "Couldn't update the offline pack. Try again while you're online."); }
     finally { setCacheBusy(false); }
   };
   return <section aria-label="Scenes and materials" className="flex flex-col gap-4">
-    <Dropdown label="Visual pack category" value={category} options={categories} onChange={value => setCategory(value as typeof category)} disabled={disabled} />
+    <Dropdown label="Category" value={category} options={categories} onChange={value => setCategory(value as typeof category)} disabled={disabled} />
     {category === "material" && <button type="button" className={`${controls} justify-start bg-muted`} disabled={disabled} aria-pressed={!materialId} onClick={() => onMaterialChange(null)}>{!materialId && <Check size={16} />}No material</button>}
     {category !== "material" && <button type="button" className={`${controls} justify-start bg-muted`} disabled={disabled} aria-pressed={!sceneId} onClick={() => onSceneChange(null)}>{!sceneId && <Check size={16} />}Use original backgrounds</button>}
     {!visible.length ? <p className="py-4 text-sm text-muted-foreground">Star a scene or material to find it here.</p> : <div className="grid grid-cols-2 gap-x-3 gap-y-5">{visible.map(choice => {
@@ -95,7 +95,7 @@ export function VisualPackPicker({ sceneId, materialId, onSceneChange, onMateria
         <div className="mt-1 flex items-start gap-1"><span className="min-w-0 flex-1 pt-2 text-sm leading-snug">{choice.name}{!choice.asset && <span className="block text-xs text-muted-foreground">Built-in</span>}</span><button type="button" aria-label={`${favourites.includes(choice.id) ? "Remove" : "Add"} ${choice.name} ${favourites.includes(choice.id) ? "from" : "to"} favourites`} aria-pressed={favourites.includes(choice.id)} disabled={disabled} onClick={() => toggleFavourite(choice.id)} className={`${controls} -mr-2 w-11 shrink-0 px-0 ${favourites.includes(choice.id) ? "text-accent" : "text-muted-foreground"}`}><Star size={17} fill={favourites.includes(choice.id) ? "currentColor" : "none"} /></button></div>
       </div>;
     })}</div>}
-    {category !== "favourites" && <div className="border-t border-border pt-4"><div className="flex flex-wrap gap-2"><button type="button" className={`${controls} bg-muted`} disabled={disabled || cacheBusy} onClick={() => void cache("cache")}>{cacheBusy ? <LoaderCircle size={16} className="animate-spin motion-reduce:animate-none" /> : <Download size={16} />}Save pack offline</button><button type="button" className={`${controls} text-muted-foreground`} disabled={disabled || cacheBusy} onClick={() => void cache("clear")}><Trash2 size={16} />Clear offline copy</button><HelpTooltip label="About offline packs">Saves this category in this browser. Built-in backgrounds work without a pack. Your browser may clear downloaded packs to free space.</HelpTooltip></div></div>}
+    {category !== "favourites" && <div className="border-t border-border pt-4"><div className="flex flex-wrap gap-2"><button type="button" className={`${controls} bg-muted`} disabled={disabled || cacheBusy} onClick={() => void cache("cache")}>{cacheBusy ? <LoaderCircle size={16} className="animate-spin motion-reduce:animate-none" /> : <Download size={16} />}Save pack offline</button><button type="button" className={`${controls} text-muted-foreground`} disabled={disabled || cacheBusy} onClick={() => void cache("clear")}><Trash2 size={16} />Clear offline copy</button><HelpTooltip label="About offline packs">Downloads this category so it works offline in this browser. Built-in backgrounds always work. Your browser might clear saved packs if it runs low on space.</HelpTooltip></div></div>}
     {notice && <p role="status" className="text-sm leading-relaxed text-muted-foreground">{notice}</p>}
     {preview && <PackPreview key={preview.id} choice={preview} disabled={disabled} close={() => setPreview(null)} apply={() => { if (preview.asset?.kind === "material") onMaterialChange(preview.id); else onSceneChange(preview.id); setPreview(null); }} />}
   </section>;

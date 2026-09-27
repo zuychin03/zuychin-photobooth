@@ -32,7 +32,7 @@ function readCurrent(record: StoredProject): PhotoProject {
   const parsed = parsePhotoProject(record.rawJson);
   if (parsed.kind !== "current") fail("readonly", "A newer project version must remain read-only");
   if (parsed.project.id !== record.id || scopeKey(parsed.project.scope) !== record.scopeKey || parsed.project.revision !== record.revision
-    || JSON.stringify(parsed.project.media.map(item => item.id)) !== JSON.stringify(record.mediaIds)) fail("readonly", "Stored project identity is inconsistent; keep a raw recovery backup");
+    || JSON.stringify(parsed.project.media.map(item => item.id)) !== JSON.stringify(record.mediaIds)) fail("readonly", "Something's off with this saved project. Download its recovery files to keep it safe.");
   return parsed.project;
 }
 function sameIdentity(left: MediaIdentity, right: MediaIdentity): boolean {
@@ -65,7 +65,7 @@ export async function openProjectRepository(scope: ProjectScope, options: { inde
     let expired = false, blocked = false;
     const timer = setTimeout(() => {
       expired = true;
-      reject(new ProjectStorageError(blocked ? "blocked" : "timeout", "Project storage could not open; close other project tabs and retry"));
+      reject(new ProjectStorageError(blocked ? "blocked" : "timeout", "Couldn't open project storage. Close any other tabs with this app open and try again."));
     }, timeout);
     request.onblocked = () => { blocked = true; };
     request.onupgradeneeded = () => {
@@ -89,13 +89,13 @@ export async function openProjectRepository(scope: ProjectScope, options: { inde
   db.onclose = () => { closed = true; };
 
   function transact<T>(mode: IDBTransactionMode, work: (tx: IDBTransaction, request: <V>(req: IDBRequest<V>, receive: (value: V) => void) => void, finish: (value: T) => void) => void): Promise<T> {
-    if (closed) return Promise.reject(new ProjectStorageError("closed", "Project storage was closed; reopen it before saving"));
+    if (closed) return Promise.reject(new ProjectStorageError("closed", "Project storage closed. Reload the page before saving."));
     return new Promise<T>((resolve, reject) => {
       options.assertActive?.();
       const tx = db.transaction(STORES, mode);
       let result: T, failure: unknown, finished = false;
       const abort = (error: unknown) => { failure = error; try { tx.abort(); } catch { reject(error); } };
-      const timer = setTimeout(() => abort(new ProjectStorageError("timeout", "Project transaction timed out; changes were not confirmed saved")), timeout);
+      const timer = setTimeout(() => abort(new ProjectStorageError("timeout", "Saving took too long, so your changes might not have saved.")), timeout);
       tx.oncomplete = () => { clearTimeout(timer); if (finished) resolve(result); else reject(new Error("Project transaction completed without a result")); };
       tx.onabort = () => { clearTimeout(timer); reject(failure ?? tx.error ?? new DOMException("Project transaction aborted", "AbortError")); };
       tx.onerror = () => {};
@@ -111,7 +111,7 @@ export async function openProjectRepository(scope: ProjectScope, options: { inde
     return record;
   };
   const assertRevision = (record: StoredProject | undefined, expected: number | null) => {
-    if ((record?.revision ?? null) !== expected) fail("conflict", "This project changed in another tab; reload or duplicate your unsaved edits");
+    if ((record?.revision ?? null) !== expected) fail("conflict", "This project changed in another tab. Reload, or duplicate it to keep your unsaved edits.");
   };
 
   const repository: ProjectRepository = {
@@ -119,7 +119,7 @@ export async function openProjectRepository(scope: ProjectScope, options: { inde
     list: () => transact("readonly", (tx, request, finish) => {
       request(tx.objectStore("projects").index("scopeKey").getAll(scoped), (records: StoredProject[]) => finish(records.map(record => {
         try { const project = readCurrent(record); return { id: record.id, name: project.name, revision: record.revision, updatedAt: project.updatedAt, readOnly: false }; }
-        catch { return { id: record.id, name: "Project requiring recovery or a newer app", revision: record.revision, updatedAt: null, readOnly: true }; }
+        catch { return { id: record.id, name: "Unknown project", revision: record.revision, updatedAt: null, readOnly: true }; }
       }).sort((a, b) => (b.updatedAt ?? "").localeCompare(a.updatedAt ?? ""))));
     }),
     load: id => transact("readonly", (tx, request, finish) => {
@@ -208,7 +208,7 @@ export async function openProjectRepository(scope: ProjectScope, options: { inde
     duplicate: async (id, duplicateOptions = {}) => {
       const loaded = await repository.load(id);
       if (!loaded) fail("missing", "Project not found");
-      if (loaded.kind !== "current") fail("readonly", "This project is read-only; retain a raw backup");
+      if (loaded.kind !== "current") fail("readonly", "This project can't be edited here. Download its recovery files to keep it safe.");
       const timestamp = now();
       const project = validatePhotoProject({ ...loaded.project, id: duplicateOptions.id ?? crypto.randomUUID(), name: duplicateOptions.name ?? `${loaded.project.name.slice(0, 72)} (copy)`, revision: 0, createdAt: timestamp, updatedAt: timestamp, capture: { ...loaded.project.capture, cameraId: null } });
       return repository.save(project, loaded.media, null);
@@ -232,13 +232,13 @@ export async function openProjectRepository(scope: ProjectScope, options: { inde
         let future = false;
         try { future = parsePhotoProject(record.rawJson).kind === "unsupported"; } catch { /* A corrupt current record can recover its prior checkpoint. */ }
         if (future) fail("readonly", "A newer project version must remain read-only");
-        if (!record.previous) fail("missing", "No previous checkpoint is available");
+        if (!record.previous) fail("missing", "There's no previous save to go back to.");
         const prior = readCurrent({ ...record, ...record.previous });
         const restored = validatePhotoProject({ ...prior, revision: record.revision + 1, updatedAt: now() });
         const previous = record.previous;
         request(tx.objectStore("media").index("projectKey").getAll(key), (rows: StoredMedia[]) => {
           const available = new Set(rows.filter(row => row.blob instanceof Blob).map(row => row.id));
-          if (previous.mediaIds.some(mediaId => !available.has(mediaId))) fail("media", "Checkpoint media is missing; retain a raw backup");
+          if (previous.mediaIds.some(mediaId => !available.has(mediaId))) fail("media", "Photos from the previous save are missing. Download the recovery files to keep what's there.");
           tx.objectStore("projects").put({ ...record, rawJson: serializePhotoProject(restored), revision: restored.revision, mediaIds: previous.mediaIds, previous: { rawJson: record.rawJson, revision: record.revision, mediaIds: record.mediaIds } });
           finish(restored);
         });

@@ -66,7 +66,7 @@ function imageHeader(bytes: Uint8Array, maximumBytes: number): ProjectImageInfo 
         width = view.getUint32(offset + 8); height = view.getUint32(offset + 12);
         dimensions("image/png", width, height);
       } else if (type === "IHDR") invalid();
-      if (["acTL", "fcTL", "fdAT"].includes(type)) invalid("Animated images are not supported here; choose a still photo");
+      if (["acTL", "fcTL", "fdAT"].includes(type)) invalid("Animated images aren't supported here. Choose a still photo.");
       if (type === "eXIf") {
         if (exif) invalid();
         orientation = exifOrientation(bytes.subarray(offset + 8, offset + 8 + size));
@@ -114,9 +114,9 @@ function imageHeader(bytes: Uint8Array, maximumBytes: number): ProjectImageInfo 
     while (offset + 8 <= bytes.length) {
       const type = ascii(bytes, offset, 4), size = view.getUint32(offset + 4, true), start = offset + 8;
       if (size > bytes.length - start) invalid();
-      if (type === "ANIM" || type === "ANMF") invalid("Animated images are not supported here; choose a still photo");
+      if (type === "ANIM" || type === "ANMF") invalid("Animated images aren't supported here. Choose a still photo.");
       if (type === "VP8X") {
-        if (offset !== 12 || size !== 10 || (bytes[start] & 2)) invalid("Animated or malformed WebP is not supported");
+        if (offset !== 12 || size !== 10 || (bytes[start] & 2)) invalid("This WebP is animated or damaged. Choose a still photo.");
         canvasWidth = 1 + bytes[start + 4] + bytes[start + 5] * 256 + bytes[start + 6] * 65536;
         canvasHeight = 1 + bytes[start + 7] + bytes[start + 8] * 256 + bytes[start + 9] * 65536;
         dimensions("image/webp", canvasWidth, canvasHeight);

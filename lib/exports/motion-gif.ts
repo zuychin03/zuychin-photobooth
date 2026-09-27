@@ -10,7 +10,7 @@ async function encodeGif(frames: readonly Blob[], options: MotionOptions & { max
   validateMotionBlobs(frames);
   const plan = motionSequence(frames.length, options), edge = options.maxEdge ?? MOTION_LIMITS.gifEdge;
   if (!Number.isInteger(edge) || edge < 2 || edge > MOTION_LIMITS.gifEdge) throw new Error("GIF edge must be between 2 and 640 pixels");
-  if (typeof Worker === "undefined") throw new Error("GIF workers are unavailable. Your still photos remain available.");
+  if (typeof Worker === "undefined") throw new Error("GIFs can't be made in this browser.");
   const job = new ExportJob(options), started = performance.now();
   let worker: Worker | undefined, canvas: HTMLCanvasElement | undefined;
   try {
@@ -24,7 +24,7 @@ async function encodeGif(frames: readonly Blob[], options: MotionOptions & { max
       try {
         return await job.wait(new Promise<GifWorkerReply>((resolve, reject) => {
           active.onmessage = event => event.data.type === "error" ? reject(new Error(event.data.message)) : resolve(event.data as GifWorkerReply);
-          active.onerror = () => reject(new Error("GIF worker failed. Your still photos remain available."));
+          active.onerror = () => reject(new Error("Couldn't make the GIF."));
           active.onmessageerror = () => reject(new Error("GIF worker returned unreadable data"));
           active.postMessage(message, transfer);
         }));
@@ -45,6 +45,6 @@ async function encodeGif(frames: readonly Blob[], options: MotionOptions & { max
     if (result.type !== "done" || !result.bytes.byteLength || result.bytes.byteLength > MOTION_LIMITS.bytes) throw new Error("Invalid GIF output");
     const blob = new Blob([result.bytes], { type: "image/gif" });
     return { blob, mime: "image/gif", extension: "gif", bytes: blob.size, width: canvas.width, height: canvas.height, frameCount: plan.order.length,
-      durationMs: result.durationMs, elapsedMs: performance.now() - started, requestedFps: plan.fps, warnings: ["GIF uses a 256-colour palette; subtle photo colours may change."] };
+      durationMs: result.durationMs, elapsedMs: performance.now() - started, requestedFps: plan.fps, warnings: ["GIFs only have 256 colours, so some shades might look a little different."] };
   } finally { worker?.terminate(); if (canvas) releaseExportCanvas(canvas); }
 }

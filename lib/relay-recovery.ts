@@ -4,7 +4,7 @@ import { openProjectRepository } from "./projects/storage";
 import { projectBlobHash } from "./projects/bundle";
 
 export async function importRelayPhotos(files: readonly Blob[], count: number, active: () => boolean, decode = projectImageToCanvas) {
-  if (files.length !== count || count < 1 || count > 4) throw new Error(`Choose exactly ${count} photos.`);
+  if (files.length !== count || count < 1 || count > 4) throw new Error(`Pick exactly ${count} photos.`);
   const frames: HTMLCanvasElement[] = [];
   try {
     for (const file of files) {
@@ -22,14 +22,14 @@ export class RelayOriginalEncoder {
   get busy() { return this.occupied; }
   settled() { return this.drain; }
   encode(frame: HTMLCanvasElement, timeoutMs = 10_000): Promise<Blob> {
-    if (this.occupied) return Promise.reject(new Error("The previous photo is still being prepared. Wait before retrying."));
+    if (this.occupied) return Promise.reject(new Error("The last photo is still processing. Wait a moment, then try again."));
     this.occupied = true;
     let finished!: () => void;
     this.drain = new Promise(resolve => { finished = resolve; });
     return new Promise((resolve, reject) => {
-      const timer = setTimeout(() => reject(new Error("Photo preparation timed out. Your photo is retained; wait for preparation to finish, then retry.")), timeoutMs);
+      const timer = setTimeout(() => reject(new Error("Processing the photo took too long. It's still here, so wait a moment and try again.")), timeoutMs);
       const done = () => { clearTimeout(timer); this.occupied = false; finished(); };
-      try { frame.toBlob(blob => { done(); if (blob && blob.size <= 10 * 1024 * 1024) resolve(blob); else reject(new Error("This photo could not be prepared within the 10 MiB limit. Your photo is retained.")); }, "image/png"); }
+      try { frame.toBlob(blob => { done(); if (blob && blob.size <= 10 * 1024 * 1024) resolve(blob); else reject(new Error("Couldn't get this photo under the 10 MB limit. It's still here.")); }, "image/png"); }
       catch (error) { done(); reject(error); }
     });
   }
@@ -39,31 +39,31 @@ export const relayFrameOriginal = (frame: HTMLCanvasElement) => relayOriginalEnc
 
 type RelayOriginalInput = { id: string; ownerId: string; layoutId: string; filterId: string; role: "A" | "B"; shots?: number; originals: readonly Blob[]; active(): boolean };
 export async function loadRelayOriginals(input: Pick<RelayOriginalInput, "id" | "ownerId" | "role" | "active">, open = openProjectRepository) {
-  const check = () => { if (!input.active()) throw new Error("Your account or relay page changed."); };
+  const check = () => { if (!input.active()) throw new Error("Your account or this page changed."); };
   check(); const repository = await open({ kind: "account", ownerId: input.ownerId }, { assertActive: check });
   try {
     check(); const loaded = await repository.load(`relay-${input.id}-${input.role}`); check();
     if (!loaded) return null;
-    if (loaded.kind !== "current" || loaded.project.role !== input.role || loaded.media.size > 4 || loaded.media.size < 1 || loaded.project.participants.length !== 1 || loaded.project.participants[0].id !== "relay-owner") throw new Error("The recovery project changed. Keep a backup in My projects.");
+    if (loaded.kind !== "current" || loaded.project.role !== input.role || loaded.media.size > 4 || loaded.media.size < 1 || loaded.project.participants.length !== 1 || loaded.project.participants[0].id !== "relay-owner") throw new Error("Your saved copy of this relay changed. Back it up from My projects.");
     const originals: Blob[] = [];
-    for (let i = 0; i < loaded.media.size; i++) { const blob = loaded.media.get(`photo-${i}`); if (!blob) throw new Error("The recovery inventory changed. Keep a backup in My projects."); originals.push(blob); }
+    for (let i = 0; i < loaded.media.size; i++) { const blob = loaded.media.get(`photo-${i}`); if (!blob) throw new Error("Some saved relay photos changed. Back them up from My projects."); originals.push(blob); }
     return { project: loaded.project, originals };
   } finally { repository.close(); }
 }
 
 export async function saveRelayOriginals(input: RelayOriginalInput, open = openProjectRepository, inspect = inspectProjectImage) {
-  const check = () => { if (!input.active()) throw new Error("Your account or relay page changed. No upload was started."); };
+  const check = () => { if (!input.active()) throw new Error("Your account or this page changed, so nothing was uploaded."); };
   const shots = input.shots ?? input.originals.length;
-  check(); if (!Number.isInteger(shots) || shots < 1 || shots > 4 || input.originals.length < 1 || input.originals.length > shots) throw new Error("Choose one to four photos.");
-  const initial = createProject({ id: `relay-${input.id}-${input.role}`, scope: { kind: "account", ownerId: input.ownerId }, mode: "duo", role: input.role, name: "Relay originals", participants: [{ id: "relay-owner", role: input.role }], capture: { requiredShots: shots as 1 | 2 | 3 | 4 }, editor: { layoutId: input.layoutId, filterId: input.filterId, showDate: false } });
+  check(); if (!Number.isInteger(shots) || shots < 1 || shots > 4 || input.originals.length < 1 || input.originals.length > shots) throw new Error("Pick between one and four photos.");
+  const initial = createProject({ id: `relay-${input.id}-${input.role}`, scope: { kind: "account", ownerId: input.ownerId }, mode: "duo", role: input.role, name: "Relay photos", participants: [{ id: "relay-owner", role: input.role }], capture: { requiredShots: shots as 1 | 2 | 3 | 4 }, editor: { layoutId: input.layoutId, filterId: input.filterId, showDate: false } });
   const media = [], blobs = new Map<string, Blob>();
   for (const [index, blob] of input.originals.entries()) { const info = await inspect(blob); check(); const id = `photo-${index}`; media.push({ id, kind: "photo" as const, participantId: "relay-owner", ...info, bytes: blob.size }); blobs.set(id, blob); }
   const repository = await open(initial.scope, { assertActive: check });
   try {
     check(); const existing = await repository.load(initial.id); check();
     if (existing) {
-      if (existing.kind !== "current" || existing.media.size > blobs.size || existing.project.role !== input.role || existing.project.capture.requiredShots !== shots || existing.project.editor.layoutId !== input.layoutId || existing.project.editor.filterId !== input.filterId) throw new Error("Your recovery project changed. Keep your originals before retrying.");
-      for (const [id, blob] of existing.media) { if (!blobs.has(id) || await projectBlobHash(blob) !== await projectBlobHash(blobs.get(id)!)) throw new Error("Your recovery originals differ. Keep both copies before continuing."); check(); }
+      if (existing.kind !== "current" || existing.media.size > blobs.size || existing.project.role !== input.role || existing.project.capture.requiredShots !== shots || existing.project.editor.layoutId !== input.layoutId || existing.project.editor.filterId !== input.filterId) throw new Error("Your saved copy of this relay changed. Back up your photos before you try again.");
+      for (const [id, blob] of existing.media) { if (!blobs.has(id) || await projectBlobHash(blob) !== await projectBlobHash(blobs.get(id)!)) throw new Error("Your saved relay photos don't match. Keep both copies before you continue."); check(); }
       if (existing.media.size === blobs.size) return existing.project;
     }
     const prior = existing?.kind === "current" ? existing.project : null;

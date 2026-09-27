@@ -8,7 +8,7 @@ import { ExportJob, composeExportSource, createExportCanvas, encodeExportCanvas,
 export async function pdfFromStripPng(png: Uint8Array, geometry: ExportGeometry, job = new ExportJob({})): Promise<Blob> {
   if (geometry.unit !== "mm" || getExportProfile(geometry.profileId).kind !== "pdf") throw new Error("Choose a physical print profile");
   job.check();
-  if (png.byteLength > RESOURCE_LIMITS.totalEncodedBytes) throw new Error("PDF image exceeds the 64 MiB file limit");
+  if (png.byteLength > RESOURCE_LIMITS.totalEncodedBytes) throw new Error("This PDF would be over the 64 MB file limit.");
   const header = inspectImageHeader(png);
   if (header.mime !== "image/png" || header.width !== 600 || header.height !== 1800) throw new Error("PDF strip raster must be 600 × 1800 pixels");
   const { PDFDocument, PrintScaling, rgb } = await job.wait(import("pdf-lib"));
@@ -23,7 +23,7 @@ export async function pdfFromStripPng(png: Uint8Array, geometry: ExportGeometry,
   }
   for (const line of exportCutMarks(geometry)) page.drawLine({ start: { x: mmToPoints(line.x1), y: mmToPoints(geometry.height - line.y1) }, end: { x: mmToPoints(line.x2), y: mmToPoints(geometry.height - line.y2) }, thickness: mmToPoints(.15), color: rgb(.33, .33, .33) });
   const bytes = await job.wait(doc.save());
-  if (bytes.byteLength > RESOURCE_LIMITS.totalEncodedBytes) throw new Error("PDF exceeds the 64 MiB file limit");
+  if (bytes.byteLength > RESOURCE_LIMITS.totalEncodedBytes) throw new Error("This PDF would be over the 64 MB file limit.");
   return new Blob([new Uint8Array(bytes)], { type: "application/pdf" });
 }
 export async function exportPdf(input: ComposeInput, profileId: PdfProfileId, options: ExportOptions = {}): Promise<ExportArtifact> {

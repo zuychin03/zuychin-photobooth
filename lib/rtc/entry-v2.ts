@@ -100,12 +100,12 @@ export function createRoomEntryApi(options: { fetch?: typeof fetch; signal?: Abo
 }
 export function roomEntryError(error: unknown, resuming = false): string {
   if (error instanceof RoomApiError) {
-    if (error.code === "invalid_name") return "Enter a display name of 1–40 characters, without line breaks.";
+    if (error.code === "invalid_name") return "Enter a name between 1 and 40 characters, all on one line.";
     if (error.code === "rate_limited") return "Too many room requests. Wait a minute, then try again.";
     if (error.code === "room_full") return "This room is full. Ask the host to make space, or start another room.";
-    if (error.code === "access_denied") return resuming ? "This browser no longer has access to that room. You can ask to join again." : "We could not join that room. Check the code with the host; the room may have closed.";
-    if (["state_conflict", "not_ready"].includes(error.code)) return "This room is not accepting new guests right now. Check with the host before trying again.";
-    if (error.code === "unavailable") return "Live rooms are unavailable here right now. You can still use the solo booth or your saved projects.";
+    if (error.code === "access_denied") return resuming ? "You're no longer in that room on this browser. You can ask to join again." : "Couldn't join that room. Double-check the code with your host, since the room might have closed.";
+    if (["state_conflict", "not_ready"].includes(error.code)) return "This room isn't letting new people in right now. Check with the host, then try again.";
+    if (error.code === "unavailable") return "Live rooms aren't available right now. You can still use the solo booth or your projects.";
   }
-  return "The room request could not be confirmed. Check your connection and try again.";
+  return "Couldn't reach the room. Check your connection and try again.";
 }

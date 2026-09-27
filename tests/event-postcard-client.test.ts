@@ -19,7 +19,8 @@ async function fixture() {
   let epoch = 1, reads = 0, closes = 0, approvalCalls = 0;
   const snapshot = (): PostcardView => ({ version: 1, eventId: id(1), postcardId: id(2), submissionId: id(3), revision: 5, state: "candidate", source, design, designHash: "a".repeat(64), expiresAt: new Date(Date.now() + 3600000).toISOString(), logicalExpiresAt: new Date(Date.now() + 600000).toISOString(), selfPrincipalId: id(6), canSubmit: true, selfConsent: { submission: true, gallery: false, wall: false }, participants: [{ principalId: id(6), role: "A", bound: true, consent: true, approved: false }], candidate });
   let view = snapshot(), corrupt = false, deniedAfterDecode = false, foreignUrl = false;
-  const fetcher: typeof fetch = async (url, init) => {
+  const fetcher: typeof fetch = async function (this: unknown, url, init) {
+    assert.equal(this, undefined, "Fetch must not receive the transport object as its receiver");
     if (String(url).startsWith("https://storage.example")) { assert.equal(init?.credentials, "omit"); assert.equal(init?.cache, "no-store"); const copy = new Uint8Array(jpeg); if (corrupt) copy[copy.length - 3] ^= 1; return new Response(copy, { headers: { "content-type": "image/jpeg" } }); }
     const body = JSON.parse(String(init?.body)); assert.equal(init?.credentials, "same-origin"); assert.equal(body.expectedGuestId, id(7));
     if (body.operation === "view") { reads++; if (deniedAfterDecode && closes === 0 && reads > 1) return json({ error: "access_denied" }, 403); return json(view); }

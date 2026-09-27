@@ -33,20 +33,20 @@ const CONNECTION_ERRORS = new Set(["signalling_expired", "peer_disconnected", "p
 const errorMessage = (error: unknown) => {
   const code = error instanceof Error ? error.message : "";
   const messages: Record<string, string> = {
-    access_denied: "Your room access has ended. Your saved projects are still on this device.",
-    authorisation_unavailable: "Room access could not be checked. Capture is paused; reconnect when the connection returns.",
-    peer_disconnected: "Someone disconnected. Capture is paused until everyone reconnects.",
-    recovery_required: "The room or shared design changed. Reconnect and check the shared design before taking another round.",
-    protocol_update_required: "This room uses a newer app version. Keep your saved project, update the app, then rejoin the room.",
-    update_required: "This shared design needs a newer app version. Keep your saved project, update the app, then rejoin the room.",
-    ownership_denied: "You can change only your own photos, placement and stickers.",
-    not_ready: "Everyone must be connected with the same design before capture.",
-    state_conflict: "The room changed. Refresh the connection before trying again.",
-    rate_limited: "The room is receiving too many requests. Wait a moment, then retry.",
-    unsaved_local_photos: "A photo still needs saving. Retry or download it before leaving this room.",
-    capture_request_rate_limited: "Your request was sent. Wait a few seconds before asking again.",
+    access_denied: "You're no longer in this room. Your projects are still on this device.",
+    authorisation_unavailable: "Couldn't check your room access, so photos are paused. Reconnect once you're back online.",
+    peer_disconnected: "Someone dropped out. Photos are paused until everyone's back.",
+    recovery_required: "The room or shared design changed. Reconnect and check it before the next round.",
+    protocol_update_required: "This room needs a newer version of the app. Refresh the page to update, then rejoin. Your saved project stays put.",
+    update_required: "This shared design needs a newer version of the app. Refresh the page to update, then rejoin. Your saved project stays put.",
+    ownership_denied: "You can only change your own photos, position and stickers.",
+    not_ready: "Everyone needs to be connected with the same design before you start.",
+    state_conflict: "Something changed in the room. Reconnect, then try again.",
+    rate_limited: "The room's getting a lot of requests. Wait a moment, then try again.",
+    unsaved_local_photos: "A photo still needs saving. Try again or download it before you leave.",
+    capture_request_rate_limited: "Request sent. Give it a few seconds before asking again.",
   };
-  return messages[code] ?? "This action could not finish. Your saved originals are retained. Retry or keep an editable copy.";
+  return messages[code] ?? "That didn't work, but your saved photos are fine. Try again, or leave with a copy to edit.";
 };
 
 export class RoomWorkspaceController {
@@ -81,7 +81,7 @@ export class RoomWorkspaceController {
   private lastBroadcast = "";
   private clockOffset: number;
   constructor(readonly initial: RoomState, readonly scope: ProjectScope, private readonly dependencies: RoomWorkspaceDependencies = {}) {
-    this.snapshot = { room: validateRoomState(initial), draft: null, recipe: null, round: null, peers: [], status: initial.selfRole ? "Choose when to turn on your camera." : "Waiting for the host to let you in.", error: null, busy: false, cameraConnected: false, capturing: false, pendingProposal: false, recoveryRecipe: null, captureRequest: null, savedShots: 0, pendingLocalFrames: [], remoteStreamRevision: 0 };
+    this.snapshot = { room: validateRoomState(initial), draft: null, recipe: null, round: null, peers: [], status: initial.selfRole ? "Turn on your camera when you're ready." : "Waiting for the host to let you in.", error: null, busy: false, cameraConnected: false, capturing: false, pendingProposal: false, recoveryRecipe: null, captureRequest: null, savedShots: 0, pendingLocalFrames: [], remoteStreamRevision: 0 };
     this.api = dependencies.api ?? createRoomApi(initial.roomId, { signal: this.abort.signal });
     this.clockOffset = initial.serverNow - Date.now();
     this.unregisterScope = registerRoomScopeCloser(scope, () => this.close());
@@ -154,8 +154,8 @@ export class RoomWorkspaceController {
     this.patch({ room, remoteStreamRevision: this.snapshot.remoteStreamRevision + Number(streamsChanged) });
     if (room.status === "ended" || !room.members.some(member => member.id === room.selfId && member.status !== "removed")) {
       this.disconnect(); this.patch({ status: room.status === "ended"
-        ? "This room has ended. Your saved projects are available below."
-        : "Your access to this room has ended. Your saved projects are available below." }); return;
+        ? "This room has ended. Your projects are linked below."
+        : "You're no longer in this room. Your projects are linked below." }); return;
     }
     const key = `${room.rosterRevision}:${room.members.filter(member => member.status === "admitted").map(member => `${member.id}:${member.role}`).join(",")}`;
     if (room.selfRole && key !== this.rosterKey && this.store) {
@@ -166,7 +166,7 @@ export class RoomWorkspaceController {
       if (!current()) return;
       this.coordinator?.close(); this.coordinator = null;
       this.rosterKey = key; this.lastBroadcast = "";
-      this.patch({ draft: draft.project, recipe: draft.recipe, recoveryRecipe: null, pendingProposal: false, capturing: false, ...(previous ? { round: null, savedShots: 0, status: "The group changed. A new design is ready; previous rounds remain in My projects." } : {}) });
+      this.patch({ draft: draft.project, recipe: draft.recipe, recoveryRecipe: null, pendingProposal: false, capturing: false, ...(previous ? { round: null, savedShots: 0, status: "The group changed, so there's a fresh design. Earlier rounds are in My projects." } : {}) });
       if (this.context().members.length >= 2) {
         const recipe = draft.recipe ?? await initialRecipeCommit(this.context());
         const saved = await this.store!.saveRecipe(recipe); this.check();
@@ -253,13 +253,13 @@ export class RoomWorkspaceController {
   private onStatus(value: RoomV2Status) {
     if (this.closed) return;
     this.updatePeers();
-    if (value.kind === "connected") this.patch({ status: "Connected. Everyone keeps a local editable copy." });
-    if (value.kind === "host-absent") this.patch({ status: "The host disconnected. Keep your copy or wait for them to return.", capturing: false });
+    if (value.kind === "connected") this.patch({ status: "Connected. Everyone gets their own copy to edit." });
+    if (value.kind === "host-absent") this.patch({ status: "The host disconnected. Keep your copy, or wait for them to come back.", capturing: false });
     if (value.kind === "recovery-required") { this.patch({ capturing: false }); this.fail(new Error(value.reason), CONNECTION_ERRORS.has(value.reason) ? "connection" : "operation"); }
-    if (value.kind === "capture-ready") this.patch({ status: "Your camera and saved design are ready. Waiting for everyone." });
-    if (value.kind === "capture-committed") this.patch({ capturing: true, status: "Everyone is ready. Get into position." });
-    if (value.kind === "capture-complete") this.patch({ capturing: false, status: "Your photos are saved. Receiving the remaining originals…" });
-    if (value.kind === "capture-incomplete") this.patch({ capturing: false, status: "Capture was interrupted. Saved photos are retained; missing photos are shown below." });
+    if (value.kind === "capture-ready") this.patch({ status: "You're ready. Waiting for everyone else." });
+    if (value.kind === "capture-committed") this.patch({ capturing: true, status: "Everyone's ready. Get into position!" });
+    if (value.kind === "capture-complete") this.patch({ capturing: false, status: "Your photos are saved. Getting everyone else's…" });
+    if (value.kind === "capture-incomplete") this.patch({ capturing: false, status: "The round got interrupted. Your saved photos are safe, and anything missing is shown below." });
     if (value.kind === "shot-saved") { this.localFrames.delete(`${value.captureId}:${value.index}`); this.publishLocalFrames(); }
   }
   private async readiness(capture: RoomCapture, current: () => boolean = () => true): Promise<boolean> {
@@ -273,7 +273,7 @@ export class RoomWorkspaceController {
     const round = await this.store?.loadRound(captureId); this.check();
     if (round && this.snapshot.round?.id === captureId) {
       const savedShots = round.project.media.filter(media => media.kind === "photo").length;
-      this.patch({ round: round.project, savedShots, ...(savedShots === round.capture.shotIds.length * round.capture.memberIds.length ? { status: "Every original is saved on this device. Finish your design together." } : {}) });
+      this.patch({ round: round.project, savedShots, ...(savedShots === round.capture.shotIds.length * round.capture.memberIds.length ? { status: "All the photos are saved on this device. Finish your design together." } : {}) });
     }
   }
   capture(): Promise<void> { return this.beginCapture(false); }
@@ -293,7 +293,7 @@ export class RoomWorkspaceController {
     if (this.localFrames.size) throw new Error("unsaved_local_photos");
     if (!this.engine) return;
     const { room, recipe, peers, round } = this.snapshot;
-    if (room.selfId !== room.hostId) { this.engine.requestCapture(); this.patch({ status: "Capture requested. The host will start when everyone is ready." }); return; }
+    if (room.selfId !== room.hostId) { this.engine.requestCapture(); this.patch({ status: "Request sent. The host will start once everyone's ready." }); return; }
     if (!recipe || this.snapshot.capturing || this.snapshot.pendingProposal || this.snapshot.recoveryRecipe || this.pendingWrite || peers.length < 1 || !peers.every(peer => peer.connected)) throw new Error("not_ready");
     if (!allowIncomplete && round && room.capture && this.snapshot.savedShots < room.capture.memberIds.length * room.capture.shotIds.length) throw new Error("not_ready");
     const shots = recipe.recipe.editor.template ? Math.max(...Object.values(recipe.recipe.editor.template.requiredSources)) : LAYOUTS.find(layout => layout.id === recipe.recipe.editor.layoutId)!.shots;
@@ -332,7 +332,7 @@ export class RoomWorkspaceController {
     else {
       if (!this.engine) throw new Error("not_ready");
       this.engine.sendRecipeProposal(proposal); this.patch({ pendingProposal: true });
-      this.proposalTimer = setTimeout(() => this.patch({ pendingProposal: false, error: "The host has not confirmed your edit. Reconnect to check the shared design before retrying." }), 10000);
+      this.proposalTimer = setTimeout(() => this.patch({ pendingProposal: false, error: "The host hasn't confirmed your edit. Reconnect to check the design, then try again." }), 10000);
     }
   }
   private receiveRecipe(incoming: RecipeCommit, sender: string, live: () => boolean = () => true): Promise<void> {
@@ -382,7 +382,7 @@ export class RoomWorkspaceController {
         await this.engine.sendSavedFrame(frame.captureId, frame.shotIndex, frame.blob); this.check();
         this.localFrames.delete(frame.id); this.publishLocalFrames();
       }
-      this.patch({ error: null, status: "Your retained photos are saved and queued for sharing." });
+      this.patch({ error: null, status: "Your photos are saved and waiting to send." });
     });
   }
   async resumeSavedOriginals(): Promise<void> {
@@ -401,7 +401,7 @@ export class RoomWorkspaceController {
           if (!blob) throw new Error("saved_original_missing");
           await engine.sendSavedFrame(round.id, index, blob); current(); queued++;
         }
-        this.patch({ error: null, status: queued ? `${queued} saved original${queued === 1 ? " is" : "s are"} queued for sharing. Missing photos remain empty.` : "There are no saved originals from your camera in this round." });
+        this.patch({ error: null, status: queued ? `Sending ${queued} saved photo${queued === 1 ? "" : "s"}. Missing photos will stay blank.` : "You don't have any saved photos from this round." });
       } finally { this.recoveringOriginals = false; }
     });
   }

@@ -44,7 +44,7 @@ function RelayAccountPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   useAppNavigationGuard(() => {
-    if ((originals.length > 0 && !originalsSaved) || busy) { setError("Wait for the current work and save your originals before leaving."); return false; }
+    if ((originals.length > 0 && !originalsSaved) || busy) { setError("Hang on until your photos finish saving before you leave."); return false; }
     return true;
   });
   const [pendingFrames, setPendingFrames] = useState<HTMLCanvasElement[] | null>(null);
@@ -64,12 +64,12 @@ function RelayAccountPage() {
         const loaded = await loadRelayOriginals({ id: r.id, ownerId: user.id, role: "B", active: current });
         if (!current() || cancelled) return;
         if (loaded) {
-          if (loaded.project.capture.requiredShots !== r.shots || loaded.project.editor.layoutId !== r.layout_id || loaded.project.editor.filterId !== r.filter_id) throw new Error("Your recovery project changed. Keep it from My projects before continuing.");
+          if (loaded.project.capture.requiredShots !== r.shots || loaded.project.editor.layoutId !== r.layout_id || loaded.project.editor.filterId !== r.filter_id) throw new Error("Your saved copy of this relay changed. Check it in My projects before you continue.");
           setOriginals(loaded.originals); setInitialOriginals(loaded.originals); setOriginalsSaved(true);
         }
       }
       setRelay(r);
-    }).catch(() => { if (current() && !cancelled) setError("This relay could not be loaded. Please refresh and try again."); }).finally(() => { if (current() && !cancelled) setChecked(true); });
+    }).catch(() => { if (current() && !cancelled) setError("Couldn't load this relay. Refresh and try again."); }).finally(() => { if (current() && !cancelled) setChecked(true); });
     return () => { cancelled = true; };
   }, [user, loading, params.id, scope]);
 
@@ -96,7 +96,7 @@ function RelayAccountPage() {
         if (current()) router.push("/customize");
       } catch (failure) {
         if (!current()) return;
-        setError(failure instanceof Error ? failure.message : "Your relay photos could not be opened. Please try again.");
+        setError(failure instanceof Error ? failure.message : "Couldn't open your relay photos. Try again.");
       } finally {
         if (current()) setBusy(false);
       }
@@ -124,7 +124,7 @@ function RelayAccountPage() {
         await openInEditor(done);
       } catch (failure) {
         if (!current()) return;
-        setError(failure instanceof Error ? failure.message : "Your half could not be saved. Your photos remain on this page.");
+        setError(failure instanceof Error ? failure.message : "Couldn't save your half. Your photos are still on this page.");
       } finally {
         if (current()) setBusy(false); else for (const frame of frames) frame.width = frame.height = 0;
       }
@@ -179,7 +179,7 @@ function RelayAccountPage() {
           onUnsavedChange={setCaptureUnsaved}
           initialOriginals={initialOriginals}
           onCheckpoint={async blobs => {
-            const current = scope.capture(); if (!current()) throw new Error("Your relay page changed.");
+            const current = scope.capture(); if (!current()) throw new Error("This page changed. Reload and try again.");
             await saveRelayOriginals({ id: relay.id, ownerId: user.id, layoutId: relay.layout_id, filterId: relay.filter_id, role: "B", shots: relay.shots, originals: blobs, active: current });
           }}
           onDone={onShot}
@@ -193,7 +193,7 @@ function RelayAccountPage() {
     <main className="mx-auto flex min-h-dvh w-full max-w-md flex-1 flex-col items-center justify-center gap-4 px-6 text-center">
       {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
       {cancelled ? (
-        <><p role="status">The relay is cancelled. Its photo cleanup is queued.</p><button onClick={() => router.push("/timeline")} className="text-sm underline">Back to the album</button></>
+        <><p role="status">This relay was cancelled, and its photos will be cleaned up shortly.</p><button onClick={() => router.push("/timeline")} className="text-sm underline">Back to the album</button></>
       ) : busy ? (
         <>
           <Loader2 className="animate-spin text-muted-foreground" />
@@ -233,7 +233,7 @@ function RelayAccountPage() {
                 setBusy(true);
                 setError(null);
                 try { await deleteRelay(relay.id); if (current()) setCancelled(true); }
-                catch (failure) { if (current()) setError(failure instanceof Error ? failure.message : "Relay cancellation failed. Please try again."); }
+                catch (failure) { if (current()) setError(failure instanceof Error ? failure.message : "Couldn't cancel the relay. Try again."); }
                 finally { if (current()) setBusy(false); }
               }}
               className="flex min-h-11 items-center gap-2 rounded-full bg-destructive/15 px-4 text-sm font-medium text-destructive"

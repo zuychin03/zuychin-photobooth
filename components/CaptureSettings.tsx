@@ -21,11 +21,11 @@ export function CaptureSettings({ value, cameras, disabled, onChange }: {
         <Dropdown label="Timer" value={String(value.timerSeconds)} disabled={disabled} onChange={timer => onChange({ timerSeconds: Number(timer) as 3 | 5 | 10 })} options={[3, 5, 10].map(seconds => ({ value: String(seconds), label: `${seconds} seconds` }))} />
       </div>
     </div>
-    <p className="text-sm text-muted-foreground">{value.style === "classic" ? "Classic keeps each shot without retakes." : "Flexible lets you retake any shot."}</p>
+    <p className="text-sm text-muted-foreground">{value.style === "classic" ? "Classic takes every shot in one go, with no retakes." : "Flexible lets you retake any shot."}</p>
     <div className="space-y-1 text-sm"><span>Camera</span>
       <Dropdown label="Camera" value={value.cameraId ?? ""} disabled={disabled} onChange={cameraId => onChange({ cameraId: cameraId || null })} options={[
         { value: "", label: "Default camera" },
-        ...(value.cameraId && !cameras.some(camera => camera.id === value.cameraId) ? [{ value: value.cameraId, label: "Previously selected camera (unavailable)", disabled: true }] : []),
+        ...(value.cameraId && !cameras.some(camera => camera.id === value.cameraId) ? [{ value: value.cameraId, label: "Last used camera (not connected)", disabled: true }] : []),
         ...cameras.filter(camera => camera.id).map(camera => ({ value: camera.id, label: camera.label })),
       ]} />
     </div>

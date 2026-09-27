@@ -27,7 +27,7 @@ export async function captureRoomOriginal(video: HTMLVideoElement, profile: Room
       signal.throwIfAborted();
       if (blob.size <= profile.maxPhotoBytes) return blob;
     }
-    throw new Error("Photo exceeds this room’s capture budget. Choose fewer shots and retry.");
+    throw new Error("That photo is too big for this room. Choose fewer shots and try again.");
   } finally { canvas.width = canvas.height = 0; }
 }
 

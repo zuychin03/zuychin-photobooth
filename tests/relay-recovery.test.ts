@@ -50,16 +50,16 @@ test("a refused second checkpoint retains the first original and exact retry app
   const saved = await saveRelayOriginals(full, open, inspect);
   assert.equal(saved.revision, 1); assert.equal(saved.media.length, 2);
   assert.equal((await saveRelayOriginals(full, open, inspect)).revision, 1);
-  await assert.rejects(saveRelayOriginals({ ...full, originals: [second, blob] }, open, inspect), /differ/);
+  await assert.rejects(saveRelayOriginals({ ...full, originals: [second, blob] }, open, inspect), /don't match/);
   assert.equal((await loadRelayOriginals(input, open))?.originals.length, 2);
 });
 
 test("encoder timeout retains its native allocation slot and leaves the source canvas intact", async () => {
   const encoder = new RelayOriginalEncoder(); let callback!: BlobCallback;
   const canvas = { width: 640, height: 480, toBlob(cb: BlobCallback) { callback = cb; } } as HTMLCanvasElement;
-  await assert.rejects(encoder.encode(canvas, 5), /timed out/);
+  await assert.rejects(encoder.encode(canvas, 5), /took too long/);
   assert.equal(encoder.busy, true); assert.equal(canvas.width, 640);
-  await assert.rejects(encoder.encode(canvas), /still being prepared/);
+  await assert.rejects(encoder.encode(canvas), /still processing/);
   callback(blob); await encoder.settled(); assert.equal(encoder.busy, false);
   const retry = encoder.encode(canvas); callback(blob); assert.equal(await retry, blob);
 });
@@ -67,7 +67,7 @@ test("encoder timeout retains its native allocation slot and leaves the source c
 test("encoder null and synchronous failure release the slot without deleting the retained photo", async () => {
   const encoder = new RelayOriginalEncoder();
   const canvas = { width: 640, height: 480, toBlob(cb: BlobCallback) { cb(null); } } as HTMLCanvasElement;
-  await assert.rejects(encoder.encode(canvas), /retained/);
+  await assert.rejects(encoder.encode(canvas), /still here/);
   assert.equal(encoder.busy, false); assert.equal(canvas.width, 640);
   canvas.toBlob = () => { throw new Error("Native encoder failed"); };
   await assert.rejects(encoder.encode(canvas), /Native encoder failed/);

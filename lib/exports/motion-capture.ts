@@ -19,12 +19,12 @@ export async function collectMotionFrames(ports: { now(): number; pause(ms: numb
     ports.check();
     if (blob.type !== "image/jpeg" || !blob.size) throw new Error("Motion capture did not produce a JPEG frame");
     bytes += blob.size;
-    if (bytes > MOTION_LIMITS.bytes) throw new Error("Motion capture exceeds 10 MiB. Your still photos are unchanged.");
+    if (bytes > MOTION_LIMITS.bytes) throw new Error("The loop came out over the 10 MB limit.");
     frames.push(blob); onProgress?.(frames.length, limit);
     nextAt = shotAt + period;
     if (ports.now() > nextAt) nextAt = ports.now() + period;
   }
-  if (frames.length < 2) throw new Error("The camera was too slow to capture a loop. Your still photos are unchanged.");
+  if (frames.length < 2) throw new Error("Your camera was too slow to record a loop.");
   return { frames, elapsedMs: ports.now() - started };
 }
 export function captureSoloFrames(video: HTMLVideoElement, options: CaptureMotionOptions = {}): Promise<MotionCapture> {
@@ -33,17 +33,17 @@ export function captureSoloFrames(video: HTMLVideoElement, options: CaptureMotio
 async function captureFrames(video: HTMLVideoElement, options: CaptureMotionOptions): Promise<MotionCapture> {
   const filter = FILTERS.find(item => item.id === (options.filterId ?? "none"));
   if (!filter) throw new Error("Unknown camera filter");
-  if (video.readyState < 2 || !video.videoWidth || !video.videoHeight) throw new Error("The camera is not ready for a motion capture");
+  if (video.readyState < 2 || !video.videoWidth || !video.videoHeight) throw new Error("The camera isn't ready yet.");
   const job = new ExportJob({ signal: options.signal, timeoutMs: 10_000 }), fps = options.fps ?? 12;
   const size = motionSize(video.videoWidth, video.videoHeight, MOTION_LIMITS.width, MOTION_LIMITS.height);
   const canvas = createExportCanvas(size.width, size.height), warnings: string[] = [];
   try {
     const context = canvas.getContext("2d");
-    if (!context) throw new Error("Canvas drawing is unavailable");
+    if (!context) throw new Error("Your browser couldn't draw the loop.");
     const filtered = filter.css === "none" || supportsCanvasFilter();
-    if (!filtered) warnings.push("This browser captured the loop without the selected filter.");
+    if (!filtered) warnings.push("Your browser recorded the loop without the filter.");
     const result = await collectMotionFrames({ now: () => performance.now(), check: () => job.check(), pause: ms => motionPause(ms, job), capture: async () => {
-      if (video.readyState < 2 || video.ended || video.videoWidth < 1 || video.videoHeight < 1) throw new Error("The camera stopped during motion capture");
+      if (video.readyState < 2 || video.ended || video.videoWidth < 1 || video.videoHeight < 1) throw new Error("The camera stopped while recording.");
       context.save();
       try {
         context.fillStyle = "#ffffff"; context.fillRect(0, 0, canvas.width, canvas.height);

@@ -55,7 +55,7 @@ export class ProjectEditorQueue {
     const version = this.version, editor = this.editor, persist = this.persist, lifecycle = this.lifecycle;
     this.error = null;
     const task = Promise.resolve().then(() => {
-      if (this.disposed) throw new Error("The editor was closed before this change could be saved");
+      if (this.disposed) throw new Error("The editor closed before this change could save.");
       return persist(editor);
     }).then(() => {
       if (lifecycle !== this.lifecycle) { this.inFlight = null; return; }
@@ -68,7 +68,7 @@ export class ProjectEditorQueue {
     }, error => {
       this.inFlight = null;
       if (lifecycle !== this.lifecycle) return;
-      this.error = error instanceof Error ? error.message : "Changes could not be saved on this device";
+      this.error = error instanceof Error ? error.message : "Couldn't save your changes on this device.";
       this.publish();
       throw error;
     });
@@ -81,7 +81,7 @@ export class ProjectEditorQueue {
     const next = snapshot({ ...this.editor, ...patch });
     try { this.reserveRecovery(); }
     catch (error) {
-      this.error = error instanceof Error ? error.message : "Save another open draft before editing this project";
+      this.error = error instanceof Error ? error.message : "Save your other open project before editing this one.";
       this.publish(); return;
     }
     this.editor = next;
@@ -99,18 +99,18 @@ export class ProjectEditorQueue {
     while (this.version !== this.savedVersion) {
       this.startWrite();
       await this.inFlight;
-      if (this.disposed) throw new Error("This editor was closed before saving finished");
+      if (this.disposed) throw new Error("The editor closed before saving finished.");
     }
   }
   replaceFromProject(editor: ProjectEditorSettings): void {
-    if (this.inFlight || this.version !== this.savedVersion) throw new Error("Save pending changes before restoring project history");
+    if (this.inFlight || this.version !== this.savedVersion) throw new Error("Save pending changes before you undo or redo.");
     this.editor = snapshot(editor);
     this.committedEditor = this.editor;
     this.error = null;
     this.publish();
   }
   discardUnsaved(durableEditor: ProjectEditorSettings = this.committedEditor): void {
-    if (this.inFlight) throw new Error("Wait for the current save to finish before discarding unsaved edits");
+    if (this.inFlight) throw new Error("Wait for the current save to finish before discarding your edits.");
     this.editor = snapshot(durableEditor);
     this.committedEditor = this.editor;
     this.version = this.savedVersion;
@@ -135,8 +135,8 @@ export class ProjectEditorRecoveryRegistry {
     if (retained) return retained;
     const queue = new ProjectEditorQueue(editor, persist, () => {
       if (this.entries.get(identity) === queue) return;
-      if (this.entries.has(identity)) throw new Error("This project already has an unsaved editor. Reopen it before editing.");
-      if (this.entries.size >= this.limit) throw new Error(`There are ${this.limit} unsaved projects in this tab. Save or discard one before editing another.`);
+      if (this.entries.has(identity)) throw new Error("This project is already open with unsaved changes. Go back to it before editing.");
+      if (this.entries.size >= this.limit) throw new Error(`You have ${this.limit} unsaved projects open in this tab. Save or discard one before editing another.`);
       this.entries.set(identity, queue);
       const unsubscribe = queue.subscribe(() => {
         if (queue.getSnapshot().pending) return;

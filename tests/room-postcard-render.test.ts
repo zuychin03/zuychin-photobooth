@@ -33,18 +33,18 @@ test("room postcard renders exact complete originals and rechecks authority befo
 });
 test("incomplete, rebound and unsupported Together maps fail before any export", async () => {
   const f = await fixture(), project = f.snapshot.round!;
-  assert.throws(() => roomPostcardPlan({ ...f.snapshot, round: { ...project, sourceOrder: { ...project.sourceOrder, A: [null, ...project.sourceOrder.A.slice(1)] } } }), /shared capture/);
-  assert.throws(() => roomPostcardPlan({ ...f.snapshot, room: { ...f.snapshot.room, members: f.snapshot.room.members.map(member => member.id === MEMBER_B ? { ...member, status: "removed" } : member) } }), /shared capture/);
+  assert.throws(() => roomPostcardPlan({ ...f.snapshot, round: { ...project, sourceOrder: { ...project.sourceOrder, A: [null, ...project.sourceOrder.A.slice(1)] } } }), /photos or design changed/);
+  assert.throws(() => roomPostcardPlan({ ...f.snapshot, room: { ...f.snapshot.room, members: f.snapshot.room.members.map(member => member.id === MEMBER_B ? { ...member, status: "removed" } : member) } }), /photos or design changed/);
   const editor = { ...project.editor, sceneId: "cream" };
   assert.throws(() => roomPostcardPlan({ ...f.snapshot, round: { ...project, editor }, recipe: { ...f.snapshot.recipe!, recipe: { ...f.snapshot.recipe!.recipe, editor } } }), /separate-photo|Unknown|scene/);
 });
 test("a changed recipe or revoked participant during rendering suppresses the JPEG", async () => {
   const f = await fixture(), original = f.ports.render;
   f.ports.render = async (input, signal) => { const result = await original(input, signal); f.snapshot = { ...f.snapshot, recipe: { ...f.snapshot.recipe!, recipeHash: "f".repeat(64) } }; return result; };
-  await assert.rejects(renderRoomPostcard(f.options, f.ports), /shared capture/); assert(f.images.every(image => image.width === 0));
+  await assert.rejects(renderRoomPostcard(f.options, f.ports), /photos or design changed/); assert(f.images.every(image => image.width === 0));
   const g = await fixture(); let requests = 0;
   g.ports.state = async () => ++requests === 1 ? g.snapshot.room : { ...g.snapshot.room, members: g.snapshot.room.members.map(member => member.id === MEMBER_B ? { ...member, status: "removed" } : member) };
-  await assert.rejects(renderRoomPostcard(g.options, g.ports), /shared capture/); assert.equal(g.counts().released, 1);
+  await assert.rejects(renderRoomPostcard(g.options, g.ports), /photos or design changed/); assert.equal(g.counts().released, 1);
 });
 test("cancelled native work holds the occupied slot until its late canvas can be released", async () => {
   const f = await fixture(); let resolve!: (canvas: HTMLCanvasElement) => void, started = false;

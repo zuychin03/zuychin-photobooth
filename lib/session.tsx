@@ -62,14 +62,14 @@ const identity = (project: Pick<PhotoProject, "id" | "scope"> | null) => project
 const activeMediaIds = (project: PhotoProject) => new Set([...Object.values(project.sourceOrder).flat().filter((id): id is string => Boolean(id)), ...(project.editor.template?.decorations.map(item => item.id) ?? []), ...(project.editor.thenNow ? [project.editor.thenNow.reference.mediaId] : [])]);
 const png = (canvas: HTMLCanvasElement) => new Promise<Blob>((resolve, reject) => {
   if (!canvas.width || !canvas.height || canvas.width > 4096 || canvas.height > 4096 || canvas.width * canvas.height > RESOURCE_LIMITS.photoPixels) {
-    reject(new Error("Photo dimensions exceed the local project limit")); return;
+    reject(new Error("This photo is too big to use.")); return;
   }
-  const timer = setTimeout(() => reject(new Error("Photo encoding timed out. Your captured photo is still available to retry.")), 10_000);
+  const timer = setTimeout(() => reject(new Error("Saving the photo took too long. It's still here, so try again.")), 10_000);
   try {
     canvas.toBlob(value => {
       clearTimeout(timer);
-      if (!value) reject(new Error("Photo encoding failed"));
-      else if (value.size > RESOURCE_LIMITS.photoBytes) reject(new Error("The encoded photo exceeds 10 MiB"));
+      if (!value) reject(new Error("Couldn't process the photo."));
+      else if (value.size > RESOURCE_LIMITS.photoBytes) reject(new Error("This photo is over the 10 MB limit."));
       else resolve(value);
     }, "image/png");
   } catch (error) { clearTimeout(timer); reject(error); }
@@ -100,15 +100,15 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     try {
       for (const mediaId of activeMediaIds(next)) {
         const blob = blobs.get(mediaId), declaration = next.media.find(item => item.id === mediaId);
-        if (!blob || !declaration) throw new Error("An original photo is missing. Keep a backup and try the previous checkpoint.");
+        if (!blob || !declaration) throw new Error("A photo is missing from this project. Back it up, then try restoring the previous save from My projects.");
         canvases.set(mediaId, fresh.get(mediaId) ?? (sameProject ? decoded.current.get(mediaId) : undefined) ?? await projectImageToCanvas(blob, declaration));
-        if (token !== epoch.current) throw new Error("The active account changed");
+        if (token !== epoch.current) throw new Error("You switched accounts.");
       }
     } catch (error) {
       for (const [id, canvas] of canvases) if (decoded.current.get(id) !== canvas && fresh.get(id) !== canvas) canvas.width = canvas.height = 0;
       throw error;
     }
-    if (token !== epoch.current) throw new Error("The active account changed");
+    if (token !== epoch.current) throw new Error("You switched accounts.");
     for (const [id, canvas] of decoded.current) if (canvases.get(id) !== canvas) canvas.width = canvas.height = 0;
     decoded.current = canvases; originals.current = new Map(blobs); current.current = next;
     const shots = Object.fromEntries(ROLES.map(role => [role, next.sourceOrder[role].map(id => id ? canvases.get(id) ?? null : null)])) as ShotStore;
@@ -120,7 +120,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const commit = useCallback(async (next: PhotoProject, additions: Map<string, Blob>, expectedRevision: number | null, token: number, fresh?: Map<string, HTMLCanvasElement>) => {
-    if (token !== epoch.current) throw new Error("The active account changed");
+    if (token !== epoch.current) throw new Error("You switched accounts.");
     const blobs = expectedRevision === null ? additions : new Map([...originals.current, ...additions]);
     const prepared = new Map(fresh);
     const sameProject = identity(current.current) === identity(next);
@@ -130,13 +130,13 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
         if (prepared.has(mediaId)) continue;
         const cached = sameProject ? decoded.current.get(mediaId) : null;
         const blob = blobs.get(mediaId), declaration = next.media.find(item => item.id === mediaId);
-        if (!blob || !declaration) throw new Error("An original photo is missing");
+        if (!blob || !declaration) throw new Error("A photo is missing from this project.");
         prepared.set(mediaId, cached ?? await projectImageToCanvas(blob, declaration));
-        if (token !== epoch.current) throw new Error("The active account changed");
+        if (token !== epoch.current) throw new Error("You switched accounts.");
       }
       const repo = await openProjectRepository(next.scope);
       try { await repo.save(next, additions, expectedRevision); } finally { repo.close(); }
-      if (token !== epoch.current) throw new Error("The active account changed");
+      if (token !== epoch.current) throw new Error("You switched accounts.");
       await adopt(next, blobs, token, prepared);
     } catch (error) {
       for (const [id, canvas] of prepared) if (decoded.current.get(id) !== canvas && fresh?.get(id) !== canvas) canvas.width = canvas.height = 0;
@@ -147,14 +147,14 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const enqueue = useCallback(<T,>(work: (token: number) => Promise<T>, expected?: string | null) => {
     const token = epoch.current;
     const operation = serial.current.catch(() => {}).then(async () => {
-      if (token !== epoch.current || writesPaused.current) throw new Error("The active account changed or local saving was paused");
-      if (expected !== undefined && identity(current.current) !== expected) throw new Error("The active project changed. Reopen the original project to retry these changes.");
+      if (token !== epoch.current || writesPaused.current) throw new Error("You switched accounts, or saving was paused.");
+      if (expected !== undefined && identity(current.current) !== expected) throw new Error("You switched projects. Reopen the original one to save these changes.");
       setStorageStatus("saving"); setStorageError(null); lastFailure.current = null;
       const result = await work(token);
       if (token === epoch.current) setStorageStatus("saved");
       return result;
     }).catch(error => {
-      if (token === epoch.current && (expected == null || identity(current.current) === expected)) { lastFailure.current = error; setStorageStatus("error"); setStorageError(error instanceof Error ? error.message : "Changes could not be saved on this device"); }
+      if (token === epoch.current && (expected == null || identity(current.current) === expected)) { lastFailure.current = error; setStorageStatus("error"); setStorageError(error instanceof Error ? error.message : "Couldn't save your changes on this device."); }
       throw error;
     });
     serial.current = operation;
@@ -178,12 +178,12 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
         if (id && /^[A-Za-z0-9_-]{1,64}$/.test(id)) {
           const loaded = await repo.load(id);
           if (loaded?.kind === "current") { await adopt(loaded.project, loaded.media, token); if (token === epoch.current) setStorageStatus("saved"); }
-          else if (loaded) throw new Error("This project needs recovery or a newer app. Open My projects to keep a raw backup.");
+          else if (loaded) throw new Error("This project can't be opened in this version of the app. Go to My projects to download its recovery files.");
         }
       } finally { repo.close(); }
     };
     const initial = initialise().catch(error => {
-      if (token === epoch.current) { setStorageError(error instanceof Error ? error.message : "Local projects could not be opened"); setStorageStatus("error"); }
+      if (token === epoch.current) { setStorageError(error instanceof Error ? error.message : "Couldn't open your projects in this browser."); setStorageStatus("error"); }
     }).finally(() => { if (token === epoch.current) setHydrating(false); });
     serial.current = initial;
     const lifetime = epoch;
@@ -191,12 +191,12 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   }, [adopt, loading, scope]);
 
   const startProject = useCallback((options: CreateProjectInput = {}, carryReference = false) => enqueue(async token => {
-    if (loading) throw new Error("Please wait for your local projects to open");
+    if (loading) throw new Error("Hang on, your projects are still loading.");
     let next = createProject({ ...options, scope });
     const additions = new Map<string, Blob>(), plan = carryReference ? current.current?.editor.thenNow : null;
     if (plan && current.current) {
       const media = current.current.media.find(item => item.id === plan.reference.mediaId), blob = originals.current.get(plan.reference.mediaId);
-      if (!media || !blob) throw new Error("The reference is unavailable. Keep the previous project open and retry.");
+      if (!media || !blob) throw new Error("Couldn't find the old photo. Keep the previous project open and try again.");
       next = createReferencedProject({ ...options, scope }, media, plan); additions.set(media.id, blob);
     }
     await commit(next, additions, null, token);
@@ -215,7 +215,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     const previous = await requireProject(token);
     const participant = previous.participants.find(person => person.role === role);
     if (!participant) throw new Error("This participant does not belong to the project");
-    if (blob.size > RESOURCE_LIMITS.photoBytes) throw new Error("Choose an image smaller than 10 MiB");
+    if (blob.size > RESOURCE_LIMITS.photoBytes) throw new Error("Choose an image under 10 MB.");
     const info = inspectImageHeader(new Uint8Array(await blob.arrayBuffer()));
     const original = blob.slice(0, blob.size, info.mime);
     const canvas = await projectImageToCanvas(original, info);
@@ -232,14 +232,14 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     const token = epoch.current;
     const expected = identity(current.current);
     const blob = await png(shot);
-    if (token !== epoch.current) throw new Error("The active account changed");
-    if (identity(current.current) !== expected) throw new Error("The active project changed. Your captured photo is still available to download.");
+    if (token !== epoch.current) throw new Error("You switched accounts.");
+    if (identity(current.current) !== expected) throw new Error("You switched projects. Your photo is still here to download.");
     await importShot(role, index, blob);
   }, [importShot]);
 
   const saveReference = useCallback(async (previous: PhotoProject, blob: Blob, plan: ThenNowPlan, token: number) => {
     const id = crypto.randomUUID(), checked = validateThenNowPlan({ ...plan, reference: { ...plan.reference, mediaId: id } });
-    if (blob.size > RESOURCE_LIMITS.photoBytes) throw new Error("Choose a reference smaller than 10 MiB");
+    if (blob.size > RESOURCE_LIMITS.photoBytes) throw new Error("Choose an old photo under 10 MB.");
     const info = inspectImageHeader(new Uint8Array(await blob.arrayBuffer())), original = blob.slice(0, blob.size, info.mime);
     const next = attachProjectReference(previous, { ...info, id, bytes: original.size, kind: "reference", participantId: null }, checked);
     const canvas = await projectImageToCanvas(original, info);
@@ -249,7 +249,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   }, [commit]);
   const attachReference = useCallback((blob: Blob, plan: ThenNowPlan) => enqueueProject(async token => {
     const checked = validateThenNowPlan(plan);
-    if (!checked.reference.provenance.kind.startsWith("imported-")) throw new Error("Choose an accessible saved project to copy an original");
+    if (!checked.reference.provenance.kind.startsWith("imported-")) throw new Error("Pick one of your saved projects to copy a photo from.");
     await saveReference(await requireProject(token), blob, checked, token);
   }), [enqueueProject, requireProject, saveReference]);
   const copyReference = useCallback((sourceProjectId: string, sourceMediaId: string, plan: ThenNowPlan) => enqueueProject(async token => {
@@ -258,7 +258,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       const loaded = await repo.load(sourceProjectId);
       const source = loaded?.kind === "current" ? loaded.project.media.find(item => item.id === sourceMediaId && item.kind === "photo") : null;
       const blob = source ? loaded!.media.get(sourceMediaId) : null;
-      if (!blob) throw new Error("That original is unavailable in this project's local scope");
+      if (!blob) throw new Error("That photo isn't available here.");
       const checked = validateThenNowPlan({ ...plan, reference: { ...plan.reference, crop: null, provenance: { kind: "project-original", projectId: sourceProjectId, sourceMediaId } } });
       await saveReference(previous, blob, checked, token);
     } finally { repo.close(); }
@@ -281,7 +281,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     if (patch.shots) {
       await startProject({ mode: patch.mode ?? "solo", role: patch.role ?? "A", participants: (patch.members ?? ["A"]).map(role => ({ id: crypto.randomUUID(), role })), editor: { layoutId: patch.layoutId ?? "strip4", filterId: patch.filterId ?? "none", sceneId: patch.sceneId ?? null } });
       for (const role of ROLES) for (let index = 0; index < patch.shots[role].length; index++) {
-        if (token !== epoch.current) throw new Error("The active account changed");
+        if (token !== epoch.current) throw new Error("You switched accounts.");
         const shot = patch.shots[role][index]; if (shot) await setShot(role, index, shot);
       }
     } else {
@@ -292,16 +292,16 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       };
       if (Object.keys(editor).length) await editProject(editor);
     }
-    if (token !== epoch.current) throw new Error("The active account changed");
+    if (token !== epoch.current) throw new Error("You switched accounts.");
     setSession(previous => ({ ...previous, ...(patch.promptSeed !== undefined ? { promptSeed: patch.promptSeed } : {}), ...(patch.roomCode !== undefined ? { roomCode: patch.roomCode } : {}) }));
   }, [editProject, setShot, startProject]);
 
   const openProject = useCallback((id: string, selectedScope: ProjectScope = scope) => enqueue(async token => {
-    if (selectedScope.kind === "account" && selectedScope.ownerId !== owner) throw new Error("Sign in to the project owner's account");
+    if (selectedScope.kind === "account" && selectedScope.ownerId !== owner) throw new Error("Sign in to the account this project belongs to.");
     const repo = await openProjectRepository(selectedScope);
     try {
       const loaded = await repo.load(id);
-      if (!loaded || loaded.kind !== "current") throw new Error("This project cannot be edited; keep a raw backup from My projects");
+      if (!loaded || loaded.kind !== "current") throw new Error("This project can't be edited here. Download its recovery files from My projects.");
       await adopt(loaded.project, loaded.media, token);
       return loaded.project;
     } finally { repo.close(); }
@@ -324,7 +324,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     if (previous) await projectEditorRecovery.flushIdentity(projectEditorIdentity(previous));
     // A failed import/application has no unsaved editor draft and must remain retryable.
     await serial.current.catch(() => {});
-    if (token !== epoch.current || identity(previous) !== identity(current.current)) throw new Error("The active project changed");
+    if (token !== epoch.current || identity(previous) !== identity(current.current)) throw new Error("You switched projects.");
     return current.current;
   }, []);
   const applyTemplate = useCallback(async (design: TemplateDesign, decorations: ReadonlyMap<string, Blob>) => {
@@ -332,7 +332,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     return enqueueProject(async token => {
       const source = previous ?? await requireProject(token);
       const { template, media, additions } = await prepareTemplateMedia(source, originals.current, design, decorations);
-      if (token !== epoch.current) throw new Error("The active account changed");
+      if (token !== epoch.current) throw new Error("You switched accounts.");
       const next = applyTemplateToProject(source, template, media);
       await commit(next, additions, source.revision, token);
       return next;
@@ -344,11 +344,11 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     return new Map((source.editor.template?.decorations ?? []).map(item => [item.id, originals.current.get(item.id)!]));
   }, [owner]);
   const exportProject = useCallback(async (editor?: ProjectEditorSettings) => {
-    if (!current.current) throw new Error("There is no project to export yet");
+    if (!current.current) throw new Error("There's no project to export yet.");
     const token = epoch.current, expected = identity(current.current);
     const source = editor ? applyProjectEdit(current.current, { sourceOrder: current.current.sourceOrder, editor }) : current.current;
     const bundle = await exportProjectBundle(source, new Map(originals.current));
-    if (token !== epoch.current || expected !== identity(current.current)) throw new Error("The active project changed before its backup finished");
+    if (token !== epoch.current || expected !== identity(current.current)) throw new Error("You switched projects before the backup finished.");
     return bundle;
   }, []);
   const suspendForSignOut = useCallback(async () => {

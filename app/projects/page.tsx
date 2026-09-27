@@ -17,7 +17,7 @@ import { openProjectRepository, type LoadedProject } from "@/lib/projects/storag
 import { RoomMetadataHousekeeping } from "@/components/RoomMetadataHousekeeping";
 
 const control = "inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 text-sm font-medium transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-wait disabled:opacity-50";
-const message = (error: unknown) => error instanceof Error ? error.message : "The project could not be opened. Try again or keep a recovery backup.";
+const message = (error: unknown) => error instanceof Error ? error.message : "Couldn't open the project. Try again, or download its recovery files to be safe.";
 const scopeId = (scope: ProjectScope) => scope.kind === "device" ? "device" : `account:${scope.ownerId}`;
 const megabytes = (bytes: number) => `${(bytes / 1024 / 1024).toLocaleString("en-AU", { maximumFractionDigits: 1 })} MiB`;
 
@@ -43,7 +43,7 @@ export default function ProjectsPage() {
   const [busy, setBusy] = useState<string | null>(null), [refresh, setRefresh] = useState(0), [count, setCount] = useState(20);
   useAppNavigationGuard(() => {
     if (!busy) return true;
-    setNotice("Wait for the current project action to finish before leaving."); return false;
+    setNotice("Hang on a second, still working on your project."); return false;
   });
   const [thumbnails, setThumbnails] = useState<Record<string, string>>({});
   const [estimate, setEstimate] = useState<{ usage?: number; quota?: number; persisted: boolean } | null>(null);
@@ -115,7 +115,7 @@ export default function ProjectsPage() {
   }, [refresh]);
 
   const assertVisible = useCallback((scope: ProjectScope, epoch: number) => {
-    if (epoch !== authEpoch.current || (scope.kind === "account" && (authLoading || scope.ownerId !== owner))) throw new Error("The active account changed. Open the library again to continue.");
+    if (epoch !== authEpoch.current || (scope.kind === "account" && (authLoading || scope.ownerId !== owner))) throw new Error("You switched accounts. Reopen My projects to keep going.");
   }, [owner, authLoading]);
 
   const readRecovery = async (item: LibraryProject): Promise<LoadedProject> => {
@@ -125,7 +125,7 @@ export default function ProjectsPage() {
     try {
       const loaded = await repository.load(item.id);
       assertVisible(item.scope, epoch);
-      if (!loaded) throw new Error("This project no longer exists in this browser. Refresh the library.");
+      if (!loaded) throw new Error("This project isn't in this browser anymore. Refresh the list.");
       return loaded;
     } finally { repository.close(); }
   };
@@ -149,20 +149,20 @@ export default function ProjectsPage() {
         else if (action === "delete") {
           const latest = await repository.load(item.id);
           assertVisible(item.scope, epoch);
-          if (!latest || latest.kind !== "current") throw new Error("This project no longer exists or needs recovery. Refresh the library before continuing.");
+          if (!latest || latest.kind !== "current") throw new Error("This project is gone or needs recovering. Refresh the list and try again.");
           await repository.delete(item.id, latest.project.revision);
           if (session.project?.id === item.id && scopeId(session.project.scope) === scopeId(item.scope)) await session.forgetProject(item.id, item.scope);
         }
         else if (action === "recover") await repository.recoverCheckpoint(item.id, item.revision);
         else {
           const loaded = await repository.load(item.id);
-          if (!loaded || loaded.kind !== "current") throw new Error("This draft needs recovery or a newer app. Keep its recovery files.");
+          if (!loaded || loaded.kind !== "current") throw new Error("This project can't be opened in this version of the app. Hang on to its recovery files.");
           assertVisible(item.scope, epoch);
           if (action === "export") {
             const bundle = await exportProjectBundle(loaded.project, loaded.media);
             assertVisible(item.scope, epoch);
             downloadProjectBlob(bundle, projectDownloadName(loaded.project.name, "pbproject"));
-            setNotice("Project backup prepared. Keep the .pbproject file somewhere you can find it again.");
+            setNotice("Backup downloaded. Keep the .pbproject file somewhere safe.");
           } else {
             await session.openProject(item.id, item.scope);
             assertVisible(item.scope, epoch);
@@ -173,10 +173,10 @@ export default function ProjectsPage() {
       if (["rename", "duplicate", "delete", "recover"].includes(action)) {
         assertVisible(item.scope, epoch); setRefresh(value => value + 1);
         if (["rename", "recover"].includes(action) && session.project?.id === item.id && scopeId(session.project.scope) === scopeId(item.scope)) await session.openProject(item.id, item.scope);
-        setNotice(action === "delete" ? "Project deleted from this browser." : action === "recover" ? "Previous settings restored." : action === "duplicate" ? "A separate copy is saved on this device." : "Project name saved.");
+        setNotice(action === "delete" ? "Project deleted." : action === "recover" ? "Previous save restored." : action === "duplicate" ? "Copy saved." : "Renamed.");
       }
     } catch (failure) {
-      setError(recoveryDiscarded ? `${message(failure)} Pending editor changes were discarded as part of the confirmed deletion. Refresh the library to check the saved project.` : message(failure));
+      setError(recoveryDiscarded ? `${message(failure)} Any unsaved edits to it were already thrown away. Refresh the list to see where things stand.` : message(failure));
       throw failure;
     }
     finally { if (epoch === authEpoch.current && action !== "resume") focusAfterAction.current = true; setBusy(null); }
@@ -209,7 +209,7 @@ export default function ProjectsPage() {
     setBusy("storage"); setError(null);
     try {
       const granted = navigator.storage?.persist ? await navigator.storage.persist() : false;
-      setNotice(granted ? "The browser granted persistent storage. Keep an exported backup too; clearing browser data still removes projects." : "The browser did not grant persistent storage. You can still use projects and export backups.");
+      setNotice(granted ? "Done. Your browser won't clear these files on its own, but clearing your browser data still deletes them, so keep a backup too." : "Your browser said no. Your projects still work, but back up the ones you care about.");
       setRefresh(value => value + 1);
     } catch (failure) { setError(message(failure)); }
     finally { setBusy(null); }
@@ -225,19 +225,19 @@ export default function ProjectsPage() {
         <input ref={input} type="file" accept=".pbproject,application/x-photobooth-project" className="sr-only" tabIndex={-1} aria-label="Import a .pbproject file" onChange={event => { const file = event.target.files?.[0]; event.target.value = ""; if (file) void importFile(file); }} />
       </div>
     </header>
-    <div className="mt-5 flex flex-wrap items-center justify-between gap-2 text-sm text-foreground/70"><p>{owner ? "Device projects and account drafts. No automatic uploads." : "No account needed. These projects stay in this browser."}</p><button type="button" className={control} disabled={Boolean(busy) || loading} onClick={() => setRefresh(value => value + 1)}><RefreshCw size={15} aria-hidden /> Refresh</button></div>
-    {error && <div role="alert" className="mt-4 rounded-xl border border-border bg-muted p-4"><p className="font-medium">That action could not finish</p><p className="mt-1 break-words text-sm">{error}</p><p className="mt-2 text-sm text-foreground/70">Refresh if another tab changed this project. Your existing saved files have not been replaced by a failed save.</p></div>}
+    <div className="mt-5 flex flex-wrap items-center justify-between gap-2 text-sm text-foreground/70"><p>{owner ? "Projects on this device, including your account drafts. Nothing uploads automatically." : "No account needed. These projects stay in this browser."}</p><button type="button" className={control} disabled={Boolean(busy) || loading} onClick={() => setRefresh(value => value + 1)}><RefreshCw size={15} aria-hidden /> Refresh</button></div>
+    {error && <div role="alert" className="mt-4 rounded-xl border border-border bg-muted p-4"><p className="font-medium">That didn&apos;t work</p><p className="mt-1 break-words text-sm">{error}</p><p className="mt-2 text-sm text-foreground/70">If this project is open in another tab, refresh and try again. Nothing you&apos;d already saved was overwritten.</p></div>}
     {notice && <p role="status" className="mt-4 max-w-2xl rounded-xl bg-muted p-4 text-sm">{notice}</p>}
-    {busy && <p role="status" className="mt-4 flex items-center gap-2 text-sm"><LoaderCircle size={16} className="animate-spin motion-reduce:animate-none" aria-hidden /> {busy === "import" ? "Checking the project and saving its originals…" : busy === "create" ? "Preparing a new project…" : "Working with your local files…"}</p>}
-    {loading ? <p role="status" className="flex min-h-48 items-center justify-center gap-2 text-sm text-foreground/70"><LoaderCircle size={18} className="animate-spin motion-reduce:animate-none" aria-hidden /> Opening this browser&apos;s library…</p> : visible.length ? <>
-      <ul aria-label="Saved local projects" className="mt-6">{page.map(item => <ProjectLibraryRow key={item.key} item={item} thumbnail={thumbnails[item.key]} busy={Boolean(busy)} onAction={act} onRecovery={readRecovery} />)}</ul>
+    {busy && <p role="status" className="mt-4 flex items-center gap-2 text-sm"><LoaderCircle size={16} className="animate-spin motion-reduce:animate-none" aria-hidden /> {busy === "import" ? "Importing the project…" : busy === "create" ? "Starting a new project…" : "Working on it…"}</p>}
+    {loading ? <p role="status" className="flex min-h-48 items-center justify-center gap-2 text-sm text-foreground/70"><LoaderCircle size={18} className="animate-spin motion-reduce:animate-none" aria-hidden /> Loading your projects…</p> : visible.length ? <>
+      <ul aria-label="Your projects" className="mt-6">{page.map(item => <ProjectLibraryRow key={item.key} item={item} thumbnail={thumbnails[item.key]} busy={Boolean(busy)} onAction={act} onRecovery={readRecovery} />)}</ul>
       {visible.length > page.length && <button type="button" onClick={() => setCount(value => value + 20)} className={`${control} my-4 self-center bg-muted`}>Show more projects</button>}
     </> : !error && <section className="flex min-h-64 flex-col items-start justify-center py-10 sm:py-14"><h2 className="font-display text-2xl font-semibold">Start your first project.</h2><p className="mt-3 max-w-lg text-foreground/70">Take photos or import a .pbproject backup.</p><button type="button" disabled={Boolean(busy) || session.hydrating} onClick={() => void create()} className={`${control} mt-5 bg-accent text-accent-foreground hover:bg-accent/90`}><Camera size={17} aria-hidden /> Start your first project</button></section>}
     <footer className="mt-8 border-t border-border pt-6 pb-3">
       <RoomMetadataHousekeeping ownerId={authLoading ? null : owner} />
-      <div className="flex items-start gap-3"><HardDrive size={19} className="mt-0.5 shrink-0 text-foreground/60" aria-hidden /><div><h2 className="font-medium">Keep a copy beyond this browser</h2><p className="mt-2 max-w-2xl text-sm text-foreground/70">Browser storage can be cleared. Back up important projects as .pbproject files. Account drafts stay local and are hidden when you sign out.</p>
-        {estimate && <p className="mt-2 text-sm text-foreground/70 tabular-nums">{estimate.usage !== undefined ? `${megabytes(estimate.usage)} used by this site` : "Site storage estimate unavailable"}{estimate.quota !== undefined ? ` · ${megabytes(estimate.quota)} estimated site allowance` : ""}. {estimate.persisted ? "Persistent storage granted." : "Storage is best effort."}</p>}
-        <button type="button" disabled={Boolean(busy) || estimate?.persisted} onClick={() => void persist()} className={`${control} -ml-4 mt-2 underline underline-offset-4`}>{estimate?.persisted ? "Persistent storage is enabled" : "Ask browser to keep local files"}</button>
+      <div className="flex items-start gap-3"><HardDrive size={19} className="mt-0.5 shrink-0 text-foreground/60" aria-hidden /><div><h2 className="font-medium">Back up your projects</h2><p className="mt-2 max-w-2xl text-sm text-foreground/70">Browsers can clear their storage, so download a .pbproject backup of anything you want to keep. Account drafts stay on this device and are hidden while you&apos;re signed out.</p>
+        {estimate && <p className="mt-2 text-sm text-foreground/70 tabular-nums">{estimate.usage !== undefined ? `${megabytes(estimate.usage)} used by this site` : "Storage use unknown"}{estimate.quota !== undefined ? ` · about ${megabytes(estimate.quota)} available` : ""}. {estimate.persisted ? "Your browser won't clear these files on its own." : "Your browser might clear these files if it runs low on space."}</p>}
+        <button type="button" disabled={Boolean(busy) || estimate?.persisted} onClick={() => void persist()} className={`${control} -ml-4 mt-2 underline underline-offset-4`}>{estimate?.persisted ? "Your browser is keeping these files" : "Ask your browser to keep these files"}</button>
       </div></div>
     </footer>
   </main>;

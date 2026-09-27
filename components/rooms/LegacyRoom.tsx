@@ -180,7 +180,7 @@ function RoomInner({ rehearsal }: { rehearsal?: LegacyRoomRehearsal }) {
     if (finishTimer.current) clearTimeout(finishTimer.current);
     queueMicrotask(() => {
       setAccountChanged(true); setPendingFrames(0); setIncomplete(false); setCount(null);
-      setSaveError("The active account changed. This round has stopped; return home before starting another room.");
+      setSaveError("You switched accounts, so this round stopped. Head home before you start another room.");
     });
   }, [ownerId]);
 
@@ -188,7 +188,7 @@ function RoomInner({ rehearsal }: { rehearsal?: LegacyRoomRehearsal }) {
     const unsaved = [...localFrames.current.values()].some(frame => !frame.saved) || remoteFrames.current.size > 0;
     const capturing = shooting && !incomplete && savedLocal.current.size < shotTotal;
     if (capturing || unsaved || retrying) {
-      setSaveError("Finish the round and save pending originals before leaving.");
+      setSaveError("Some photos are still saving. Finish the round before you leave.");
       return false;
     }
     return true;
@@ -237,7 +237,7 @@ function RoomInner({ rehearsal }: { rehearsal?: LegacyRoomRehearsal }) {
   }, [router]);
 
   const reportFailure = useCallback((error: unknown) => {
-    if (!cancelled.current) setSaveError(error instanceof Error ? error.message : "A photo could not be saved. Keep this page open and retry.");
+    if (!cancelled.current) setSaveError(error instanceof Error ? error.message : "Couldn't save a photo. Keep this page open and try again.");
   }, []);
   const updatePending = useCallback(() => {
     if (!cancelled.current) setPendingFrames(localFrames.current.size + remoteFrames.current.size);
@@ -260,7 +260,7 @@ function RoomInner({ rehearsal }: { rehearsal?: LegacyRoomRehearsal }) {
         const blob = await canvasToJpeg(entry.canvas);
         const engine = engineRef.current;
         if (cancelled.current) return;
-        if (!engine) throw new Error("The room connection closed before this photo was sent");
+        if (!engine) throw new Error("The room disconnected before this photo could be sent.");
         await engine.sendFrame(shot, blob, entry.capturedAt);
         if (cancelled.current) return;
         sentLocal.current.add(shot);
@@ -304,7 +304,7 @@ function RoomInner({ rehearsal }: { rehearsal?: LegacyRoomRehearsal }) {
       const video = videoRef.current;
       if (!video || planRef.current) return;
       if (!Number.isInteger(plan.shots) || plan.shots < 1 || plan.shots > 4 || getLayout(plan.layoutId).shots !== plan.shots || !Array.isArray(plan.members) || plan.members.length < 2 || plan.members.length > 4 || new Set(plan.members).size !== plan.members.length) {
-        reportFailure(new Error("This room sent an unsupported capture plan")); return;
+        reportFailure(new Error("Couldn't start this round. Everyone might need to refresh the page.")); return;
       }
       applyScene(plan.sceneId, false);
       setRoundSceneFallback(Boolean(plan.sceneId && getCuratedAsset(plan.sceneId) && (sceneReadiness.current.id !== plan.sceneId || sceneReadiness.current.loading || !sceneReadiness.current.available)));
@@ -363,7 +363,7 @@ function RoomInner({ rehearsal }: { rehearsal?: LegacyRoomRehearsal }) {
         if (cancelled.current) return;
         const capturedAt = Date.now();
         if (!video.videoWidth || !video.videoHeight || video.videoWidth > RESOURCE_LIMITS.photoEdge || video.videoHeight > RESOURCE_LIMITS.photoEdge || video.videoWidth * video.videoHeight > RESOURCE_LIMITS.photoPixels) {
-          reportFailure(new Error("This camera's image size exceeds the project limit. Your saved photos are safe."));
+          reportFailure(new Error("Your camera's photos are too big for the booth. The photos you already saved are fine."));
           setIncomplete(true); return;
         }
         let shot: HTMLCanvasElement;
@@ -380,7 +380,7 @@ function RoomInner({ rehearsal }: { rehearsal?: LegacyRoomRehearsal }) {
       finishTimer.current = setTimeout(() => {
         if (!cancelled.current && planRef.current) {
           setIncomplete(true);
-          setSaveError("Some photos are still missing or waiting to save. Keep this page open to retry, or open only the photos already saved.");
+          setSaveError("Some photos are missing or still saving. Keep this page open to try again, or carry on with the ones you have.");
         }
       }, FINISH_TIMEOUT_MS);
     },
@@ -420,7 +420,7 @@ function RoomInner({ rehearsal }: { rehearsal?: LegacyRoomRehearsal }) {
         if (!plan || cancelled.current || role === captureRole.current || !plan.members.includes(role) || !Number.isInteger(shot) || shot < 0 || shot >= plan.shots || savedRemote.current.has(key) || remoteFrames.current.has(key)) return;
         const retainedBytes = [...remoteFrames.current.values()].reduce((sum, entry) => sum + entry.blob.size, 0);
         if (blob.size > RESOURCE_LIMITS.photoBytes || remoteFrames.current.size >= 12 || retainedBytes + blob.size > RESOURCE_LIMITS.totalEncodedBytes) {
-          reportFailure(new Error("Incoming photos exceed the local capture budget. Previously saved photos are safe.")); return;
+          reportFailure(new Error("Too many photos came in at once for this device to hold. The ones already saved are fine.")); return;
         }
         remoteFrames.current.set(key, { role, shot, blob, capturedAt: capturedAtLocal });
         updatePending();
@@ -538,7 +538,7 @@ function RoomInner({ rehearsal }: { rehearsal?: LegacyRoomRehearsal }) {
           >
             {error ? (
               <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center text-sm text-muted-foreground">
-                <p>Camera unavailable. Allow access to join the booth.</p>
+                <p>Can&apos;t use your camera. Allow camera access to join the booth.</p>
                 <button
                   onClick={retry}
                   className="glass-card min-h-11 rounded-full px-4 font-medium text-foreground"
@@ -601,7 +601,7 @@ function RoomInner({ rehearsal }: { rehearsal?: LegacyRoomRehearsal }) {
                 <p className="font-semibold">This booth is already full (4 max).</p>
               ) : status === "failed" ? (
                 <p className="font-semibold">
-                  Connection failed. This network may need a TURN relay.
+                  Couldn&apos;t connect. Some networks block this, so try another Wi-Fi network or mobile data.
                 </p>
               ) : (
                 <p className="font-semibold">Everyone left the room.</p>
@@ -701,24 +701,24 @@ function RoomInner({ rehearsal }: { rehearsal?: LegacyRoomRehearsal }) {
             </button>
             {connected && (
               <p className="text-center text-xs text-muted-foreground">
-                Anyone can press the shutter; the countdown fires on every screen
+                Anyone can press the shutter, and the countdown starts on every screen
                 at once. {activeLayout.shots} shots.
-                {skewMs !== null && ` Last sync: ${skewMs}ms apart.`}
+                {skewMs !== null && ` Screens were ${skewMs}ms apart last time.`}
               </p>
             )}
           </>
         )}
         {shooting && (
           <p className="text-center text-sm text-muted-foreground">
-            {accountChanged ? "Round stopped." : <>{shotProgress} of {shotTotal} local photos saved. {pendingFrames > 0 ? `${pendingFrames} photos waiting to save or send.` : "Waiting for everyone's saved photos."}</>}
+            {accountChanged ? "Round stopped." : <>{shotProgress} of {shotTotal} of your photos saved. {pendingFrames > 0 ? `${pendingFrames} still saving or sending.` : "Waiting for everyone else's photos."}</>}
           </p>
         )}
-        {curated.loading && !roundSceneFallback && <p role="status" className="text-center text-sm text-muted-foreground">Loading the selected backdrop before capture…</p>}
-        {(roundSceneFallback || curated.fallback.length > 0) && <p role="status" className="text-center text-sm text-muted-foreground">This round’s live preview uses a built-in fallback. Your saved photos can use the image backdrop when it is available.</p>}
+        {curated.loading && !roundSceneFallback && <p role="status" className="text-center text-sm text-muted-foreground">Loading the background…</p>}
+        {(roundSceneFallback || curated.fallback.length > 0) && <p role="status" className="text-center text-sm text-muted-foreground">The live preview is using a built-in background this round. Your saved photos will get the real one once it loads.</p>}
         {saveError && <div role="alert" className="rounded-xl border border-destructive p-3 text-sm">
           <p>{saveError}</p>
-          {pendingFrames > 0 && <><p className="mt-2">Unsaved photos are still on this page. Retry before leaving.</p><button disabled={retrying} onClick={() => void retryFrames()} className="mt-2 min-h-11 rounded-lg bg-foreground px-4 text-background">{retrying ? "Retrying…" : "Retry saving and sending photos"}</button></>}
-          {incomplete && pendingFrames === 0 && <button onClick={() => { cancelled.current = true; router.push("/customize"); }} className="mt-2 min-h-11 px-2 font-medium underline underline-offset-4">Open saved shots (incomplete)</button>}
+          {pendingFrames > 0 && <><p className="mt-2">Some photos haven&apos;t saved yet. Try again before you leave.</p><button disabled={retrying} onClick={() => void retryFrames()} className="mt-2 min-h-11 rounded-lg bg-foreground px-4 text-background">{retrying ? "Trying again…" : "Try saving and sending again"}</button></>}
+          {incomplete && pendingFrames === 0 && <button onClick={() => { cancelled.current = true; router.push("/customize"); }} className="mt-2 min-h-11 px-2 font-medium underline underline-offset-4">Carry on with the photos you have</button>}
         </div>}
       </div>
     </main>
