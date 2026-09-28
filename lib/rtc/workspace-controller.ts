@@ -143,9 +143,10 @@ export class RoomWorkspaceController {
   }
   private acceptState(value: RoomState, current: () => boolean = () => true): Promise<void> {
     const room = validateRoomState(value);
+    const stillCurrent = () => current() && !(this.snapshot.room.status === "ended" && room.status !== "ended");
     return this.enqueue(async () => {
     this.check();
-    if (!current()) return;
+    if (!stillCurrent()) return;
     if (room.roomId !== this.initial.roomId || room.sessionId !== this.initial.sessionId || room.selfId !== this.initial.selfId) throw new Error("room_identity_changed");
     if (room.rosterRevision < this.snapshot.room.rosterRevision || room.serverNow < this.snapshot.room.serverNow) return;
     this.clockOffset = room.serverNow - Date.now();
@@ -163,20 +164,22 @@ export class RoomWorkspaceController {
       const previous = this.rosterKey;
       if (this.pendingWrite) await this.persistRecipe(this.pendingWrite);
       const draft = await this.store!.loadDraft(room); this.check();
-      if (!current()) return;
+      if (!stillCurrent()) return;
       this.coordinator?.close(); this.coordinator = null;
       this.rosterKey = key; this.lastBroadcast = "";
       this.patch({ draft: draft.project, recipe: draft.recipe, recoveryRecipe: null, pendingProposal: false, capturing: false, ...(previous ? { round: null, savedShots: 0, status: "The group changed, so there's a fresh design. Earlier rounds are in My projects." } : {}) });
       if (this.context().members.length >= 2) {
         const recipe = draft.recipe ?? await initialRecipeCommit(this.context());
+        if (!stillCurrent()) return;
         const saved = await this.store!.saveRecipe(recipe); this.check();
+        if (!stillCurrent()) return;
         this.patch({ draft: saved.project, recipe });
         if (room.selfId === room.hostId) this.coordinator = new RecipeCoordinator(recipe, () => this.context());
       }
     }
     if (this.store && room.capture?.memberIds.includes(room.selfId) && room.capture.rosterRevision === room.rosterRevision && this.snapshot.round?.id !== room.capture.captureId) {
       const round = await this.store.loadRound(room.capture.captureId); this.check();
-      if (!current()) return;
+      if (!stillCurrent()) return;
       if (round) this.patch({ round: round.project, savedShots: round.project.media.filter(media => media.kind === "photo").length });
     }
     this.updatePeers();
@@ -418,7 +421,7 @@ export class RoomWorkspaceController {
     });
   }
   async control(action: "admit" | "remove" | "lock" | "end", value?: string | boolean) {
-    if (action === "end") { await this.api.control(action, {}); this.disconnect(); this.patch({ room: { ...this.snapshot.room, status: "ended" } }); return; }
+    if (action === "end") { await this.api.control(action, {}); this.disconnect(); this.patch({ room: { ...this.snapshot.room, status: "ended" }, status: "This room has ended. Your projects are linked below." }); return; }
     const result = await this.api.control(action, action === "lock" ? { locked: value } : { memberId: value });
     if ("roomId" in result) await this.acceptState(result);
     if (this.engine) await this.engine.refresh();

@@ -36,7 +36,7 @@ function fixture(guest = false) {
     acceptHostSnapshot: async commit => { accepted.push(commit.revision); if (failAcceptance) throw new Error("quota"); project = { ...project, editor: commit.recipe.editor }; return { draft: { project, recipe: commit }, round: null }; },
     close: async () => { closedStore = true; },
   };
-  const api: RoomApi = { state: async () => state, signal: unused, poll: unused, prepare: unused, capture: unused, ack: unused, commit: unused, abort: unused, control: unused };
+  const api: RoomApi = { state: async () => state, signal: unused, poll: unused, prepare: unused, capture: unused, ack: unused, commit: unused, abort: unused, control: async action => { if (action !== "end") return unused(); state = { ...state, status: "ended" }; return { ended: true }; } };
   const blob = new Blob(["retained original bytes"], { type: "image/jpeg" });
   const deps: RoomWorkspaceDependencies = {
     api, openStore: async () => { await openGate; return store; }, iceServers: () => [], captureOriginal: async () => { captures++; return blob; },
@@ -211,4 +211,81 @@ test("guided rounds freeze four story prompts and a 15-second interval in the ca
   assert.equal(f.proposals[0].recipeHash, f.controller.getSnapshot().recipe?.recipeHash);
   await assert.rejects(f.controller.edit({ kind: "shared", patch: { story: null } }), /not_ready/);
   await f.controller.close();
+});
+
+test("ending without a camera replaces the camera prompt with the terminal room status", async () => {
+  const f = fixture();
+  try {
+    await f.controller.start();
+    assert.match(f.controller.getSnapshot().status, /Turn on your camera/);
+    await f.controller.control("end");
+    assert.equal(f.controller.getSnapshot().room.status, "ended");
+    assert.match(f.controller.getSnapshot().status, /room has ended/);
+    assert.equal(f.controller.getSnapshot().cameraConnected, false);
+  } finally { await f.controller.close(); }
+});
+
+test("terminal room transitions preserve unsaved originals and their recovery error", async () => {
+  for (const removed of [false, true]) {
+    const f = fixture();
+    try {
+      await f.connect(); f.failFrame(true);
+      await assert.rejects(f.engines[0].options.captureShot(captureFixture(), 0), /quota/);
+      const before = f.controller.getSnapshot();
+      if (removed) {
+        f.setState({ ...f.state, rosterRevision: 2, serverNow: f.state.serverNow + 1,
+          members: f.state.members.map(member => member.id === f.state.selfId ? { ...member, status: "removed" } : member) });
+        await f.controller.refresh();
+      } else await f.controller.control("end");
+      const after = f.controller.getSnapshot();
+      assert.match(after.status, removed ? /no longer in this room/ : /room has ended/);
+      assert.deepEqual(after.pendingLocalFrames, before.pendingLocalFrames);
+      assert.equal(after.error, before.error);
+      assert.equal(f.controller.getLocalRecoveryBlob(before.pendingLocalFrames[0].id), f.blob);
+      assert.equal(after.cameraConnected, false);
+    } finally { await f.controller.close(); }
+  }
+});
+
+test("acknowledged end is immediate during a saved edit and cannot be reopened by a newer queued refresh", async () => {
+  const f = fixture(), gate = deferred();
+  let edit: Promise<unknown> | undefined, refresh: Promise<unknown> | undefined;
+  try {
+    await f.connect(); f.saveGate(gate.promise);
+    edit = f.controller.edit({ kind: "shared", patch: { caption: "Saved while ending" } });
+    await until(() => f.recipeWrites.length === 2);
+    const newerOpen = { ...f.state, serverNow: f.state.serverNow + 100, rosterRevision: 2 };
+    f.setState(newerOpen); refresh = f.controller.refresh(); await tick();
+    await f.controller.control("end");
+    assert.equal(f.controller.getSnapshot().cameraConnected, false);
+    assert.equal(f.controller.getSnapshot().room.status, "ended");
+    gate.resolve(); await edit; await refresh;
+    f.setState({ ...newerOpen, serverNow: newerOpen.serverNow + 100 });
+    await f.controller.refresh();
+    assert.equal(f.controller.getSnapshot().room.status, "ended");
+    assert.match(f.controller.getSnapshot().status, /room has ended/);
+    assert.equal(f.controller.getSnapshot().draft?.editor.caption, "Saved while ending");
+    assert.equal(f.controller.getSnapshot().cameraConnected, false);
+  } finally { gate.resolve(); await Promise.allSettled([edit, refresh]); await f.controller.close(); }
+});
+
+test("end during an in-flight camera-off draft load preserves terminal status and saved round", async () => {
+  const f = fixture(), gate = deferred(); let refresh: Promise<unknown> | undefined;
+  try {
+    await f.connect(); await f.engines[0].options.captureShot(captureFixture(), 0);
+    f.controller.disconnect();
+    const before = f.controller.getSnapshot(), loadDraft = f.store.loadDraft;
+    let loading = false;
+    f.store.loadDraft = async room => { loading = true; await gate.promise; return loadDraft(room); };
+    f.setState({ ...f.state, rosterRevision: 2, serverNow: f.state.serverNow + 100 });
+    refresh = f.controller.refresh(); await until(() => loading);
+    await f.controller.control("end");
+    gate.resolve(); await refresh;
+    const after = f.controller.getSnapshot();
+    assert.equal(after.room.status, "ended");
+    assert.match(after.status, /room has ended/);
+    assert.equal(after.round, before.round);
+    assert.equal(after.savedShots, before.savedShots);
+    assert.equal(after.cameraConnected, false);
+  } finally { gate.resolve(); await Promise.allSettled([refresh]); await f.controller.close(); }
 });
