@@ -43,14 +43,14 @@ export function CloudDesignPanel({ client, projectId, disabled, onBusy, onOpened
         const code = failure && typeof failure === "object" && "code" in failure ? String(failure.code) : "";
         setRecord(null); setChecked(false);
         const messages: Record<string, string> = {
-          update_required: "Editable cloud designs need a server update here. Your originals and device projects remain available.",
+          update_required: "Saved designs aren't available on this server yet.",
           design_changed: "This saved design changed. Check it again before opening a copy.",
-          missing_design: "This design checkpoint is no longer available. Check the latest saved design.",
-          source_unavailable: "An original is no longer available. No replacement photo was used. Check the latest saved design.",
-          integrity_failed: "An original did not match the saved design. Keep your existing files and try again later.",
-          cleanup_failed: "Opening stopped, but a local copy could not be removed. Check this account’s My projects before opening another copy.",
+          missing_design: "This version isn't available anymore. Check the latest saved design.",
+          source_unavailable: "One of the design's photos isn't available anymore. Check the latest saved design.",
+          integrity_failed: "One of the photos didn't match the saved design. Try again later.",
+          cleanup_failed: "Opening stopped, but a partial copy may be left in My projects. Check there before trying again.",
         };
-        setError(code === "cleanup_failed" ? messages[code] : abort.signal.aborted ? "Opening stopped. Your existing device projects are unchanged." : messages[code] ?? cloudError(failure));
+        setError(code === "cleanup_failed" ? messages[code] : abort.signal.aborted ? "Opening stopped." : messages[code] ?? cloudError(failure));
       }
     } finally {
       running.current = false;
@@ -82,18 +82,18 @@ export function CloudDesignPanel({ client, projectId, disabled, onBusy, onOpened
   });
   return <section className="border-b border-border py-6" aria-labelledby={`${id}-title`} aria-busy={busy}>
     <div className="flex flex-wrap items-start justify-between gap-5">
-      <div className="max-w-xl"><h3 ref={heading} id={`${id}-title`} tabIndex={-1} className="font-display text-2xl outline-none">Open a saved design</h3><p className="mt-2 text-sm leading-relaxed text-foreground/70">Open the design and available originals as a new local copy.</p></div>
-      <div className="w-full sm:w-60"><Dropdown label="Saved design version" showLabel value={checkpoint} disabled={disabled || busy} options={[{ value: "current", label: "Latest saved design" }, { value: "previous", label: "Previous checkpoint" }]} onChange={value => { setCheckpoint(value as typeof checkpoint); setRecord(null); setChecked(false); setSavedCopy(null); setError(null); }} /></div>
+      <div className="max-w-xl"><h3 ref={heading} id={`${id}-title`} tabIndex={-1} className="font-display text-2xl outline-none">Open a saved design</h3><p className="mt-2 text-sm leading-relaxed text-foreground/70">Open it as a new project on this device.</p></div>
+      <div className="w-full sm:w-60"><Dropdown label="Version" showLabel value={checkpoint} disabled={disabled || busy} options={[{ value: "current", label: "Latest" }, { value: "previous", label: "Previous" }]} onChange={value => { setCheckpoint(value as typeof checkpoint); setRecord(null); setChecked(false); setSavedCopy(null); setError(null); }} /></div>
     </div>
     {error && <p role="alert" className="mt-4 max-w-2xl rounded-xl bg-muted p-4 text-sm leading-relaxed">{error}</p>}
-    {checked && !record && <p role="status" className="mt-4 text-sm text-foreground/70">{checkpoint === "current" ? "No editable design has been saved to this cloud project yet. Uploaded originals remain available below." : "There is no previous design checkpoint available."}</p>}
-    {record && <div className="mt-4 space-y-2 text-sm"><p className="font-medium">{record.unsupported ? "A design from a newer app" : record.snapshot.project.name}</p><p className="text-foreground/70">Version {record.revision + 1} · Saved {new Date(record.savedAt).toLocaleString("en-AU")}{!record.unsupported && ` · ${record.snapshot.bindings.length} original ${record.snapshot.bindings.length === 1 ? "file" : "files"}`}</p><p className="max-w-2xl leading-relaxed text-foreground/70">{record.unsupported ? "Keep a raw design backup and open it with a compatible app. This JSON file contains the design only; it does not include original photos." : "All originals must still be accessible. Downloaded copies remain on this device if access changes later."}</p></div>}
-    {savedCopy && <p role="status" className="mt-4 text-sm">An editable copy was saved in this account’s local projects. If the editor did not open, find it in My projects.</p>}
+    {checked && !record && <p role="status" className="mt-4 text-sm text-foreground/70">{checkpoint === "current" ? "No design has been saved to this project yet." : "There's no previous version."}</p>}
+    {record && <div className="mt-4 space-y-2 text-sm"><p className="font-medium">{record.unsupported ? "A design from a newer app" : record.snapshot.project.name}</p><p className="text-foreground/70">Version {record.revision + 1} · Saved {new Date(record.savedAt).toLocaleString("en-AU")}{!record.unsupported && ` · ${record.snapshot.bindings.length} ${record.snapshot.bindings.length === 1 ? "photo" : "photos"}`}</p>{record.unsupported && <p className="max-w-2xl leading-relaxed text-foreground/70">This design needs a newer version of the app. You can back it up as a JSON file, without photos.</p>}</div>}
+    {savedCopy && <p role="status" className="mt-4 text-sm">A copy was saved to My projects.</p>}
     <div className="mt-5 flex flex-wrap gap-3">
-      <button className={`${cloudControl} border border-border`} disabled={disabled || busy} onClick={() => void inspect()}>{checked ? "Check saved design again" : "Check saved design"}</button>
-      {record && (record.unsupported ? <button className={`${cloudControl} border border-border`} disabled={disabled || busy} onClick={() => void backup()}><ArrowDownToLine size={17} aria-hidden /> Back up design JSON</button> : <button className={`${cloudControl} bg-accent text-accent-foreground`} disabled={disabled || busy} onClick={() => void open()}><FolderOpen size={17} aria-hidden /> Open editable copy</button>)}
-      {busy && <button className={cloudControl} onClick={() => controller.current?.abort()}>Stop opening</button>}
+      <button className={`${cloudControl} border border-border`} disabled={disabled || busy} onClick={() => void inspect()}>{checked ? "Check again" : "Check saved design"}</button>
+      {record && (record.unsupported ? <button className={`${cloudControl} border border-border`} disabled={disabled || busy} onClick={() => void backup()}><ArrowDownToLine size={17} aria-hidden /> Back up design JSON</button> : <button className={`${cloudControl} bg-accent text-accent-foreground`} disabled={disabled || busy} onClick={() => void open()}><FolderOpen size={17} aria-hidden /> Open a copy</button>)}
+      {busy && <button className={cloudControl} onClick={() => controller.current?.abort()}>Stop</button>}
     </div>
-    {busy && <p role="status" className="mt-3 flex items-center gap-2 text-sm"><LoaderCircle size={16} aria-hidden className="animate-spin motion-reduce:animate-none" /> Checking access and preparing your copy…</p>}
+    {busy && <p role="status" className="mt-3 flex items-center gap-2 text-sm"><LoaderCircle size={16} aria-hidden className="animate-spin motion-reduce:animate-none" /> Preparing your copy…</p>}
   </section>;
 }

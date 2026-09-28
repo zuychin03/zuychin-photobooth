@@ -11,13 +11,13 @@ export function createPcmVoiceRecorder(callbacks: { state(value: PcmVoiceState):
     if (context) { void context.close().catch(() => {}); context = undefined; }
   }
   function cancel() { generation++; busy = false; release(); callbacks.state("idle"); }
-  function fail(error: unknown) { cancel(); callbacks.error(error instanceof Error ? error : new Error("Audio recording failed. Use a text caption instead.")); }
+  function fail(error: unknown) { cancel(); callbacks.error(error instanceof Error ? error : new Error("Couldn't record audio. Use a text caption instead.")); }
   function stop() {
     if (!node) return;
     callbacks.state("finishing"); clearTimeout(timer);
     node.port.postMessage("stop");
     stream?.getTracks().forEach(track => track.stop()); stream = undefined;
-    clearTimeout(finishTimer); finishTimer = setTimeout(() => fail(new Error("Recording could not finish. Please try again.")), 3000);
+    clearTimeout(finishTimer); finishTimer = setTimeout(() => fail(new Error("The recording didn't finish. Try again.")), 3000);
   }
   async function start() {
     if (busy) return;
@@ -29,7 +29,7 @@ export function createPcmVoiceRecorder(callbacks: { state(value: PcmVoiceState):
       stream = acquired;
       timer = setTimeout(() => { if (ticket === generation) fail(new Error("Audio setup took too long. Use a text caption or try again.")); }, 10_000);
       context = new AudioContext({ sampleRate: PCM_VOICE.rate });
-      if (context.sampleRate !== PCM_VOICE.rate || !context.audioWorklet) throw new Error("This browser cannot record this audio format. Use a text caption instead.");
+      if (context.sampleRate !== PCM_VOICE.rate || !context.audioWorklet) throw new Error("This browser can't record audio here. Use a text caption instead.");
       const current = context;
       await current.audioWorklet.addModule("/voice-pcm-worklet.js");
       if (ticket !== generation) return;
@@ -44,7 +44,7 @@ export function createPcmVoiceRecorder(callbacks: { state(value: PcmVoiceState):
           const bytes = encodeVoiceWav(samples.subarray(0, count));
           cancel(); callbacks.ready(new Blob([bytes], { type: "audio/wav" })); return;
         }
-        if (value?.sequence !== sequence++ || !(value.samples instanceof Int16Array) || value.samples.length < 1 || value.samples.length > PCM_VOICE.block || count + value.samples.length > samples.length) { fail(new Error("Recording exceeded its safe limits.")); return; }
+        if (value?.sequence !== sequence++ || !(value.samples instanceof Int16Array) || value.samples.length < 1 || value.samples.length > PCM_VOICE.block || count + value.samples.length > samples.length) { fail(new Error("The recording got too long.")); return; }
         samples.set(value.samples, count); count += value.samples.length;
       };
       node.onprocessorerror = () => { if (ticket === generation) fail(new Error("Recording stopped unexpectedly. Use a text caption instead.")); };

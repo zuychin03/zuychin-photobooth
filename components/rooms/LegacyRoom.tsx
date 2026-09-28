@@ -180,7 +180,7 @@ function RoomInner({ rehearsal }: { rehearsal?: LegacyRoomRehearsal }) {
     if (finishTimer.current) clearTimeout(finishTimer.current);
     queueMicrotask(() => {
       setAccountChanged(true); setPendingFrames(0); setIncomplete(false); setCount(null);
-      setSaveError("You switched accounts, so this round stopped. Head home before you start another room.");
+      setSaveError("You switched accounts, so this round stopped. Go to the home page to start a new room.");
     });
   }, [ownerId]);
 
@@ -718,7 +718,7 @@ function RoomInner({ rehearsal }: { rehearsal?: LegacyRoomRehearsal }) {
         {saveError && <div role="alert" className="rounded-xl border border-destructive p-3 text-sm">
           <p>{saveError}</p>
           {pendingFrames > 0 && <><p className="mt-2">Some photos haven&apos;t saved yet. Try again before you leave.</p><button disabled={retrying} onClick={() => void retryFrames()} className="mt-2 min-h-11 rounded-lg bg-foreground px-4 text-background">{retrying ? "Trying again…" : "Try saving and sending again"}</button></>}
-          {incomplete && pendingFrames === 0 && <button onClick={() => { cancelled.current = true; router.push("/customize"); }} className="mt-2 min-h-11 px-2 font-medium underline underline-offset-4">Carry on with the photos you have</button>}
+          {incomplete && pendingFrames === 0 && <button onClick={() => { cancelled.current = true; router.push("/customize"); }} className="mt-2 min-h-11 px-2 font-medium underline underline-offset-4">Continue with the photos you have</button>}
         </div>}
       </div>
     </main>

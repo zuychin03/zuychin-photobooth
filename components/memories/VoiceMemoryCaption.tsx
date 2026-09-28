@@ -12,12 +12,12 @@ import { PCM_VOICE } from "@/lib/memories/voice-wav";
 
 function message(error: unknown) {
   const code = error && typeof error === "object" && "code" in error ? error.code : "";
-  if (code === "conflict") return "This caption changed elsewhere. Download your draft, then discard it and refresh before editing.";
-  if (code === "account_changed" || code === "access_denied" || code === "access_changed") return "Your access changed. Reopen your own memories before continuing.";
-  if (code === "source_unavailable") return "This memory is no longer available. Your saved draft has not been sent.";
-  if (code === "quota_exceeded" || code === "capacity") return "Caption storage is full. Delete an older caption and retry after cleanup finishes.";
-  if (code === "journal_readonly") return "This draft needs a newer app. It has not been overwritten.";
-  return "The caption could not be saved or loaded. Your recovery draft is kept on this device when available. Retry after checking your connection.";
+  if (code === "conflict") return "This caption changed somewhere else. Download your draft, then discard it and refresh.";
+  if (code === "account_changed" || code === "access_denied" || code === "access_changed") return "Your access changed. Go back to your memories.";
+  if (code === "source_unavailable") return "This memory isn't available anymore. Your draft wasn't sent.";
+  if (code === "quota_exceeded" || code === "capacity") return "Caption storage is full. Delete an older caption, then try again.";
+  if (code === "journal_readonly") return "This draft needs a newer version of the app.";
+  return "Couldn't save or load the caption. Check your connection and try again.";
 }
 function download(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob), link = document.createElement("a");
@@ -43,7 +43,7 @@ export default function VoiceMemoryCaption({ activityId, client, journal, onDirt
   function restoreFocus() { requestAnimationFrame(() => { if (!alive.current) return; const target = invokedBy.current; if (target?.isConnected && !target.disabled) target.focus(); else heading.current?.focus(); }); }
   function ask(kind: "delete" | "discard" | "refresh", trigger: HTMLButtonElement) { invokedBy.current = trigger; setConfirmation({ kind, revision: snapshot?.revision ?? 0 }); }
   function cancelConfirmation() { setConfirmation(null); restoreFocus(); }
-  const loseAccess = () => { recorder.current?.cancel(); clearPreview(); setText(""); setBlob(null); setDraft(null); setSnapshot(null); setLost(true); setBusy(false); setNote(""); setError("Your access changed. Reopen your own memories before continuing."); };
+  const loseAccess = () => { recorder.current?.cancel(); clearPreview(); setText(""); setBlob(null); setDraft(null); setSnapshot(null); setLost(true); setBusy(false); setNote(""); setError("Your access changed. Go back to your memories."); };
   const failed = (failure: unknown) => {
     const code = failure && typeof failure === "object" && "code" in failure ? failure.code : "";
     if (["account_changed", "access_denied", "access_changed", "source_unavailable"].includes(String(code))) loseAccess();
@@ -53,12 +53,12 @@ export default function VoiceMemoryCaption({ activityId, client, journal, onDirt
     const [saved, recovered] = await Promise.all([client.read(activityId, signal), journal.get(activityId)]); active(signal);
     clearPreview(); setSnapshot(saved); setDraft(recovered); setText(recovered?.text ?? saved.text); setBlob(recovered?.blob ?? null); setAudioChange(recovered?.audio ?? "keep");
     if (recovered?.blob) showPreview(recovered.blob);
-    setNote(recovered ? "Recovered a private draft from this device. Review it before retrying." : "");
+    setNote(recovered ? "Found a draft on this device. Check it before saving." : "");
   }
   useEffect(() => {
     alive.current = true; suspended.current = false; const controller = new AbortController(); task.current = controller;
     const leave = () => { suspended.current = true; recorder.current?.cancel(); player.current?.pause(); task.current?.abort(); setBusy(false); };
-    const resume = () => { if (!suspended.current) return; suspended.current = false; if (alive.current) { setBusy(false); setNote("Returned to the caption. Refresh to recover any interrupted save before continuing."); } };
+    const resume = () => { if (!suspended.current) return; suspended.current = false; if (alive.current) { setBusy(false); setNote("Refresh to check whether your last save went through."); } };
     const hidden = () => { if (document.visibilityState === "hidden") { recorder.current?.cancel(); player.current?.pause(); } };
     const invalidated = () => { if (alive.current) { leave(); loseAccess(); } };
     window.addEventListener("pagehide", leave);
@@ -92,13 +92,13 @@ export default function VoiceMemoryCaption({ activityId, client, journal, onDirt
     const saved = frozen.kind === "delete" ? await client.delete(activityId, { requestId: frozen.requestId, revision: frozen.remoteRevision }, signal) : await client.save(activityId, await voiceDraftRequest(frozen), signal);
     active(signal); await journal.forget(activityId, frozen.revision); active(signal);
     setSnapshot(saved); setDraft(null); setText(saved.text); setBlob(null); setAudioChange("keep"); clearPreview();
-    setNote(frozen.kind === "delete" ? "Caption deleted. Stored audio cleanup may still be finishing." : "Private caption saved with this memory.");
+    setNote(frozen.kind === "delete" ? "Caption deleted." : "Caption saved.");
   }
   const button = `${cloudControl} border border-border hover:bg-muted`;
   return <section inert={locked} className="space-y-4 border-t border-border pt-6" aria-labelledby={`${id}-title`}>
-    <h3 ref={heading} tabIndex={-1} id={`${id}-title`} className="font-display text-xl outline-none">Your private voice caption</h3>
-    <p className="text-sm text-foreground/75">Only you can access this note. Record up to 30 seconds or write a caption.</p>
-    <p role="status" className="text-sm">{recording === "recording" ? `Recording: ${seconds} / 30 seconds` : recording === "requesting" ? synthetic ? "Preparing synthetic audio…" : "Waiting for microphone permission…" : recording === "finishing" ? "Finishing recording…" : busy ? "Checking caption…" : note}</p>
+    <h3 ref={heading} tabIndex={-1} id={`${id}-title`} className="font-display text-xl outline-none">Voice caption</h3>
+    <p className="text-sm text-foreground/75">Only you can see this. Record up to 30 seconds, or write a caption.</p>
+    <p role="status" className="text-sm">{recording === "recording" ? `Recording: ${seconds} / 30 seconds` : recording === "requesting" ? synthetic ? "Preparing synthetic audio…" : "Waiting for microphone permission…" : recording === "finishing" ? "Finishing recording…" : busy ? "Loading…" : note}</p>
     {error && <p role="alert" className="text-sm text-red-700 dark:text-red-300">{error}</p>}
     <div className="flex flex-wrap gap-2">
       <button className={button} disabled={disabled || pending} onClick={() => {
@@ -108,43 +108,43 @@ export default function VoiceMemoryCaption({ activityId, client, journal, onDirt
         recorder.current = createPcmVoiceRecorder({ state: value => { if (alive.current) setRecording(value); }, error: failure => { if (alive.current) setError(failure.message); }, ready: value => {
           try { active(); } catch { return; }
           setBlob(value); setAudioChange("replace"); showPreview(value);
-          void run(async signal => { await keepDraft(value, "replace", signal); setNote("Audio is saved privately on this device. Save caption to upload it."); });
+          void run(async signal => { await keepDraft(value, "replace", signal); setNote("Audio saved on this device. Choose Save caption to upload it."); });
         } }, acquire);
         void recorder.current.start();
       }}>{synthetic ? "Record synthetic PCM tone" : "Allow microphone and record"}</button>
       {recording === "recording" && <button className={button} onClick={() => recorder.current?.stop()}>Stop recording</button>}
       {recording !== "idle" && <button className={button} onClick={() => recorder.current?.cancel()}>Cancel recording</button>}
-      {snapshot?.audio && audioChange === "keep" && <button className={button} disabled={disabled} onClick={() => void run(async signal => { const audio = await client.download(activityId, signal); active(signal); showPreview(audio); })}>Load audio for playback</button>}
+      {snapshot?.audio && audioChange === "keep" && <button className={button} disabled={disabled} onClick={() => void run(async signal => { const audio = await client.download(activityId, signal); active(signal); showPreview(audio); })}>Load audio</button>}
     </div>
-    {preview && <audio ref={player} controls={!confirmation && !locked} preload="metadata" src={preview} aria-label="Private voice caption playback" />}
+    {preview && <audio ref={player} controls={!confirmation && !locked} preload="metadata" src={preview} aria-label="Voice caption" />}
     {(blob || snapshot?.audio && audioChange === "keep") && <div className="flex flex-wrap gap-2">
       <button className={button} disabled={disabled} onClick={() => void run(async signal => { const audio = blob ?? await client.download(activityId, signal); active(signal); download(audio, "voice-caption.wav"); })}>Download audio</button>
       <button className={button} disabled={disabled || pending} onClick={() => { clearPreview(); setBlob(null); setAudioChange("remove"); setNote("Audio will be removed when you save the caption."); }}>Remove audio</button>
     </div>}
-    <label htmlFor={`${id}-text`} className="block text-sm font-medium">Text alternative</label>
+    <label htmlFor={`${id}-text`} className="block text-sm font-medium">Text caption</label>
     <textarea id={`${id}-text`} rows={4} className={cloudInput} maxLength={PCM_VOICE.text} value={text} disabled={disabled || pending} onChange={event => setText(event.target.value)} />
-    <p className="text-xs text-foreground/70">Keep a draft or save before leaving to retain your text. <HelpTooltip label="About audio downloads">Recordings download as WAV files, up to 2.9 MB.</HelpTooltip></p>
+    <p className="text-xs text-foreground/70">Save before you leave, or keep a draft. <HelpTooltip label="About audio downloads">Recordings download as WAV files, up to 2.9 MB.</HelpTooltip></p>
     <div className="flex flex-wrap gap-2">
       <button className={button} disabled={disabled} onClick={() => void run(async signal => {
         const savedDraft = pending ? draft! : await keepDraft(blob, audioChange, signal); active(signal);
         const frozen = await journal.freeze(activityId, savedDraft.revision); active(signal); setDraft(frozen);
         await send(frozen, signal);
-      })}>{pending ? "Retry saved request" : "Save caption"}</button>
-      <button className={button} disabled={disabled || pending} onClick={() => void run(async signal => { await keepDraft(blob, audioChange, signal); setNote("Private draft kept on this device."); })}>Keep draft on this device</button>
+      })}>{pending ? "Try again" : "Save caption"}</button>
+      <button className={button} disabled={disabled || pending} onClick={() => void run(async signal => { await keepDraft(blob, audioChange, signal); setNote("Draft kept on this device."); })}>Keep as draft</button>
       <button className={button} disabled={disabled || !text} onClick={() => download(new Blob([text], { type: "text/plain;charset=utf-8" }), "voice-caption.txt")}>Download text</button>
-      {draft && <button className={button} disabled={disabled} onClick={event => ask("discard", event.currentTarget)}>Discard local draft and refresh</button>}
-      <button className={button} disabled={disabled || Boolean(draft)} onClick={event => ask("delete", event.currentTarget)}>Delete saved caption</button>
-      <button className={button} disabled={busy || lost || recording !== "idle" || locked || confirmation !== null} onClick={event => { if (dirty) ask("refresh", event.currentTarget); else void run(load); }}>Refresh caption</button>
+      {draft && <button className={button} disabled={disabled} onClick={event => ask("discard", event.currentTarget)}>Discard draft</button>}
+      <button className={button} disabled={disabled || Boolean(draft)} onClick={event => ask("delete", event.currentTarget)}>Delete caption</button>
+      <button className={button} disabled={busy || lost || recording !== "idle" || locked || confirmation !== null} onClick={event => { if (dirty) ask("refresh", event.currentTarget); else void run(load); }}>Refresh</button>
     </div>
     {confirmation && <div role="group" aria-label="Confirm caption change" aria-describedby={`${id}-confirmation`} onKeyDown={event => { if (event.key === "Escape" && !unavailable) { event.preventDefault(); cancelConfirmation(); } }} className="space-y-3 rounded-xl border border-border p-4">
-      <p id={`${id}-confirmation`} className="text-sm">{confirmation.kind === "delete" ? "Delete this saved voice caption and text? This cannot be undone." : confirmation.kind === "discard" ? "Discard the local recovery draft? A pending request may already have saved on the server. This does not undo it. The saved caption will be refreshed." : "Refresh and discard unsaved changes in this tab? Any saved recovery draft will remain."}</p>
+      <p id={`${id}-confirmation`} className="text-sm">{confirmation.kind === "delete" ? "Delete this caption and its audio? You can't undo this." : confirmation.kind === "discard" ? "Discard your draft? If a save already went through, it stays." : "Refresh and lose unsaved changes? Your kept draft stays."}</p>
       <div className="flex flex-wrap gap-2"><button className={button} disabled={unavailable} onClick={() => {
         const action = confirmation; setConfirmation(null);
         void run(async signal => {
           if (action.kind === "delete") { const frozen = await journal.prepareDelete(activityId, action.revision); active(signal); setDraft(frozen); await send(frozen, signal); }
           else { if (action.kind === "discard" && draft) await journal.forget(activityId, draft.revision); await load(signal); }
         }).finally(restoreFocus);
-      }}>Confirm {confirmation.kind === "delete" ? "deletion" : confirmation.kind}</button><button ref={keepButton} className={button} disabled={unavailable} onClick={cancelConfirmation}>Keep editing</button></div>
+      }}>{confirmation.kind === "delete" ? "Delete" : confirmation.kind === "discard" ? "Discard" : "Refresh"}</button><button ref={keepButton} className={button} disabled={unavailable} onClick={cancelConfirmation}>Keep editing</button></div>
     </div>}
   </section>;
 }

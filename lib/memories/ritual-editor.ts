@@ -23,7 +23,7 @@ export function reviewRitual(fields: RitualFields, now: string, legacy?: RitualR
   if (fields.frequency === "once") {
     // A one-off is resolved from its own date, never advanced into another year.
     const resolved = nextRitualOccurrence({ ...base, frequency: "yearly", paused: false }, new Date(Date.parse(`${fields.date}T00:00:00Z`) - 172_800_000).toISOString());
-    if (!resolved || resolved.cycle !== 0) throw new Error("That local time does not occur. Choose another time or allow the daylight-saving adjustment.");
+    if (!resolved || resolved.cycle !== 0) throw new Error("That time doesn't exist on that day because of daylight saving. Choose another time.");
     let onceAt = resolved.instant;
     const existingInstant = legacy?.legacy && legacy.cadence === "once" ? legacy.scheduledAt : legacy?.schedule?.frequency === "once" && legacy.schedule.timeZone === base.timeZone && legacy.schedule.fold === fields.fold && legacy.schedule.gap === fields.gap ? legacy.schedule.onceAt : null;
     if (existingInstant) {
@@ -36,7 +36,7 @@ export function reviewRitual(fields: RitualFields, now: string, legacy?: RitualR
   } else schedule = { ...base, frequency: fields.frequency, onceAt: null };
   const input = validateRitualEdit({ title: fields.title.trim(), schedule });
   const occurrence = computeRitualProof(input.schedule, now).occurrence;
-  if (!occurrence) throw new Error("Choose a future date and time. This schedule has no upcoming occurrence.");
+  if (!occurrence) throw new Error("Choose a date and time in the future.");
   return { input, occurrence, adjustments: [...new Set([...adjustments, ...occurrence.adjustments])] };
 }
 export function ritualInstant(instant: string, zone: string): string {
@@ -44,12 +44,12 @@ export function ritualInstant(instant: string, zone: string): string {
 }
 export function ritualError(error: unknown): string {
   const code = error && typeof error === "object" && "code" in error ? error.code : "";
-  if (code === "account_changed" || code === "access_denied") return "This account can no longer manage these reminders. Return to your album and check your pairing.";
-  if (code === "unavailable") return "Rituals could not be loaded or confirmed here at the moment. Refresh before making another change.";
-  if (code === "capacity") return "This pair already has 20 reminders. Delete one you no longer need before adding another.";
-  if (code === "conflict" || code === "schedule_changed") return "This reminder changed. Refresh and review its current schedule before trying again.";
-  if (code === "no_future_occurrence") return "This schedule has no future occurrence. Choose a later date or edit the repeat settings.";
+  if (code === "account_changed" || code === "access_denied") return "You can't manage these reminders anymore. Check your pairing in your album.";
+  if (code === "unavailable") return "Couldn't load rituals right now. Refresh before making another change.";
+  if (code === "capacity") return "You already have 20 rituals. Delete one to add another.";
+  if (code === "conflict" || code === "schedule_changed") return "This reminder changed. Refresh and check it before trying again.";
+  if (code === "no_future_occurrence") return "This schedule has nothing coming up. Choose a later date or change how often it repeats.";
   if (code === "invalid_request") return "Check the title, date, time and timezone before trying again.";
   if (code === "rate_limited") return "Too many requests. Wait a minute, then refresh and try again.";
-  return "The response could not be confirmed. Your change may have arrived. Refresh before another action; retry a new ritual with the same reviewed request.";
+  return "No reply from the server, but your change may have worked. Refresh before trying again.";
 }

@@ -54,7 +54,7 @@ function Designer() {
   const templatesButton = useRef<HTMLButtonElement>(null), keepDesigning = useRef<HTMLButtonElement>(null);
   const leaveTrigger = useRef<HTMLElement | null>(null);
   const allowNavigation = (path: string) => {
-    if (working.current || busy) { setStatus("Hang on a second, still saving your design."); return false; }
+    if (working.current || busy) { setStatus("Wait for your design to finish saving."); return false; }
     if (!dirty) return true;
     leaveTrigger.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     setLeaveTo(path); return false;
@@ -120,7 +120,7 @@ function Designer() {
           if (!active) return; value[role].push(shot ? await cutout(shot) : null);
         }
         if (active) setCuts({ sources: session.shots, value });
-      } catch { if (active) { setCuts(null); setStatus("Background removal doesn't work here, so you're seeing the photos as they are."); } }
+      } catch { if (active) { setCuts(null); setStatus("Background removal doesn't work on this device."); } }
       finally { if (active) setSegmenting(false); }
     };
     void prepare(); return () => { active = false; };
@@ -233,7 +233,7 @@ function Designer() {
         </div>
         <div className="mt-3 flex flex-wrap items-center justify-between gap-3"><p className="text-sm text-muted-foreground">{design.canvas.width} × {design.canvas.height} px · {design.slots.length}/16 photo slots</p><div className="flex gap-2"><button className={button} aria-label="Undo design change" disabled={!past.length} onClick={() => { setFuture(values => [design, ...values]); setDesign(past[past.length - 1]); setPast(past.slice(0, -1)); setDirty(true); }}><Undo2 size={18} /></button><button className={button} aria-label="Redo design change" disabled={!future.length} onClick={() => { setPast(values => [...values, design]); setDesign(future[0]); setFuture(future.slice(1)); setDirty(true); }}><Redo2 size={18} /></button></div></div>
         {segmenting && <p role="status" className="mt-2 text-sm">Preparing the scene preview…</p>}
-        {curated.fallback.length > 0 && <p className="mt-2 text-sm">Couldn&apos;t load {curated.fallback.join(", ")}, so a built-in background is filling in.</p>}
+        {curated.fallback.length > 0 && <p className="mt-2 text-sm">Couldn&apos;t load {curated.fallback.join(", ")}. Using a built-in background.</p>}
         {!project && <p className="mt-3 text-sm">Save this frame, then start a new project with it from My templates.</p>}
       </section>
       <div className="min-w-0 space-y-7">
@@ -261,7 +261,7 @@ function Designer() {
               <Dropdown showLabel label="Photo rotation" value={String(slot.crop.rotation)} options={[0, 90, 180, 270].map(value => ({ value: String(value), label: `${value}°` }))} onChange={value => updateSlot({ crop: { ...slot.crop, rotation: Number(value) as 0 | 90 | 180 | 270 } })} />
               <label className="flex min-h-11 items-center gap-3 text-sm"><input type="checkbox" checked={slot.crop.mirror} onChange={event => updateSlot({ crop: { ...slot.crop, mirror: event.target.checked } })} /> Mirror photo</label>
               <Dropdown showLabel label="Photo filter" value={slot.filterId ?? "inherit"} options={[{ value: "inherit", label: "Same as the frame" }, ...FILTERS.map(filter => ({ value: filter.id, label: filter.name }))]} onChange={value => updateSlot({ filterId: value === "inherit" ? null : value })} />
-              {slot.companions?.length ? <p className="text-sm text-muted-foreground">{slot.role} shares this slot with {slot.companions.map(source => source.role).join(", ")} in a Together scene. Their positions come from the scene placement.</p> : null}
+              {slot.companions?.length ? <p className="text-sm text-muted-foreground">{slot.role} shares this slot with {slot.companions.map(source => source.role).join(", ")} in a Together scene.</p> : null}
             </>}
             {layer && <><NumberField label="Layer rotation (°)" value={layer.rotation} min={-180} max={180} change={rotation => updateLayer({ ...layer, rotation })} />
               {layer.kind === "text" && <><label className="block text-sm font-medium">Text<textarea className={`${field} mt-1 min-h-24 py-2`} value={layer.text} maxLength={500} onChange={event => updateLayer({ ...layer, text: event.target.value })} /></label><Dropdown showLabel label="Typeface" value={layer.font} options={[{ value: "serif", label: "Fraunces" }, { value: "sans", label: "Geist" }, { value: "mono", label: "Geist Mono" }]} onChange={value => updateLayer({ ...layer, font: value as "serif" | "sans" | "mono" })} /><NumberField label="Text size (% of width)" value={layer.fontSize * 100} min={0.5} max={25} change={value => updateLayer({ ...layer, fontSize: value / 100 })} /><Dropdown showLabel label="Text alignment" value={layer.align} options={[{ value: "left", label: "Left" }, { value: "center", label: "Centre" }, { value: "right", label: "Right" }]} onChange={value => updateLayer({ ...layer, align: value as "left" | "center" | "right" })} /><label className="flex min-h-11 items-center justify-between text-sm">Text colour<input type="color" value={layer.colour} onChange={event => updateLayer({ ...layer, colour: event.target.value })} className="h-11 w-16 rounded-md" /></label></>}
@@ -273,7 +273,7 @@ function Designer() {
         </section>
         <section className="space-y-3 border-t border-border pt-5"><h2 className="font-medium">Frame finish</h2><Dropdown showLabel label="Frame colour" value={design.look.frameId} options={FRAMES.map(frame => ({ value: frame.id, label: frame.name }))} onChange={frameId => edit({ look: { ...design.look, frameId } })} /><Dropdown showLabel label="Frame filter" value={design.look.filterId} options={FILTERS.map(filter => ({ value: filter.id, label: filter.name }))} onChange={filterId => edit({ look: { ...design.look, filterId } })} /><Dropdown showLabel label="Pattern" value={design.look.patternId} options={[{ value: "none", label: "None" }, ...PATTERNS.map(pattern => ({ value: pattern.id, label: pattern.name }))]} onChange={patternId => edit({ look: { ...design.look, patternId } })} /><label className="block text-sm font-medium">Default caption<input className={`${field} mt-1`} value={design.defaults.caption} maxLength={500} onChange={event => edit({ defaults: { ...design.defaults, caption: event.target.value } })} /></label><label className="flex min-h-11 items-center gap-3 text-sm"><input type="checkbox" checked={design.defaults.showDate} onChange={event => edit({ defaults: { ...design.defaults, showDate: event.target.checked } })} /> Show capture date</label></section>
         <VisualPackPicker sceneId={design.look.sceneId} materialId={design.look.materialId} onSceneChange={sceneId => edit({ look: { ...design.look, sceneId } })} onMaterialChange={materialId => edit({ look: { ...design.look, materialId } })} />
-        <section className="space-y-3 border-t border-border pt-5"><h2 className="font-medium">Save or share</h2><p className="text-sm text-muted-foreground">Exported templates include your PNG decorations, but not your photos. Captions and text are left out unless you tick the box below.</p><label className="flex min-h-11 items-center gap-3 text-sm"><input type="checkbox" checked={includeText} onChange={event => setIncludeText(event.target.checked)} /> Include captions and text in the export</label><div className="flex flex-wrap gap-2"><button className={button} onClick={() => void work(async assertCurrent => { const file = await exportTemplateBundle(makeRecipe(true), filesForDesign(), { includeText }); assertCurrent(); downloadProjectBlob(file, projectDownloadName(name, "pbtemplate")); setStatus("Template exported."); })}><Download size={16} /> Export template</button>{recipe && <button className={button} onClick={() => void save(true)}>Save as a copy</button>}</div></section>
+        <section className="space-y-3 border-t border-border pt-5"><h2 className="font-medium">Save or share</h2><p className="text-sm text-muted-foreground">Exported templates never include your photos.</p><label className="flex min-h-11 items-center gap-3 text-sm"><input type="checkbox" checked={includeText} onChange={event => setIncludeText(event.target.checked)} /> Include captions and text in the export</label><div className="flex flex-wrap gap-2"><button className={button} onClick={() => void work(async assertCurrent => { const file = await exportTemplateBundle(makeRecipe(true), filesForDesign(), { includeText }); assertCurrent(); downloadProjectBlob(file, projectDownloadName(name, "pbtemplate")); setStatus("Template exported."); })}><Download size={16} /> Export template</button>{recipe && <button className={button} onClick={() => void save(true)}>Save as a copy</button>}</div></section>
       </div>
     </div>
   </main>;

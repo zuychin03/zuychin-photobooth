@@ -43,7 +43,7 @@ export default function ProjectsPage() {
   const [busy, setBusy] = useState<string | null>(null), [refresh, setRefresh] = useState(0), [count, setCount] = useState(20);
   useAppNavigationGuard(() => {
     if (!busy) return true;
-    setNotice("Hang on a second, still working on your project."); return false;
+    setNotice("Wait for this to finish before you leave."); return false;
   });
   const [thumbnails, setThumbnails] = useState<Record<string, string>>({});
   const [estimate, setEstimate] = useState<{ usage?: number; quota?: number; persisted: boolean } | null>(null);
@@ -156,7 +156,7 @@ export default function ProjectsPage() {
         else if (action === "recover") await repository.recoverCheckpoint(item.id, item.revision);
         else {
           const loaded = await repository.load(item.id);
-          if (!loaded || loaded.kind !== "current") throw new Error("This project can't be opened in this version of the app. Hang on to its recovery files.");
+          if (!loaded || loaded.kind !== "current") throw new Error("This project can't be opened in this version of the app. Keep its recovery files.");
           assertVisible(item.scope, epoch);
           if (action === "export") {
             const bundle = await exportProjectBundle(loaded.project, loaded.media);
@@ -209,7 +209,7 @@ export default function ProjectsPage() {
     setBusy("storage"); setError(null);
     try {
       const granted = navigator.storage?.persist ? await navigator.storage.persist() : false;
-      setNotice(granted ? "Done. Your browser won't clear these files on its own, but clearing your browser data still deletes them, so keep a backup too." : "Your browser said no. Your projects still work, but back up the ones you care about.");
+      setNotice(granted ? "Done. Your browser won't clear these files on its own, but clearing your browser data still deletes them, so keep a backup too." : "Your browser didn't allow this. Export the projects you want to keep.");
       setRefresh(value => value + 1);
     } catch (failure) { setError(message(failure)); }
     finally { setBusy(null); }
@@ -225,8 +225,8 @@ export default function ProjectsPage() {
         <input ref={input} type="file" accept=".pbproject,application/x-photobooth-project" className="sr-only" tabIndex={-1} aria-label="Import a .pbproject file" onChange={event => { const file = event.target.files?.[0]; event.target.value = ""; if (file) void importFile(file); }} />
       </div>
     </header>
-    <div className="mt-5 flex flex-wrap items-center justify-between gap-2 text-sm text-foreground/70"><p>{owner ? "Projects on this device, including your account drafts. Nothing uploads automatically." : "No account needed. These projects stay in this browser."}</p><button type="button" className={control} disabled={Boolean(busy) || loading} onClick={() => setRefresh(value => value + 1)}><RefreshCw size={15} aria-hidden /> Refresh</button></div>
-    {error && <div role="alert" className="mt-4 rounded-xl border border-border bg-muted p-4"><p className="font-medium">That didn&apos;t work</p><p className="mt-1 break-words text-sm">{error}</p><p className="mt-2 text-sm text-foreground/70">If this project is open in another tab, refresh and try again. Nothing you&apos;d already saved was overwritten.</p></div>}
+    <div className="mt-5 flex flex-wrap items-center justify-between gap-2 text-sm text-foreground/70"><p>{owner ? "Includes drafts from your account. Nothing uploads automatically." : "No account needed."}</p><button type="button" className={control} disabled={Boolean(busy) || loading} onClick={() => setRefresh(value => value + 1)}><RefreshCw size={15} aria-hidden /> Refresh</button></div>
+    {error && <div role="alert" className="mt-4 rounded-xl border border-border bg-muted p-4"><p className="font-medium">That didn&apos;t work</p><p className="mt-1 break-words text-sm">{error}</p><p className="mt-2 text-sm text-foreground/70">If it&apos;s open in another tab, refresh and try again.</p></div>}
     {notice && <p role="status" className="mt-4 max-w-2xl rounded-xl bg-muted p-4 text-sm">{notice}</p>}
     {busy && <p role="status" className="mt-4 flex items-center gap-2 text-sm"><LoaderCircle size={16} className="animate-spin motion-reduce:animate-none" aria-hidden /> {busy === "import" ? "Importing the project…" : busy === "create" ? "Starting a new project…" : "Working on it…"}</p>}
     {loading ? <p role="status" className="flex min-h-48 items-center justify-center gap-2 text-sm text-foreground/70"><LoaderCircle size={18} className="animate-spin motion-reduce:animate-none" aria-hidden /> Loading your projects…</p> : visible.length ? <>
@@ -235,8 +235,8 @@ export default function ProjectsPage() {
     </> : !error && <section className="flex min-h-64 flex-col items-start justify-center py-10 sm:py-14"><h2 className="font-display text-2xl font-semibold">Start your first project.</h2><p className="mt-3 max-w-lg text-foreground/70">Take photos or import a .pbproject backup.</p><button type="button" disabled={Boolean(busy) || session.hydrating} onClick={() => void create()} className={`${control} mt-5 bg-accent text-accent-foreground hover:bg-accent/90`}><Camera size={17} aria-hidden /> Start your first project</button></section>}
     <footer className="mt-8 border-t border-border pt-6 pb-3">
       <RoomMetadataHousekeeping ownerId={authLoading ? null : owner} />
-      <div className="mt-6 flex items-start gap-3"><HardDrive size={19} className="mt-0.5 shrink-0 text-foreground/60" aria-hidden /><div><h2 className="font-medium">Back up your projects</h2><p className="mt-2 max-w-2xl text-sm text-foreground/70">Browsers can clear their storage, so download a .pbproject backup of anything you want to keep. Account drafts stay on this device and are hidden while you&apos;re signed out.</p>
-        {estimate && <p className="mt-2 text-sm text-foreground/70 tabular-nums">{estimate.usage !== undefined ? `${megabytes(estimate.usage)} used by this site` : "Storage use unknown"}{estimate.quota !== undefined ? ` · about ${megabytes(estimate.quota)} available` : ""}. {estimate.persisted ? "Your browser won't clear these files on its own." : "Your browser might clear these files if it runs low on space."}</p>}
+      <div className="mt-6 flex items-start gap-3"><HardDrive size={19} className="mt-0.5 shrink-0 text-foreground/60" aria-hidden /><div><h2 className="font-medium">Back up your projects</h2><p className="mt-2 max-w-2xl text-sm text-foreground/70">Browsers can clear their storage, so export anything you want to keep.</p>
+        {estimate && <p className="mt-2 text-sm text-foreground/70 tabular-nums">{estimate.usage !== undefined ? `${megabytes(estimate.usage)} used` : "Storage use unknown"}{estimate.quota !== undefined ? ` of about ${megabytes(estimate.quota)}` : ""}</p>}
         <button type="button" disabled={Boolean(busy) || estimate?.persisted} onClick={() => void persist()} className={`${control} -ml-4 mt-2 underline underline-offset-4`}>{estimate?.persisted ? "Your browser is keeping these files" : "Ask your browser to keep these files"}</button>
       </div></div>
     </footer>

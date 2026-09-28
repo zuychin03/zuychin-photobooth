@@ -5,7 +5,7 @@ export function voiceExtension(mime: string): "webm" | "ogg" | "m4a" {
   if (base === "audio/webm") return "webm";
   if (base === "audio/ogg") return "ogg";
   if (base === "audio/mp4") return "m4a";
-  throw new Error("This recording format is not supported. Use a text caption instead.");
+  throw new Error("This recording format isn't supported. Use a text caption instead.");
 }
 export type VoiceRecording = { blob: Blob; milliseconds: number; extension: ReturnType<typeof voiceExtension> };
 export type VoiceState = "requesting" | "recording" | "finishing" | "idle";
@@ -52,7 +52,7 @@ export function createVoiceRecorder(callbacks: { state(value: VoiceState): void;
     callbacks.state("requesting");
     try {
       const mime = formats.find(dependencies.supports);
-      if (!mime) throw new Error("Voice recording is unavailable here. Use a text caption instead.");
+      if (!mime) throw new Error("Voice recording doesn't work here. Use a text caption instead.");
       const acquired = await dependencies.getStream();
       if (ticket !== generation) { acquired.getTracks().forEach(track => track.stop()); return; }
       stream = acquired;
@@ -63,21 +63,21 @@ export function createVoiceRecorder(callbacks: { state(value: VoiceState): void;
       current.ondataavailable = event => {
         if (ticket !== generation || !event.data.size) return;
         bytes += event.data.size;
-        if (bytes > VOICE_LIMITS.bytes) { cancel(); callbacks.error("Recording exceeded 10 MB. Please record a shorter caption."); return; }
+        if (bytes > VOICE_LIMITS.bytes) { cancel(); callbacks.error("The recording is over 10 MB. Record a shorter one."); return; }
         chunks.push(event.data);
       };
-      current.onerror = () => { if (ticket === generation) { cancel(); callbacks.error("Recording failed. Try again or use a text caption."); } };
+      current.onerror = () => { if (ticket === generation) { cancel(); callbacks.error("Couldn't record. Try again or use a text caption."); } };
       current.onstop = () => {
         if (ticket !== generation) return;
         const elapsed = (stoppedAt ?? dependencies.now()) - started;
         release(); recorder = undefined; active = false; callbacks.state("idle");
         try {
-          if (elapsed > VOICE_LIMITS.milliseconds) throw new Error("Recording ran beyond 30 seconds. Please try a shorter caption.");
+          if (elapsed > VOICE_LIMITS.milliseconds) throw new Error("Recordings can be up to 30 seconds. Try a shorter one.");
           const actualMime = current.mimeType || chunks[0]?.type || "";
           const extension = voiceExtension(actualMime), blob = new Blob(chunks, { type: actualMime });
           if (!blob.size) throw new Error("No audio was recorded. Try again or use a text caption.");
           callbacks.ready({ blob, milliseconds: Math.min(elapsed, VOICE_LIMITS.milliseconds), extension });
-        } catch (error) { callbacks.error(error instanceof Error ? error.message : "Recording could not be saved."); }
+        } catch (error) { callbacks.error(error instanceof Error ? error.message : "Couldn't save the recording."); }
       };
       current.start(250);
       callbacks.state("recording");
@@ -85,7 +85,7 @@ export function createVoiceRecorder(callbacks: { state(value: VoiceState): void;
     } catch (error) {
       if (ticket !== generation) return;
       cancel();
-      callbacks.error(error instanceof DOMException && error.name === "NotAllowedError" ? "Microphone access was declined. You can still write a caption." : error instanceof Error ? error.message : "Microphone unavailable. Use a text caption instead.");
+      callbacks.error(error instanceof DOMException && error.name === "NotAllowedError" ? "Microphone access was declined. You can still write a caption." : error instanceof Error ? error.message : "No microphone available. Use a text caption instead.");
     }
   }
   return { start, stop, cancel };

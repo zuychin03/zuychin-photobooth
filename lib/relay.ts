@@ -97,7 +97,7 @@ export async function completeRelay(userId: string, relay: Relay, frames: HTMLCa
     const { data, error } = await supabase.from("pb_relays")
       .update({ partner: userId, b_done: true, status: "complete" }).eq("id", relay.id).eq("status", "pending").eq("b_done", false).select("id");
     if (error) throw cloudWriteError(error);
-    if (data?.length !== 1) throw new Error("This relay changed while saving. Reload it to see where it's at.");
+    if (data?.length !== 1) throw new Error("This relay changed while saving. Reload it to check its status.");
     return true;
   });
 }

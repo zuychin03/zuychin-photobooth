@@ -57,11 +57,11 @@ export const captureChallengePhoto = createChallengePhotoCapture();
 export function challengeCameraMessage(error: unknown): string {
   const code = error instanceof ChallengeCameraError ? error.code : "encode_failed";
   return {
-    busy: "The previous photo is still finishing. Wait a moment, or close the camera and choose a file.",
-    not_ready: "The camera has not produced a frame yet. Start it again, or choose a file.",
-    resource_limit: "This camera photo exceeds the image limits. Choose another camera or a file up to 10 MiB, 4096 pixels per side and 12 megapixels.",
-    encode_failed: "This photo could not be prepared. Retake it, or close the camera and choose a file.",
-    cancelled: "Capture stopped. No photo was selected or uploaded.",
-    timeout: "The photo took too long to prepare. It has not been selected or uploaded. Wait a moment, or choose a file.",
+    busy: "The last photo is still processing. Wait a moment, or choose a file instead.",
+    not_ready: "The camera hasn't started yet. Start it again, or choose a file.",
+    resource_limit: "This camera's photos are too big. Choose another camera, or a file up to 10 MiB, 4096 pixels per side and 12 megapixels.",
+    encode_failed: "Couldn't process this photo. Retake it, or choose a file instead.",
+    cancelled: "Stopped. No photo was used.",
+    timeout: "Processing the photo took too long. Wait a moment, or choose a file instead.",
   }[code];
 }

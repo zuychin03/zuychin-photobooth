@@ -139,7 +139,7 @@ let weeklyOccupied = false;
 export function renderWeeklyRecap(sources: readonly WeeklyRecapSource[], title: string, options: { signal?: AbortSignal; assertActive(): void; timeoutMs?: number; nativeTimeoutMs?: number }, ports: WeeklyRecapPorts = weeklyNative): Promise<{ blob: Blob; width: number; height: number }> {
   const items = [...sources], timeout = options.timeoutMs ?? WEEKLY_RECAP_LIMITS.timeoutMs, nativeTimeout = options.nativeTimeoutMs ?? WEEKLY_RECAP_LIMITS.nativeTimeoutMs;
   if (!items.length || items.length > WEEKLY_RECAP_LIMITS.sources || new Set(items.map(s => s.id)).size !== items.length || typeof title !== "string" || [...title].length > 120 || !Number.isInteger(timeout) || timeout < 1 || timeout > WEEKLY_RECAP_LIMITS.timeoutMs || !Number.isInteger(nativeTimeout) || nativeTimeout < 1 || nativeTimeout > WEEKLY_RECAP_LIMITS.nativeTimeoutMs) return Promise.reject(new Error("Pick up to 20 strips for this recap."));
-  if (weeklyOccupied) return Promise.reject(new Error("The last recap is still finishing up. Try again in a moment."));
+  if (weeklyOccupied) return Promise.reject(new Error("The last recap is still being made. Try again in a moment."));
   const controller = new AbortController(); let failure: Error | undefined, rejectStop!: (error: Error) => void;
   const stopped = new Promise<never>((_, reject) => { rejectStop = reject; });
   const stop = (message: string) => { if (!failure) { failure = new Error(message); controller.abort(); rejectStop(failure); } };

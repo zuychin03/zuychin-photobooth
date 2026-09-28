@@ -35,18 +35,18 @@ const errorMessage = (error: unknown) => {
   const messages: Record<string, string> = {
     access_denied: "You're no longer in this room. Your projects are still on this device.",
     authorisation_unavailable: "Couldn't check your room access, so photos are paused. Reconnect once you're back online.",
-    peer_disconnected: "Someone dropped out. Photos are paused until everyone's back.",
+    peer_disconnected: "Someone disconnected. Photos are paused until everyone reconnects.",
     recovery_required: "The room or shared design changed. Reconnect and check it before the next round.",
-    protocol_update_required: "This room needs a newer version of the app. Refresh the page to update, then rejoin. Your saved project stays put.",
-    update_required: "This shared design needs a newer version of the app. Refresh the page to update, then rejoin. Your saved project stays put.",
+    protocol_update_required: "This room needs a newer version of the app. Refresh the page, then rejoin.",
+    update_required: "This shared design needs a newer version of the app. Refresh the page, then rejoin.",
     ownership_denied: "You can only change your own photos, position and stickers.",
     not_ready: "Everyone needs to be connected with the same design before you start.",
     state_conflict: "Something changed in the room. Reconnect, then try again.",
-    rate_limited: "The room's getting a lot of requests. Wait a moment, then try again.",
+    rate_limited: "The room is busy. Wait a moment, then try again.",
     unsaved_local_photos: "A photo still needs saving. Try again or download it before you leave.",
-    capture_request_rate_limited: "Request sent. Give it a few seconds before asking again.",
+    capture_request_rate_limited: "Request sent. Wait a few seconds before asking again.",
   };
-  return messages[code] ?? "That didn't work, but your saved photos are fine. Try again, or leave with a copy to edit.";
+  return messages[code] ?? "That didn't work. Try again, or leave with a copy to edit.";
 };
 
 export class RoomWorkspaceController {

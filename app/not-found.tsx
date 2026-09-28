@@ -4,7 +4,7 @@ export default function NotFound() {
   return <main className="mx-auto flex min-h-dvh w-full max-w-xl flex-col justify-center px-6 py-16">
     <p className="text-sm text-muted-foreground">Page not found</p>
     <h1 className="mt-3 font-display text-4xl font-semibold">We couldn&apos;t find that page.</h1>
-    <p className="mt-4 max-w-md text-sm leading-relaxed text-muted-foreground">The link might be old or mistyped. Head home or open your projects.</p>
+    <p className="mt-4 max-w-md text-sm leading-relaxed text-muted-foreground">The link might be old or mistyped.</p>
     <nav aria-label="Where to go next" className="mt-7 flex flex-wrap gap-3">
       <Link href="/" className="inline-flex min-h-11 items-center justify-center rounded-xl bg-accent px-5 py-3 text-sm font-semibold text-accent-foreground focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring">Home</Link>
       <Link href="/projects" className="inline-flex min-h-11 items-center justify-center rounded-xl border border-border px-5 py-3 text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring">My projects</Link>

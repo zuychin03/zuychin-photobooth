@@ -61,7 +61,7 @@ export default function BoothPage() {
   const motionKey = project ? `${project.scope.kind === "account" ? project.scope.ownerId : "device"}:${project.id}` : null;
   useAppNavigationGuard(() => {
     if (pending) { setFailure("A photo hasn't saved yet. Download it or discard it before you leave."); return false; }
-    if (operation.current || busy || downloadingPending) { setFailure("Hang on a second, the booth is still busy."); return false; }
+    if (operation.current || busy || downloadingPending) { setFailure("Wait for the booth to finish first."); return false; }
     if (motionProject && motionProject === motionKey) { setFailure("Close the loop recorder before you leave."); return false; }
     return true;
   });
@@ -122,7 +122,7 @@ export default function BoothPage() {
     starting.current = true;
     const generation = ++startupGeneration.current;
     void startProject().catch(error => {
-      if (mounted.current && generation === startupGeneration.current) setFailure(error instanceof Error ? error.message : "Couldn't start a new project. Your other projects are still there.");
+      if (mounted.current && generation === startupGeneration.current) setFailure(error instanceof Error ? error.message : "Couldn't start a new project. Try again.");
     }).finally(() => { if (generation === startupGeneration.current) starting.current = false; });
   }, [hydrating, project, startProject]);
 
@@ -210,8 +210,8 @@ export default function BoothPage() {
     setDownloadingPending(true);
     try {
       const blob = "blob" in pending ? pending.blob : await new Promise<Blob>((resolve, reject) => {
-        const timer = setTimeout(() => reject(new Error("The download took too long. Your photo is still here.")), 10_000);
-        try { pending.canvas.toBlob(value => { clearTimeout(timer); if (value) resolve(value); else reject(new Error("Couldn't get the download ready. Your photo is still here.")); }, "image/png"); }
+        const timer = setTimeout(() => reject(new Error("The download took too long. Try again.")), 10_000);
+        try { pending.canvas.toBlob(value => { clearTimeout(timer); if (value) resolve(value); else reject(new Error("Couldn't prepare the download. Try again.")); }, "image/png"); }
         catch (error) { clearTimeout(timer); reject(error); }
       });
       if (!mounted.current || generation !== downloadGeneration.current) return;
@@ -267,7 +267,7 @@ export default function BoothPage() {
       const nextId = crypto.randomUUID();
       await startProject({ id: nextId, capture: { ...roundCapture }, editor: { layoutId: previous.editor.layoutId, filterId: previous.editor.filterId, story: (design ? Math.max(...Object.values(design.requiredSources)) : getLayout(previous.editor.layoutId).shots) === 4 ? previous.editor.story : null } }, true);
       if (design) {
-        if (!mounted.current || (await flushEditor())?.id !== nextId) throw new Error("You switched projects before the template could be added. Your last project is still saved.");
+        if (!mounted.current || (await flushEditor())?.id !== nextId) throw new Error("You switched projects before the template was added.");
         await applyTemplate(design, decorations);
       }
     }
@@ -295,7 +295,7 @@ export default function BoothPage() {
         )}
       </div>
       <div className="z-40 flex shrink-0 flex-col gap-3 px-4 pt-2 pb-4 md:w-96 md:overflow-y-auto md:p-6">
-        {(failure || storageError) && <div role="alert" className="rounded-xl border border-destructive p-3 text-sm"><p>{failure ?? storageError}</p>{pending && <><p className="mt-2">This shot hasn&apos;t saved to your project yet. Try saving it again, or download a copy.</p><button disabled={busy || downloadingPending} onClick={() => void retryPending()} className="mt-2 min-h-11 rounded-lg bg-foreground px-4 text-background">Try saving again</button><button disabled={busy || downloadingPending} onClick={() => void downloadUnsavedPhoto()} className="mt-1 min-h-11 px-3 text-sm underline underline-offset-4">{downloadingPending ? "Getting the download ready…" : "Download this photo"}</button><button disabled={busy || downloadingPending} onClick={() => { setPending(null); setFailure(null); }} className="mt-1 min-h-11 px-3 text-sm underline underline-offset-4">Discard it</button></>}</div>}
+        {(failure || storageError) && <div role="alert" className="rounded-xl border border-destructive p-3 text-sm"><p>{failure ?? storageError}</p>{pending && <><p className="mt-2">This shot hasn&apos;t saved yet.</p><button disabled={busy || downloadingPending} onClick={() => void retryPending()} className="mt-2 min-h-11 rounded-lg bg-foreground px-4 text-background">Try saving again</button><button disabled={busy || downloadingPending} onClick={() => void downloadUnsavedPhoto()} className="mt-1 min-h-11 px-3 text-sm underline underline-offset-4">{downloadingPending ? "Preparing download…" : "Download this photo"}</button><button disabled={busy || downloadingPending} onClick={() => { setPending(null); setFailure(null); }} className="mt-1 min-h-11 px-3 text-sm underline underline-offset-4">Discard it</button></>}</div>}
         {capture && <>
           <p role="status" className="text-sm text-muted-foreground">{requiredShots - missing.length} of {requiredShots} shots saved{busy ? (count ? ". Get ready…" : ". Saving…") : ""}</p>
           {!complete && retakeTargets.length === 0 && <div className="flex items-center justify-center gap-5">
@@ -305,11 +305,11 @@ export default function BoothPage() {
           {retakeTargets.length > 0 && <div className="space-y-2">
             <button disabled={!ready || busy || Boolean(pending) || curated.loading} onClick={() => void shoot(retakeTargets)} className="min-h-12 w-full rounded-xl bg-accent px-4 font-semibold text-accent-foreground disabled:opacity-40">Retake {retakeTargets.length} selected {retakeTargets.length === 1 ? "photo" : "photos"}</button>
             <label className="flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-xl border border-border px-3 text-sm focus-within:outline-2 focus-within:outline-ring"><ImagePlus size={18} /> Replace selected with imports<input type="file" accept="image/jpeg,image/png,image/webp" multiple disabled={busy || Boolean(pending)} className="sr-only" onChange={event => { void onUpload(event.target.files, true); event.target.value = ""; }} /></label>
-            <p className="text-xs text-muted-foreground">Selected shots: {retakeTargets.map(index => index + 1).join(", ")}. Imports replace them in this order. Other photos and your design stay as they are.</p>
+            <p className="text-xs text-muted-foreground">Imports replace shots {retakeTargets.map(index => index + 1).join(", ")}, in that order.</p>
             <button disabled={busy || Boolean(pending)} onClick={() => { setRetakeSelection(null); focusSavedPhotos(); }} className="min-h-11 w-full text-sm underline underline-offset-4">Cancel selection</button>
           </div>}
           {complete && retakeTargets.length === 0 && <><button disabled={busy || Boolean(pending)} onClick={() => router.push("/customize")} className="min-h-12 rounded-xl bg-accent px-5 font-semibold text-accent-foreground">Edit this strip</button><button disabled={busy || Boolean(pending)} onClick={() => void nextRound()} className="min-h-11 text-sm font-medium underline underline-offset-4">Go again with the same settings</button></>}
-          {thumbs.some(Boolean) && <p ref={savedPhotosHeading} tabIndex={-1} aria-label="Saved photos" className="rounded text-sm text-muted-foreground focus-visible:outline-2 focus-visible:outline-ring">Select any saved photos to retake. Only selected shots will change.</p>}
+          {thumbs.some(Boolean) && <p ref={savedPhotosHeading} tabIndex={-1} aria-label="Saved photos" className="rounded text-sm text-muted-foreground focus-visible:outline-2 focus-visible:outline-ring">Tap photos to select them for a retake.</p>}
           <div className="grid grid-cols-4 gap-2">
             {indices.map(index => <div key={index} className="min-w-0">
               {thumbs[index] ? <button type="button" disabled={busy || Boolean(pending)} aria-pressed={retakeTargets.includes(index)} aria-label={`Select shot ${index + 1} to retake`} onClick={() => setRetakeSelection({ projectId: project!.id, indices: retakeTargets.includes(index) ? retakeTargets.filter(item => item !== index) : [...retakeTargets, index] })} className={`w-full overflow-hidden rounded-lg border-2 text-sm disabled:opacity-40 ${retakeTargets.includes(index) ? "border-accent bg-accent text-accent-foreground" : "border-transparent bg-muted"}`}>
@@ -319,16 +319,14 @@ export default function BoothPage() {
               </button> : <div className="flex aspect-[3/2] items-center justify-center rounded-lg border border-dashed border-border text-sm text-muted-foreground">{index + 1}</div>}
             </div>)}
           </div>
-          {!complete && <p className="text-center text-sm text-muted-foreground">You can mix camera shots and imported photos.</p>}
           <MobileControlPanel open={controlsOpen} onOpenChange={setControlsOpen} disabled={busy || Boolean(pending)}>
           {(failure || storageError) && <p role="alert" className="text-sm text-destructive md:hidden">{failure ?? storageError}</p>}
-          {project?.editor.template ? <p className="text-sm text-muted-foreground">Your template takes {requiredShots} photos. You can change that in the frame designer.</p> : <div className="flex flex-wrap gap-2">
+          {project?.editor.template ? <p className="text-sm text-muted-foreground">This template takes {requiredShots} photos.</p> : <div className="flex flex-wrap gap-2">
             {LAYOUTS.filter(item => item.mode === "solo").map(item => <button key={item.id} disabled={busy || Boolean(pending) || Boolean((project?.capturedAt || project?.media.some(item => item.kind === "photo")))} onClick={() => void changeLayout(item.id)} className={`min-h-11 rounded-full px-4 text-sm font-medium disabled:opacity-60 ${session.layoutId === item.id ? "bg-foreground text-background" : "bg-muted text-muted-foreground"}`}>{item.name} · {item.shots}</button>)}
           </div>}
           {curated.loading && <p role="status" className="text-sm text-muted-foreground">Loading artwork…</p>}
-          {curated.fallback.length > 0 && <p role="status" className="text-sm text-muted-foreground">Couldn&apos;t load {curated.fallback.join(", ")}, so a built-in background is filling in.</p>}
+          {curated.fallback.length > 0 && <p role="status" className="text-sm text-muted-foreground">Couldn&apos;t load {curated.fallback.join(", ")}. Using a built-in background.</p>}
           {project && <div id="photo-story" ref={storyAnchor} tabIndex={-1} aria-label="Photo story" className="scroll-mt-4 rounded-xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"><StoryGuide plan={project.editor.story ?? null} members={project.participants.map(person => ({ id: person.id, name: "You" }))} activeStep={busy ? storyIndex : undefined} disabled={busy || Boolean(pending) || Boolean((project.capturedAt !== null || project.media.some(item => item.kind === "photo"))) || Boolean(project.editor.template && requiredShots !== 4)} onChange={story => void changeStory(story)} /></div>}
-          {project?.editor.story && <p className="text-xs leading-relaxed text-muted-foreground">Flip through the prompts before you start. The timer runs before each pose.</p>}
           <CaptureSettings value={capture} cameras={cameras} disabled={busy || Boolean(pending)} onChange={patch => void changeCapture(patch)} />
           <FilterBar value={session.filterId} onChange={id => { if (!busy && !pending) void update({ filterId: id }).catch(error => setFailure(explain(error))); }} layoutClass="scrollbar-hide overflow-x-auto md:flex-wrap md:overflow-visible" />
           {project && <ThenNowStudio key={`${project.scope.kind}:${project.scope.kind === "account" ? project.scope.ownerId : "device"}:${project.id}`} project={project} disabled={captureBusy || Boolean(pending)} onBusyChange={setReferenceBusy} />}

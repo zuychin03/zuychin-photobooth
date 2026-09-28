@@ -169,14 +169,13 @@ function TimelineContent() {
     <h2 ref={signOutHeading} tabIndex={-1} id="sign-out-title" className="font-display text-xl font-semibold outline-none">{signOutResult ? "You're signed out" : "Sign out of this account?"}</h2>
     {signOutResult ? <>
       <p className="mt-3 text-sm">{signOutResult.localCopies === "kept" ? "Your account drafts are hidden on this device. They'll come back when you sign in to this account again." : signOutResult.cleanupError ? "You're signed out, but some drafts couldn't be deleted from this device. They're hidden for now, so sign in again and check My projects." : `Deleted ${signOutResult.cleanup?.removed ?? 0} account draft${signOutResult.cleanup?.removed === 1 ? "" : "s"} from this browser.`}</p>
-      {Boolean(signOutResult.cleanup?.retained) && <p className="mt-2 text-sm">{signOutResult.cleanup!.retained} draft{signOutResult.cleanup!.retained === 1 ? " was" : "s were"} hidden instead of deleted. Sign in again if you want to download recovery files.</p>}
+      {Boolean(signOutResult.cleanup?.retained) && <p className="mt-2 text-sm">{signOutResult.cleanup!.retained} draft{signOutResult.cleanup!.retained === 1 ? " was" : "s were"} hidden instead of deleted.</p>}
       {signOutResult.cleanup?.incomplete && <p className="mt-2 text-sm">We couldn&apos;t confirm every draft was deleted. Sign in again to check.</p>}
       {signOutResult.roomCleanup && <p className="mt-2 text-sm">Room data for this account was cleared from this browser too.</p>}
       <button type="button" onClick={() => router.replace("/")} className="mt-4 min-h-11 rounded-xl bg-accent px-4 text-sm font-semibold text-accent-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">Back to booth</button>
     </> : <>
-      <p className="mt-3 max-w-xl text-sm text-foreground/75">Your account drafts are saved in this browser. You can hide them until you sign in again, or delete them from this device. Export anything important before deleting.</p>
-      <p className="mt-2 max-w-xl text-sm text-foreground/75">Your device projects and cloud memories aren&apos;t affected. Drafts that can&apos;t be opened in this version stay hidden either way.</p>
-      {boothSession.storageStatus === "error" && <p className="mt-3 text-sm font-medium">Some recent edits didn&apos;t save. If you keep your drafts, they&apos;ll go back to the last save. Go back and export or retry first if you need those edits.</p>}
+      <p className="mt-3 max-w-xl text-sm text-foreground/75">Your account drafts are saved in this browser. Hide them until you sign in again, or delete them. Export anything important before deleting.</p>
+      {boothSession.storageStatus === "error" && <p className="mt-3 text-sm font-medium">Some recent edits didn&apos;t save. Keeping drafts keeps only the last save. Go back to export or retry first.</p>}
       {signOutError && <p role="alert" className="mt-3 text-sm font-medium">{signOutError}</p>}
       {signingOut ? <p role="status" className="mt-4 flex items-center gap-2 text-sm"><Loader2 size={16} className="animate-spin motion-reduce:animate-none" aria-hidden /> Signing you out…</p> : <div className="mt-4 flex flex-wrap gap-2">
         <button type="button" onClick={() => void finishSignOut(false)} className="min-h-11 rounded-xl bg-accent px-4 text-sm font-semibold text-accent-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">Sign out and keep drafts</button>
@@ -227,7 +226,7 @@ function TimelineContent() {
     try {
       const result = await setStripKept(strip.id, kept, mediaRequest(key));
       if (result.pending) {
-        setKeepNote("On its way. Refresh in a bit to check it went through.");
+        setKeepNote("Saving your change. Refresh soon to check it worked.");
       } else {
         setStrips(list => list.map(value => value.id === strip.id ? { ...value, kept: result.kept } : value));
         mediaRequests.current.delete(key);
@@ -247,7 +246,7 @@ function TimelineContent() {
     setKeepNote(null);
     try {
       const result = await deleteStrip(strip, mediaRequest(key));
-      if (result.pending) setKeepNote("Deleting now. The strip stays visible until it's fully gone, so refresh in a bit.");
+      if (result.pending) setKeepNote("Deleting the strip. Refresh soon to check it's gone.");
       else {
         setStrips(list => list.filter(value => value.id !== strip.id));
         mediaRequests.current.delete(key);
@@ -569,7 +568,7 @@ function TimelineContent() {
               >
                 {busy ? "Saving…" : datePending ? "Retry this reminder" : "Set reminder"}
               </button>
-              {datePending && !busy && <p className="text-sm">This reminder didn&apos;t go through yet. Retry it before you add another. Once it&apos;s saved, you can delete it from the list.</p>}
+              {datePending && !busy && <p className="text-sm">This reminder didn&apos;t save. Try again before adding another.</p>}
               <p className="text-xs text-muted-foreground">
                 Both of you get an email when it&apos;s time.
               </p>

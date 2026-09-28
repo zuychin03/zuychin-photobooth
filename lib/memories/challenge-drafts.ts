@@ -117,9 +117,9 @@ export async function openChallengeDraftJournal(ownerId: string, options: CloudJ
 }
 export function challengeDraftMessage(error: unknown): string {
   const code = error && typeof error === "object" && "code" in error ? error.code : null;
-  if (code === "conflict") return "This draft changed in another tab. Reopen its saved version before continuing.";
-  if (code === "capacity") return "Local challenge recovery is full. Review or dismiss old drafts in Cloud projects before continuing.";
-  if (code === "readonly" || code === "journal_readonly") return "This recovery data needs a newer app. It has not been overwritten.";
-  if (code === "account_changed") return "Your account changed. Reopen your own cloud library to recover this draft.";
-  return "This draft could not be saved on this device. Your choices remain here. Retry saving before sending the request.";
+  if (code === "conflict") return "This draft changed in another tab. Reopen it before you continue.";
+  if (code === "capacity") return "There are too many unfinished challenges on this device. Dismiss some old ones in Cloud projects first.";
+  if (code === "readonly" || code === "journal_readonly") return "This draft needs a newer version of the app.";
+  if (code === "account_changed") return "You switched accounts. Open your own cloud library to find this draft.";
+  return "Couldn't save this draft on this device. Try again before sending it.";
 }

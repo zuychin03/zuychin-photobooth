@@ -44,7 +44,7 @@ function RelayAccountPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   useAppNavigationGuard(() => {
-    if ((originals.length > 0 && !originalsSaved) || busy) { setError("Hang on until your photos finish saving before you leave."); return false; }
+    if ((originals.length > 0 && !originalsSaved) || busy) { setError("Wait for your photos to finish saving before you leave."); return false; }
     return true;
   });
   const [pendingFrames, setPendingFrames] = useState<HTMLCanvasElement[] | null>(null);

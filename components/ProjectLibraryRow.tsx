@@ -72,14 +72,14 @@ export function ProjectLibraryRow({ item, thumbnail, busy, onAction, onRecovery 
           <button type="button" className={control} disabled={disabled} onClick={() => { focusTarget.current = "rename"; setEditing(false); }}>Cancel</button>
         </form>}
         {confirmDelete && <div className="mt-4" role="group" aria-label={`Confirm deletion of ${item.name}`}>
-          <p className="max-w-xl text-sm">Delete this project and its photos from this browser? You can&apos;t undo this, so export a backup first if you might want it later.</p>
+          <p className="max-w-xl text-sm">Delete this project and its photos from this browser? You can&apos;t undo this.</p>
           <div className="mt-2 flex flex-wrap gap-2"><button type="button" className={`${control} bg-foreground text-background hover:bg-foreground/90`} disabled={disabled} onClick={() => void run("delete")}>Delete from this device</button><button data-row-focus="keep" type="button" className={control} disabled={disabled} onClick={() => { focusTarget.current = "delete"; setConfirmDelete(false); }}>Keep project</button></div>
         </div>}
         {recoveryError && <p role="alert" className="mt-3 text-sm text-foreground">{recoveryError}</p>}
       </div>
     </div>
     {recoveryOpen && recovery && <section className="mt-5 border-t border-border pt-4 sm:ml-29" aria-label={`Recovery files for ${item.name}`}>
-      <p className="max-w-2xl text-sm text-foreground/75">These are the raw files behind your project. They can include private account or camera details, so use Export if you want to share it.</p>
+      <p className="max-w-2xl text-sm text-foreground/75">Raw files for this project. They can include private details, so use Export to share it.</p>
       <div className="mt-2 flex flex-wrap gap-1">
         <button type="button" className={control} onClick={() => downloadProjectBlob(new Blob([recovery.kind === "current" ? JSON.stringify(recovery.project) : recovery.rawJson], { type: "application/json" }), projectDownloadName(item.name, "json"))}><Download size={15} aria-hidden /> Project data</button>
         {recovery.checkpoint && <button type="button" className={control} onClick={() => downloadProjectBlob(new Blob([recovery.checkpoint!.rawJson], { type: "application/json" }), projectDownloadName(`${item.name}-previous`, "json"))}><Download size={15} aria-hidden /> Previous project data</button>}

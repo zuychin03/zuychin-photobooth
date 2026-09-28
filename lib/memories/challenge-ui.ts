@@ -37,20 +37,20 @@ export async function challengeSubmission(challengeId: string, ownerId: string, 
 export function challengeError(error: unknown): string {
   const code = error && typeof error === "object" && "code" in error ? error.code : "";
   const messages: Record<string, string> = {
-    access_denied: "This challenge is no longer available to your account. Return to the project and refresh your access.",
-    access_lost: "A contributor or original is no longer available. This result cannot be prepared.",
-    expired: "The contribution deadline has passed. Refresh to see the latest result.",
-    not_ready: "The challenge is not ready for this action. Refresh to check invitations and submissions.",
-    conflict: "The challenge changed, or this action already has a different result. Refresh before continuing.",
-    capacity: "This project has reached a challenge or storage limit. Keep your original files.",
-    account_changed: "Your account changed. Return to the library and sign in again.",
+    access_denied: "You don't have access to this challenge anymore. Go back to the project and refresh.",
+    access_lost: "Someone left or a photo was removed, so this result can't be made.",
+    expired: "The deadline has passed. Refresh to see the result.",
+    not_ready: "The challenge isn't ready for that yet. Refresh to see who has joined and added photos.",
+    conflict: "The challenge has changed. Refresh before you continue.",
+    capacity: "This project is out of space or has too many challenges.",
+    account_changed: "You switched accounts. Go back to the library and sign in again.",
     rate_limited: "Too many requests. Wait a minute before trying again.",
-    update_required: "This challenge needs a newer server update before it can be opened here.",
-    unsupported: "This design cannot be exported in this browser yet. Your originals are unchanged.",
-    file_required: "Choose the same original file to resume this upload.",
-    file_mismatch: "That file does not match this upload. Choose the original file.",
+    update_required: "This challenge isn't supported on this server yet.",
+    unsupported: "This design can't be exported in this browser yet.",
+    file_required: "Choose the same file to resume this upload.",
+    file_mismatch: "That's a different file. Choose the one you started with.",
     invalid_image: "Choose a JPEG, PNG or WebP within 10 MiB, 4096 pixels per side and 12 megapixels.",
-    resource_limit: "This result exceeds the browser's export limits. Keep the originals for a smaller export.",
+    resource_limit: "This result is too big for your browser to export.",
   };
-  return messages[String(code)] ?? "Confirmation did not arrive. Refresh before retrying; your action may already have reached the server.";
+  return messages[String(code)] ?? "No reply from the server. Refresh before trying again, as it may have worked.";
 }

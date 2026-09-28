@@ -62,9 +62,9 @@ export default function TogetherEntry({ roomsConfigured, cloudConfigured, challe
     <section aria-labelledby="later-title" className="grid grid-cols-1 gap-6 border-t border-border py-8 md:grid-cols-[1fr_1.2fr] md:gap-12">
       <div><Clock size={23} aria-hidden className="text-accent" /><h2 id="later-title" className="mt-3 font-display text-2xl font-semibold">Take your turn later</h2><p className="mt-3 text-sm leading-relaxed text-foreground/70">Photo challenges for 2–4 people, at your own pace.</p></div>
       <div className="space-y-4">
-        <p className="text-sm leading-relaxed text-foreground/70">{legacyRooms ? "Feature incoming" : challengesConfigured && authEnabled ? "Challenges live inside shared cloud projects. Each project decides when everyone's photos are revealed." : "Challenges aren't available right now."}</p>
+        <p className="text-sm leading-relaxed text-foreground/70">{legacyRooms ? "Feature incoming" : challengesConfigured && authEnabled ? "Start a challenge from a shared cloud project." : "Challenges aren't available right now."}</p>
         <div className="flex flex-wrap gap-2">{cloudConfigured && authEnabled && <Link href="/projects/cloud" className={`${control} border border-border`}>Open cloud projects<ArrowRight size={16} aria-hidden /></Link>}{authEnabled && <Link href="/relay/new" className={`${control} underline underline-offset-4`}>Paired relay</Link>}</div>
-        {authEnabled && <p className="text-xs leading-relaxed text-foreground/70">Relays are just for you and your paired partner.</p>}
+        {authEnabled && <p className="text-xs leading-relaxed text-foreground/70">Relays are for you and your paired partner.</p>}
       </div>
     </section>
 

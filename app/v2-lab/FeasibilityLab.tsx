@@ -63,7 +63,10 @@ export default function FeasibilityLab() {
   const button = "rounded-lg border border-border bg-card px-4 py-3 text-sm font-medium disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent";
   return (
     <main className="mx-auto w-full max-w-5xl px-6 py-10 sm:py-16">
-      <Link href="/" className="text-sm text-accent underline underline-offset-4">Back to Photobooth</Link>
+      <div className="flex flex-wrap gap-4">
+        <Link href="/v2-lab/turn" className="text-sm text-accent underline underline-offset-4">Check configured TURN</Link>
+        <Link href="/" className="text-sm text-accent underline underline-offset-4">Back to Photobooth</Link>
+      </div>
       <p className="mt-10 text-sm font-medium uppercase tracking-widest text-muted-foreground">V2 development lab</p>
       <h1 className="mt-3 font-display text-4xl sm:text-5xl">Prove the foundations.</h1>
       <p className="mt-5 max-w-2xl leading-relaxed text-muted-foreground">Synthetic fixtures check local recovery, real canvas output and short video encoding in this browser. This page is available only in development. It uses no camera, microphone, account or cloud uploads.</p>

@@ -382,7 +382,7 @@ function CustomizeWorkspace({ project }: { project: PhotoProject }) {
     if (curated.loading) throw new Error("The artwork is still loading. Try exporting again in a moment.");
     if (editor.template?.slots.some(slot => [slot, ...(slot.companions ?? [])].some(source => !session.shots[source.role]?.[source.sourceIndex]))) throw new Error("Some template spots are still empty. Add those photos, then export.");
     try { await draft.flush(); }
-    catch { setSaveError("Your latest edits haven't saved on this device yet. They're in this export, so keep the file and try saving again."); }
+    catch { setSaveError("Your latest edits haven't saved yet, but they're in this export."); }
     if (sceneId && (!cutouts || segmenting)) throw new Error("The Together scene is still being set up. Wait for it, or turn the scene off to export now.");
     if (stickerStyle === "noto" || theme?.stickerStyle === "noto" || editor.template?.layers.some(layer => layer.kind === "sticker" && layer.style === "noto")) await ensureNotoFont(getComputedStyle(document.documentElement).getPropertyValue("--font-noto-emoji").trim());
     if (stickerStyle !== "noto") {
@@ -426,7 +426,7 @@ function CustomizeWorkspace({ project }: { project: PhotoProject }) {
     setSaving(true); setSaveError(null);
     try {
       try { await draft.flush(); }
-      catch { setSaveError("Your latest edits haven't saved on this device yet. They're in this backup, so keep the file and try saving again."); }
+      catch { setSaveError("Your latest edits haven't saved yet, but they're in this backup."); }
       const blob = await exportProject(editor);
       if (!mounted.current) return;
       const url = URL.createObjectURL(blob), link = document.createElement("a");
@@ -471,7 +471,7 @@ function CustomizeWorkspace({ project }: { project: PhotoProject }) {
       setSaveState("saved");
     } catch (error) {
       if (error instanceof UploadSaveError && error.restartRequired) saveIdentity.current = null;
-      setSaveError(error instanceof Error ? error.message : "Couldn't save to the Shared Vault. Your photos are still here, so try again.");
+      setSaveError(error instanceof Error ? error.message : "Couldn't save to the Shared Vault. Try again.");
       setSaveState("idle");
     }
   };
@@ -502,11 +502,11 @@ function CustomizeWorkspace({ project }: { project: PhotoProject }) {
     try {
       const result = await deleteStrip(strip);
       if (result.pending) {
-        setSaveError("That strip is queued for deletion. Check your vault before you try saving again. Your photos are still here.");
+        setSaveError("That strip is still being deleted. Check your vault, then try again.");
         return;
       }
     } catch (error) {
-      setSaveError(error instanceof Error ? error.message : "Couldn't delete that strip. Your photos are still here.");
+      setSaveError(error instanceof Error ? error.message : "Couldn't delete that strip.");
       return;
     }
     await persistStrip();
@@ -585,7 +585,7 @@ function CustomizeWorkspace({ project }: { project: PhotoProject }) {
           </div>
           {!hasShots && <p className="text-sm">This version has no photos. Press Redo to bring them back, or choose Add photos.</p>}
           {(draft.error || storageError) && <div role="alert" className="text-sm"><p>{draft.error ?? storageError}</p><div className="flex flex-wrap gap-4"><button className="mt-2 min-h-11 text-accent underline" onClick={() => void draft.flush().catch(error => setSaveError(error.message))}>Try saving again</button>{draft.error && <button className="mt-2 min-h-11 underline" onClick={() => setDiscardingEdits(true)}>Discard unsaved edits</button>}</div></div>}
-          {discardingEdits && <div className="border-y border-border py-3 text-sm"><p>Go back to your last saved edits? Anything that hasn&apos;t saved will be lost. Back up the project first if you want to keep it.</p><div className="mt-2 flex gap-4"><button className="min-h-11 text-destructive underline" onClick={() => void discardEdits()}>Go back to saved edits</button><button className="min-h-11 underline" onClick={() => setDiscardingEdits(false)}>Keep editing</button></div></div>}
+          {discardingEdits && <div className="border-y border-border py-3 text-sm"><p>Go back to your last saved edits? Unsaved changes will be lost.</p><div className="mt-2 flex gap-4"><button className="min-h-11 text-destructive underline" onClick={() => void discardEdits()}>Go back to saved edits</button><button className="min-h-11 underline" onClick={() => setDiscardingEdits(false)}>Keep editing</button></div></div>}
           <div className={toolClass("photos")}>
             {editor.template ? <><TemplateSourcePanel project={project} onImport={async (role, index, file) => { await draft.flush(); await importShot(role, index, file); }} /><button className="min-h-11 text-left text-sm underline" onClick={() => setField("template", null)}>Use the standard layout</button></> : <PhotoEditPanel project={project} editor={editor} change={draft.patch} reorder={async order => { await draft.flush(); await editProject({}, order); }} />}
           </div>
@@ -594,7 +594,7 @@ function CustomizeWorkspace({ project }: { project: PhotoProject }) {
           <VisualPackPicker sceneId={sceneId} materialId={editor.materialId ?? null} onSceneChange={setSceneId} onMaterialChange={id => setField("materialId", id)} />
           </div>
           {curated.loading && <p role="status" className="text-sm text-muted-foreground">Loading artwork…</p>}
-          {curated.fallback.length > 0 && <p role="status" className="text-sm">Couldn&apos;t load {curated.fallback.join(", ")}, so a built-in background will be used instead.</p>}
+          {curated.fallback.length > 0 && <p role="status" className="text-sm">Couldn&apos;t load {curated.fallback.join(", ")}. Using a built-in background.</p>}
 
           <div className={toolClass("look")}>
           <section>
@@ -948,8 +948,8 @@ function CustomizeWorkspace({ project }: { project: PhotoProject }) {
               </div>
             ) : (
               <p className="rounded-xl bg-muted/60 px-3 py-2 text-sm text-muted-foreground">
-                None of your strips from this week can be swapped out. Kept strips
-                stay put, and you can&apos;t remove your partner&apos;s. Download this one instead, or wait for the weekly reset.
+                None of your strips from this week can be removed. Download this one
+                instead, or wait for the weekly reset.
               </p>
             )}
           </div>

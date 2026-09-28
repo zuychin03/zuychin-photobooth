@@ -191,7 +191,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   }, [adopt, loading, scope]);
 
   const startProject = useCallback((options: CreateProjectInput = {}, carryReference = false) => enqueue(async token => {
-    if (loading) throw new Error("Hang on, your projects are still loading.");
+    if (loading) throw new Error("Your projects are still loading. Try again in a moment.");
     let next = createProject({ ...options, scope });
     const additions = new Map<string, Blob>(), plan = carryReference ? current.current?.editor.thenNow : null;
     if (plan && current.current) {

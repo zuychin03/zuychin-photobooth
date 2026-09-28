@@ -43,7 +43,7 @@ function NewRelayAccountPage() {
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
   useAppNavigationGuard(() => {
-    if ((originals.length > 0 && !originalsSaved) || step === "saving") { setError("Hang on until your photos finish saving before you leave."); return false; }
+    if ((originals.length > 0 && !originalsSaved) || step === "saving") { setError("Wait for your photos to finish saving before you leave."); return false; }
     return true;
   });
   const [pendingUpload, setPendingUpload] = useState<{ id: string; frames: HTMLCanvasElement[] } | null>(null);

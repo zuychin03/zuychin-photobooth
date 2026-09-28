@@ -29,7 +29,7 @@ function InvitationQr({ eventId, token, expiresAt, audience }: { eventId: string
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={ready} width={256} height={256} alt={`Private QR ${label} for this event`} className="h-auto w-64 max-w-full rounded-sm bg-white" />
       <a className={`${eventControl} mt-3 border border-border`} href={ready} download={audience === "guest" ? "event-invitation.svg" : `event-${audience}-access.svg`} onClick={event => { if (Date.now() >= Date.parse(expiresAt)) event.preventDefault(); }}>Download QR {label}</a>
-    </> : <p role="status" className="text-sm">{expired ? "This link has expired. Create a new link to get a new QR code." : failed ? "The QR code could not be prepared. You can still copy the private link." : `Preparing your QR ${label}…`}</p>}
-    <figcaption className="mt-2 text-xs leading-relaxed text-foreground/70">{audience === "guest" ? "Share this code only with your guests. It grants the same access as the private invitation link." : audience === "gallery" ? "Anyone with this code can browse approved gallery photos. It does not allow contributions or wall access." : "Anyone with this code can open the approved event wall. It does not allow contributions or gallery access."}</figcaption>
+    </> : <p role="status" className="text-sm">{expired ? "This link has expired. Create a new one to get a new QR code." : failed ? "Couldn't make the QR code. You can still copy the link." : `Making your QR ${label}…`}</p>}
+    <figcaption className="mt-2 text-xs leading-relaxed text-foreground/70">{audience === "guest" ? "Only share this with your guests. It works like the invitation link." : audience === "gallery" ? "Anyone with this code can see approved gallery photos." : "Anyone with this code can see the event wall."}</figcaption>
   </figure>;
 }

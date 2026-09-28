@@ -1,7 +1,5 @@
 "use client";
 
-import { HelpTooltip } from "@/components/HelpTooltip";
-
 import { useEffect, useRef, useState } from "react";
 import { Download, LoaderCircle, Pause, Play, Share2 } from "lucide-react";
 import { Dropdown } from "./Dropdown";
@@ -83,7 +81,6 @@ export function MotionExportPanel({ getFrames, name, delayMs = 500, warnings = [
       { value: "gif", label: "GIF · animated image" },
       ...["mp4", "webm"].map(value => ({ value, label: `${value.toUpperCase()} · video`, disabled: !capabilities?.find(item => item.format === value)?.available })),
     ]} />
-    <div className="flex items-center gap-2 text-sm text-muted-foreground"><span>GIFs and videos have no sound</span><HelpTooltip label="About loop formats">GIFs go up to 640 pixels on the longest side and use fewer colours. Videos go up to 1280 × 720. Check what your browser supports before you pick a video format.</HelpTooltip></div>
     <button type="button" disabled={blocked} onClick={() => void run(true)} className={`${control} border border-border`}>{busy === "checking" && <LoaderCircle size={16} className="animate-spin motion-reduce:animate-none" />}{capabilities ? "Check video formats again" : "Check video support"}</button>
     {capabilities && <p role="status" className="text-sm text-muted-foreground">{capabilities.map(item => `${item.format.toUpperCase()}: ${item.available ? "works here" : "not supported in this browser"}`).join(". ")}.</p>}
     <label className="flex min-h-11 items-center gap-2 text-sm"><input type="checkbox" checked={boomerang} disabled={blocked} onChange={event => { reset(); setBoomerang(event.target.checked); }} className="h-4 w-4 accent-accent" /> Play forwards, then backwards</label>
