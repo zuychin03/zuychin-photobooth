@@ -1,3 +1,5 @@
+import { recoveryOperationAllowed } from "../recovery-policy";
+import { isRecoveryRelease } from "../release-mode";
 import { CLOUD_DESIGN_LIMITS, designObject, designRevision, validateCloudDesign } from "../projects/cloud-design";
 import { cloudUuid } from "../projects/cloud-contract";
 import { privateJson } from "./cron-auth";
@@ -35,11 +37,12 @@ export function createProjectDesignHandler(createStore: (token: string, env: Rec
       const token = /^Bearer ([^\s,]+)$/i.exec(request.headers.get("authorization") ?? "")?.[1];
       if (!token || token.length > 16384) throw new ProjectServerError("access_denied", 401);
       const raw = await body(request), operation = (raw as Record<string, unknown> | null)?.operation;
-      if (!["capabilities", "head", "read", "save", "status"].includes(operation as string)) throw new Error("invalid_request");
+      if (typeof operation !== "string" || !["capabilities", "head", "read", "save", "status"].includes(operation)) throw new Error("invalid_request");
       const value = designObject(raw, operation === "capabilities" ? ["operation"] : operation === "head" ? ["operation", "projectId"] : operation === "read" ? ["operation", "projectId", "checkpoint"] : operation === "status" ? ["operation", "projectId", "requestId"] : ["operation", "projectId", "requestId", "expectedRevision", "snapshot"]);
       const projectId = operation === "capabilities" ? "" : cloudUuid(value.projectId);
       if (operation === "read" && !["current", "previous"].includes(value.checkpoint as string)) throw new Error("invalid_request");
       if (operation === "save" || operation === "status") cloudUuid(value.requestId);
+      if (isRecoveryRelease(env) && !recoveryOperationAllowed("project-design", operation, value)) return privateJson({ error: "feature_recovery" }, 503);
       const snapshot = operation === "save" ? validateCloudDesign(value.snapshot) : null;
       if (operation === "save") designRevision(value.expectedRevision);
       const store = await createStore(token, env); await store.rate(operation === "save" ? "write" : "read");

@@ -9,9 +9,11 @@ import { MobileNav } from "@/components/MobileNav";
 import { useAuth } from "@/lib/auth";
 import { useAppNavigation } from "@/components/AppNavigation";
 import { useKioskLocked } from "@/components/events/EventKioskGuard";
+import { useRecoveryRelease } from "@/components/ReleaseMode";
 
 export function SiteNav() {
   const { user, enabled: authEnabled } = useAuth(), pathname = usePathname();
+  const recovery = useRecoveryRelease();
   const navigation = useAppNavigation(), locked = useKioskLocked(), header = useRef<HTMLElement>(null);
   const pill = useRef<HTMLElement>(null), scroller = useRef<HTMLDivElement>(null), options = useRef<HTMLDivElement>(null);
   const pillAnchor = useRef<HTMLDivElement>(null);
@@ -87,7 +89,7 @@ export function SiteNav() {
   const guard = (href: string, event: { preventDefault(): void }) => { if (locked || navigation?.canNavigate(href) === false) { event.preventDefault(); return false; } return true; };
   const linkStyle = "flex min-h-11 shrink-0 items-center gap-2 whitespace-nowrap rounded-full px-4 transition-colors hover:bg-accent/10 hover:text-accent focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring";
   const scrollButtonStyle = "flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-accent/10 hover:text-accent disabled:cursor-default disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-muted-foreground focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring";
-  const accountHref = user ? "/timeline?signout=1" : "/login?next=/timeline";
+  const accountHref = user ? "/timeline?signout=1" : recovery ? "/login?next=/projects/cloud" : "/login?next=/timeline";
   const accountLabel = user ? "Sign out" : "Sign in";
   const account = (compact: boolean) => {
     const iconOnly = compact || Boolean(user);

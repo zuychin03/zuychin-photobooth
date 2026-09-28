@@ -23,9 +23,50 @@ test("local kiosk permits recovery operations but refuses new work before openin
 test("release defaults fail closed in production and explicit modes override", () => {
   for (const value of [undefined, "", "FULL", "unexpected"]) assert.equal(isLocalRelease({ NODE_ENV: "production", PB_RELEASE_MODE: value }), true);
   assert.equal(isLocalRelease({ NODE_ENV: "production", PB_RELEASE_MODE: "full" }), false);
+  assert.equal(isLocalRelease({ NODE_ENV: "production", PB_RELEASE_MODE: "recovery" }), false);
   assert.equal(isLocalRelease({ NODE_ENV: "development" }), false);
   assert.equal(isLocalRelease({ NODE_ENV: "test" }), false);
   assert.equal(isLocalRelease({ NODE_ENV: "development", PB_RELEASE_MODE: "local" }), true);
+});
+
+test("recovery proxy keeps authenticated recovery routes and refuses unrelated API work", async () => {
+  const keys = ["NODE_ENV", "PB_RELEASE_MODE", "NEXT_PUBLIC_SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_ANON_KEY"];
+  const saved = keys.map(key => [key, process.env[key]] as const);
+  try {
+    Object.assign(process.env, { NODE_ENV: "production", PB_RELEASE_MODE: "recovery" });
+    delete process.env.NEXT_PUBLIC_SUPABASE_URL;
+    delete process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    for (const path of ["/login", "/auth/callback?code=synthetic", "/projects", "/projects/cloud", "/events", "/receipt/existing", "/timeline?signout=1"]) {
+      const response = await proxy(new NextRequest(`https://booth.example${path}`));
+      assert.equal(response.headers.get("x-middleware-next"), "1", path);
+    }
+    for (const path of ["/api/projects", "/api/projects/design", "/api/events", "/api/events/existing", "/api/events/existing/guest", "/api/events/existing/exports", "/api/events/existing/kiosk", "/api/events/existing/receipts/accepted"]) {
+      const response = await proxy(new NextRequest(`https://booth.example${path}`, { method: "POST" }));
+      assert.equal(response.headers.get("x-middleware-next"), "1", path);
+    }
+    for (const path of ["/api/reminders", "/api/rooms", "/api/keep", "/api/push/notify", "/api/memories", "/api/projects/unknown", "/api/events/existing/reminder", "/api/events/existing/exports/extra"]) {
+      const response = await proxy(new NextRequest(`https://booth.example${path}`, { method: "POST" }));
+      assert.equal(response.status, 503, path);
+      assert.deepEqual(await response.json(), { error: "feature_recovery" });
+      assert.equal(response.headers.get("cache-control"), "private, no-store");
+    }
+    for (const path of ["/api/events/maintenance", "/api/projects/maintenance", "/api/media/maintenance", "/api/retention"]) {
+      assert.equal((await proxy(new NextRequest(`https://booth.example${path}`))).headers.get("x-middleware-next"), "1", path);
+      assert.equal((await proxy(new NextRequest(`https://booth.example${path}`, { method: "POST" }))).status, 503, path);
+    }
+    for (const path of ["/together", "/room/ABC234", "/relay/new", "/challenges", "/memories", "/timeline", "/timeline?signout=0", "/timeline?signout=1&signout=0", "/e/existing/postcard", "/e/existing/gallery", "/e/existing/wall"]) {
+      const response = await proxy(new NextRequest(`https://booth.example${path}`));
+      const rewrite = new URL(response.headers.get("x-middleware-rewrite")!);
+      assert.equal(rewrite.pathname, "/incoming", path);
+      assert.equal(rewrite.searchParams.get("mode"), "recovery", path);
+    }
+    const cookie = "pb-kiosk-lock=00000000-0000-4000-8000-000000000001.00000000-0000-4000-8000-000000000002";
+    const locked = await proxy(new NextRequest("https://booth.example/api/projects", { headers: { cookie } }));
+    assert.equal(locked.status, 403);
+    assert.deepEqual(await locked.json(), { error: "kiosk_locked" });
+  } finally {
+    for (const [key, value] of saved) { if (value === undefined) delete process.env[key]; else process.env[key] = value; }
+  }
 });
 
 test("online page prefixes respect route boundaries", () => {

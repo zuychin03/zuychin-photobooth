@@ -1,3 +1,5 @@
+import { recoveryOperationAllowed } from "../recovery-policy";
+import { isRecoveryRelease } from "../release-mode";
 import { createHash, createHmac } from "node:crypto";
 import { isIP } from "node:net";
 import { createClient } from "@supabase/supabase-js";
@@ -53,6 +55,7 @@ export function createEventKioskHandler(ports: EventKioskRequestPorts = producti
       const header=env.PB_EVENT_TRUSTED_IP_HEADER, ip=header && /^[a-z][a-z0-9-]{0,63}$/.test(header)?request.headers.get(header)?.trim():local?"127.0.0.1":null;
       if(!ip || !isIP(ip)) throw new EventStoreError("unavailable",503);
       const b=await readSmallJson(request); check(); if(typeof b.operation!=="string") return bad(); const operation=b.operation, shape=(...fields:string[])=>eventObject(b,["operation",...fields]);
+      if (isRecoveryRelease(env) && !recoveryOperationAllowed("event-kiosk", operation, b)) return privateJson({ error: "feature_recovery" }, 503);
       if(isLocalRelease(env) && !localReleaseKioskAllowed(operation)) throw new EventStoreError("unavailable",503);
       const kiosk=ports.kiosk(env,signal), core=ports.core(env,signal);
       const rate=async(key:string,scope:"read"|"write"|"redeem")=>{ const r=await core.rate(kioskDigest(kioskDerive(secret,"rate",key)),scope); check(); if(!r.allowed) throw new RequestValidationError(429,"rate_limited"); };

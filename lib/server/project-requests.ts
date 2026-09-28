@@ -1,3 +1,5 @@
+import { recoveryOperationAllowed } from "../recovery-policy";
+import { isRecoveryRelease } from "../release-mode";
 import { CLOUD_PROJECT_LIMITS, cloudUuid, validateCloudAsset, type CloudAssetInput } from "../projects/cloud-contract";
 import { createProjectStore, ProjectServerError, type ProjectStore } from "./project-store";
 import { createProjectObjects, type ProjectObjects } from "./project-objects";
@@ -56,6 +58,7 @@ export function createProjectHandler(ports: ProjectRequestPorts = production, ge
       const token = /^Bearer ([^\s,]+)$/i.exec(request.headers.get("authorization") ?? "")?.[1];
       if (!token || token.length > 16_384) throw new ProjectServerError("access_denied", 401);
       const body = await readSmallJson(request), operation = validate(body);
+      if (isRecoveryRelease(env) && !recoveryOperationAllowed("project", operation, body)) return privateJson({ error: "feature_recovery" }, 503);
       const store = await ports.store(token, env);
       await store.rate(operation === "upload" ? "upload" : ["capabilities", "list", "view", "read", "status"].includes(operation) ? "read" : "write");
       const project = body.projectId as string, asset = body.assetId as string;

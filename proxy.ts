@@ -2,7 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { authCookieOptions } from "@/lib/supabase/cookie-options";
 import { kioskAllowsPath, kioskCookieValue, kioskLock } from "@/lib/events/kiosk-lock";
-import { incomingFeature, isLocalRelease, localReleaseApiAllowed } from "@/lib/release-mode";
+import { incomingFeature, isLocalRelease, isRecoveryRelease, localReleaseApiAllowed, recoveryPausedFeature, recoveryReleaseApiAllowed } from "@/lib/release-mode";
 
 // Refreshes the Supabase session cookie on every request so Server Components
 // read a valid session. Next.js 16 renamed the `middleware` convention to `proxy`.
@@ -32,6 +32,20 @@ export async function proxy(request: NextRequest) {
       return NextResponse.rewrite(destination, { headers });
     }
     return NextResponse.next();
+  }
+  if (isRecoveryRelease()) {
+    const pathname = request.nextUrl.pathname;
+    const headers = { "Cache-Control": "private, no-store", "Referrer-Policy": "no-referrer", "X-Robots-Tag": "noindex, nofollow" };
+    if (pathname.startsWith("/api/")) {
+      return recoveryReleaseApiAllowed(pathname, request.method) ? NextResponse.next({ headers }) : NextResponse.json({ error: "feature_recovery" }, { status: 503, headers });
+    }
+    const feature = recoveryPausedFeature(pathname, request.nextUrl.searchParams);
+    if (feature) {
+      const destination = new URL("/incoming", request.url);
+      destination.searchParams.set("feature", feature);
+      destination.searchParams.set("mode", "recovery");
+      return NextResponse.rewrite(destination, { headers });
+    }
   }
   if (
     !process.env.NEXT_PUBLIC_SUPABASE_URL ||

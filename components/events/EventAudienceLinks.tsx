@@ -1,4 +1,5 @@
 "use client";
+import { useRecoveryRelease } from "@/components/ReleaseMode";
 
 import { useEffect, useId, useRef, useState } from "react";
 import { Dropdown } from "@/components/Dropdown";
@@ -13,6 +14,7 @@ type Pending = Issue | { kind: "revoke"; audience: Audience; token: string };
 type Issued = { audience: Audience; token: string; expiresAt: string };
 
 export function EventAudienceLinks({ client, eventId, expiresAt, disabled = false, onBusyChange, onDirtyChange }: { client: EventHostClient; eventId: string; expiresAt: string; disabled?: boolean; onBusyChange?(busy: boolean): void; onDirtyChange?(dirty: boolean): void }) {
+  const recovery = useRecoveryRelease();
   const task = useEventHostTask(client), id = useId(), [audience, setAudience] = useState<Audience>("gallery"), [duration, setDuration] = useState("24"), [issued, setIssued] = useState<Issued | null>(null), [pending, setPending] = useState<Pending | null>(null), [confirm, setConfirm] = useState<"issue" | "revoke" | "discard" | null>(null), [notice, setNotice] = useState<string | null>(null), [now, setNow] = useState(Date.now);
   const callbacks = useRef({ onBusyChange, onDirtyChange }), heading = useRef<HTMLHeadingElement>(null), link = useRef<HTMLInputElement>(null), alive = useRef(false);
   useEffect(() => { callbacks.current = { onBusyChange, onDirtyChange }; }, [onBusyChange, onDirtyChange]);
@@ -24,7 +26,7 @@ export function EventAudienceLinks({ client, eventId, expiresAt, disabled = fals
   useEventLeaveWarning(!task.lost && !!pending);
   const expired = !Number.isFinite(Date.parse(expiresAt)) || Date.parse(expiresAt) <= now, visible = issued && Date.parse(issued.expiresAt) > now ? issued : null;
   const run = (request: Pending) => {
-    if (disabled || task.isBusy()) return;
+    if (disabled || task.isBusy() || recovery && request.kind === "issue") return;
     setConfirm(null); setPending(request); setNotice(null);
     void task.run(async (signal, check) => {
       if (request.kind === "issue") {
@@ -47,7 +49,7 @@ export function EventAudienceLinks({ client, eventId, expiresAt, disabled = fals
       </div>
       <p className="mt-3 text-xs leading-relaxed text-foreground/70">A link always expires by the event&apos;s retention deadline. Anyone holding it can use or forward it.</p>
       {task.error && <p role="alert" className="mt-3 text-sm">{task.error}</p>}{notice && <p role="status" className="mt-3 text-sm leading-relaxed">{notice}</p>}
-      <div className="mt-4 flex flex-wrap gap-2">{pending ? <><button className={`${eventControl} border border-border`} disabled={disabled || task.busy} onClick={() => run(pending)}>Retry exact access action</button><button className={eventControl} disabled={disabled || task.busy} onClick={() => setConfirm("discard")}>Dismiss access retry…</button></> : <button className={`${eventControl} border border-border`} disabled={disabled || task.busy || expired} onClick={() => setConfirm("issue")}>Create {audience} access…</button>}</div>
+      <div className="mt-4 flex flex-wrap gap-2">{pending ? <><button className={`${eventControl} border border-border`} disabled={disabled || task.busy || recovery && pending.kind === "issue"} onClick={() => run(pending)}>Retry exact access action</button><button className={eventControl} disabled={disabled || task.busy} onClick={() => setConfirm("discard")}>Dismiss access retry…</button></> : <button className={`${eventControl} border border-border`} disabled={recovery || disabled || task.busy || expired} onClick={() => setConfirm("issue")}>Create {audience} access…</button>}</div>
       {pending && <p className="mt-3 text-sm leading-relaxed">The link may already exist. Retry here to recover it without creating another; leaving loses this retry.</p>}
       {visible && <div className="mt-5 max-w-xl"><label htmlFor={`${id}-link`} className="text-sm font-medium">Private {visible.audience} link</label><input ref={link} id={`${id}-link`} className={`${eventInput} mt-2`} readOnly value={`${location.origin}/e/${eventId}/${visible.audience}#token=${visible.token}`} onFocus={event => event.currentTarget.select()} /><p className="mt-2 text-xs text-foreground/70">Expires {new Date(visible.expiresAt).toLocaleString("en-AU")}. Keep a copy if you need to revoke this exact token later.</p><EventInvitationQr eventId={eventId} token={visible.token} expiresAt={visible.expiresAt} audience={visible.audience} /><button className={`${eventControl} mt-3 border border-border`} disabled={disabled || task.busy || !!pending} onClick={() => setConfirm("revoke")}>Revoke this {visible.audience} link…</button></div>}
     </div>

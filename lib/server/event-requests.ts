@@ -1,3 +1,5 @@
+import { recoveryOperationAllowed } from "../recovery-policy";
+import { isRecoveryRelease } from "../release-mode";
 import { createEventOwnConsentStore } from "./event-own-consent-store";
 import { createEventGuestbookStore } from "./event-guestbook-store";
 import { EVENT_MISSIONS, validateGuestbookText } from "../events/guestbook-contract";
@@ -115,6 +117,8 @@ export function createEventHandler(route: EventRoute, ports: EventRequestPorts =
       const operation = b.operation; if (typeof operation !== "string") return eventInvalid();
       const shape = (...keys: string[]) => eventObject(b, ["operation", ...keys]);
       if (route !== "root") eventUuid(eventId); if (route === "receipt") eventUuid(submissionId);
+      const recovery = isRecoveryRelease(env);
+      if (recovery && !recoveryOperationAllowed(`event-${route}`, operation, b)) return privateJson({ error: "feature_recovery" }, 503);
       const store = ports.store(env, controller.signal); await store.transportReady(); check();
       const rate = async (identity: string, bucket: "read" | "write" | "redeem") => {
         const response = await store.rate(digest(derive("rate", identity)), bucket); check();
@@ -134,7 +138,7 @@ export function createEventHandler(route: EventRoute, ports: EventRequestPorts =
         try { if ((await ports.guestbook?.(env, controller.signal).capabilities())?.version === 1) guestbookVersion = 1; } catch { /* Guestbook remains unavailable on older event deployments. */ }
         let accepting = false;
         try { const status = await worker(); accepting = status.ready && status.pending < status.maxPending; } catch { /* Reads remain available while worker readiness is absent. */ }
-        check(); return privateJson({ enabled: true, version: 1, transportVersion: 1, hostVersion, guestbookVersion, ownConsentVersion, limits: EVENT_LIMITS, uploadsAvailable: !!ports.objects && hostVersion === 1 && accepting, downloadsAvailable: !!ports.objects });
+        check(); return privateJson({ enabled: true, version: 1, transportVersion: 1, hostVersion, guestbookVersion, ownConsentVersion, limits: EVENT_LIMITS, uploadsAvailable: !recovery && !!ports.objects && hostVersion === 1 && accepting, downloadsAvailable: !!ports.objects });
       }
       if (route === "root" || route === "host") {
         const bearer = /^Bearer ([^\s,]+)$/i.exec(request.headers.get("authorization") ?? "")?.[1];
@@ -218,17 +222,17 @@ export function createEventHandler(route: EventRoute, ports: EventRequestPorts =
           if (!host?.guestContext) throw new EventStoreError("unavailable", 503);
           const result = await host.guestContext(eventId!, digest(token)); check();
           let serviceAvailable = false; try { const status = await worker(); serviceAvailable = status.ready && status.pending < status.maxPending; } catch { /* Existing guests can recover without admitting a new photo. */ }
-          return privateJson({ ...result, serviceAvailable, canReserve: result.canReserve && serviceAvailable });
+          return privateJson({ ...result, serviceAvailable, canReserve: !recovery && result.canReserve && serviceAvailable });
         }
         if (operation === "reserve" || operation === "reserveMission") {
           shape("requestId", "submissionId", "consent", "expectedGuestId", ...(operation === "reserveMission" ? ["missionId"] : [])); guestFence(); const requestId = eventUuid(b.requestId), id = eventUuid(b.submissionId), consent = eventConsent(b.consent); if (!consent.submission || !session.guestId) return eventInvalid();
-          await worker();
+          if (!recovery) await worker();
           const receiptToken = derive("receipt", eventId, token, id, requestId);
-          if (operation === "reserveMission") {
-            if (b.missionId !== null && !EVENT_MISSIONS.some(m => m.id === b.missionId)) return eventInvalid();
+          if (operation === "reserveMission" && b.missionId !== null && !EVENT_MISSIONS.some(m => m.id === b.missionId)) return eventInvalid();
+          if (!recovery && operation === "reserveMission") {
             const book = ports.guestbook?.(env, controller.signal); if (!book) throw new EventStoreError("unavailable", 503);
             await book.reserve(eventId!, digest(token), session.guestId, { requestId, submissionId: id, receiptHash: digest(receiptToken), consent, missionId: b.missionId as string | null });
-          } else await store.reserve({ eventId: eventId!, tokenHash: digest(token), requestId, submissionId: id, receiptHash: digest(receiptToken), contributors: [session.guestId], consent }); check();
+          } else if (!recovery) await store.reserve({ eventId: eventId!, tokenHash: digest(token), requestId, submissionId: id, receiptHash: digest(receiptToken), contributors: [session.guestId], consent }); check();
           const receiptSession = await store.session(eventId!, digest(receiptToken), "receipt", id); check();
           const receipt = await store.receipt(eventId!, digest(receiptToken), id); check();
           const response = privateJson({ receipt: cleanReceipt(receipt, id), receiptToken, replacesBrowserReceipt: true, fragmentOnly: true }, 201);

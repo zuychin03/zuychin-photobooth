@@ -1,4 +1,5 @@
 "use client";
+import { useRecoveryRelease } from "@/components/ReleaseMode";
 
 import { useEffect, useState } from "react";
 import { Copy, UserPlus } from "lucide-react";
@@ -23,6 +24,7 @@ export function CloudInvitationId({ ownerId }: { ownerId: string }) {
 interface Props { client: CloudProjectClient; view: CloudProjectView; disabled: boolean; onUpdated(view: CloudProjectView): void; runAction(name: string, work: (signal: AbortSignal) => Promise<void>): Promise<void> }
 
 export function CloudMembers({ client, view, disabled, onUpdated, runAction }: Props) {
+  const recovery = useRecoveryRelease();
   const [inviteId, setInviteId] = useState("");
   const [error, setError] = useState<string | null>(null), [notice, setNotice] = useState<string | null>(null);
   const [removing, setRemoving] = useState<string | null>(null), [focusTarget, setFocusTarget] = useState<string | null>(null);
@@ -61,7 +63,7 @@ export function CloudMembers({ client, view, disabled, onUpdated, runAction }: P
     {owned && view.members.length < 4 && <form className="mt-5 max-w-xl" onSubmit={event => { event.preventDefault(); void change(inviteId, "invite"); }}>
       <label className="block text-sm font-medium">Friend&apos;s invitation ID<input className={`${cloudInput} mt-2 font-mono text-sm`} value={inviteId} onChange={event => setInviteId(event.target.value)} maxLength={36} required autoComplete="off" spellCheck={false} disabled={locked} /></label>
       <p className="mt-2 text-sm leading-relaxed text-foreground/70">Ask your friend to copy their ID from their cloud library. The invitation shows this project&apos;s name before they accept. Each invited person uses one of the project&apos;s four places permanently.</p>
-      <button className={`${cloudControl} mt-3 bg-accent text-accent-foreground`} disabled={locked || !inviteId.trim()}><UserPlus size={16} aria-hidden /> Invite to project</button>
+      <button className={`${cloudControl} mt-3 bg-accent text-accent-foreground`} disabled={recovery || locked || !inviteId.trim()}><UserPlus size={16} aria-hidden /> Invite to project</button>
     </form>}
     {owned && view.members.length >= 4 && <p className="mt-3 max-w-xl text-sm leading-relaxed text-foreground/70">All four places have been used. Start a new project for a different group.</p>}
   </section>;

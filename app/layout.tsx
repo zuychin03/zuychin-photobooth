@@ -9,7 +9,7 @@ import { AppNavigationProvider } from "@/components/AppNavigation";
 import { SiteNav } from "@/components/SiteNav";
 import { Suspense } from "react";
 import { connection } from "next/server";
-import { isLocalRelease } from "@/lib/release-mode";
+import { isLocalRelease, isRecoveryRelease } from "@/lib/release-mode";
 import { ReleaseFeatureBoundary, ReleaseModeProvider } from "@/components/ReleaseMode";
 import "./globals.css";
 
@@ -71,7 +71,7 @@ export default async function RootLayout({
         {!localOnly && <AuthCookieMigration />}
         <Suspense fallback={<main className="min-h-dvh" aria-label="Checking shared-device privacy" />}>
           <EventKioskGuard><AuthProvider accountsEnabled={!localOnly}>
-            <ReleaseModeProvider localOnly={localOnly}><SessionProvider><AppNavigationProvider><SiteNav /><div className="app-content flex min-h-0 flex-1 flex-col"><ReleaseFeatureBoundary>{children}</ReleaseFeatureBoundary></div></AppNavigationProvider></SessionProvider></ReleaseModeProvider>
+            <ReleaseModeProvider localOnly={localOnly} recovery={isRecoveryRelease()}><SessionProvider><AppNavigationProvider><SiteNav /><div className="app-content flex min-h-0 flex-1 flex-col"><ReleaseFeatureBoundary>{children}</ReleaseFeatureBoundary></div></AppNavigationProvider></SessionProvider></ReleaseModeProvider>
           </AuthProvider></EventKioskGuard>
         </Suspense>
       </body>

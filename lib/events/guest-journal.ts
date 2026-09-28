@@ -170,6 +170,19 @@ export async function uploadEventGuestRecord(journal: EventGuestJournal, client:
   const receipt = await client.finalise(submissionId, signal); check();
   await journal.update(submissionId, current.revision, { stage: receipt.state === "ready" ? "ready" : "finalising", receipt }); return receipt;
 }
+export async function finaliseInterruptedEventGuestRecord(journal: EventGuestJournal, client: EventGuestClient, submissionId: string, signal?: AbortSignal): Promise<EventReceipt> {
+  const check = () => { journal.assertActive(signal); client.assertActive(signal); if (client.eventId !== journal.eventId || client.guestId !== journal.guestId) invalid("identity_changed"); }; check();
+  const current = await journal.get(submissionId); check();
+  if (!current) return invalid("not_found");
+  if (current.stage !== "uploading" || !current.receipt) return invalid("reservation_required");
+  const existing = await reserveRecord(client, current, signal); check();
+  if (["failed", "expired", "deleted"].includes(existing.receipt.state)) return invalid("source_unavailable");
+  const receipt = existing.receipt.state === "ready" ? existing.receipt : await client.finalise(submissionId, signal); check();
+  // Keep the uncertain upload retryable until the server accepts verification.
+  const stage = receipt.state === "ready" ? "ready" : receipt.state === "finalising" ? "finalising" : "uploading";
+  await journal.update(submissionId, current.revision, { stage, receipt }); check();
+  return receipt;
+}
 export async function refreshEventGuestRecord(journal: EventGuestJournal, client: EventGuestClient, submissionId: string, signal?: AbortSignal): Promise<EventReceipt> {
   journal.assertActive(signal); client.assertActive(signal); if (client.eventId !== journal.eventId || client.guestId !== journal.guestId) return invalid("identity_changed");
   const current = await journal.get(submissionId); if (!current || current.stage === "prepared") return invalid("not_found");

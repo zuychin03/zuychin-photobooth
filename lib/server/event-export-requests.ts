@@ -1,3 +1,5 @@
+import { recoveryOperationAllowed } from "../recovery-policy";
+import { isRecoveryRelease } from "../release-mode";
 import { createHmac } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
 import { exportInteger, exportObject, exportUuid, validateEventExportUpdates } from "../events/export-contract";
@@ -58,6 +60,7 @@ export function createEventExportHandler(ports: EventExportRequestPorts = produc
       const token = /^Bearer ([^\s,]+)$/i.exec(request.headers.get("authorization") ?? "")?.[1];
       if (!token || token.length > 16384) throw new EventStoreError("access_denied", 401);
       const body = parseOperation(await readSmallJson(request)); check();
+      if (isRecoveryRelease(env) && !recoveryOperationAllowed("event-export", body.operation, body)) return privateJson({ error: "feature_recovery" }, 503);
       const actor = await ports.authenticate(token, env, abort.signal); check();
       const { exports: store, base, objects } = ports.stores(env, abort.signal); await base.transportReady(); check();
       const key = createHmac("sha256", secret).update(JSON.stringify(["event-export", actor.id])).digest("hex"), rate = await base.rate(key, ["create", "checkpoint", "retire"].includes(body.operation) ? "write" : "read"); check();

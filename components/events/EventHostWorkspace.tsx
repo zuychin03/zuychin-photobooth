@@ -1,4 +1,5 @@
 "use client";
+import { useRecoveryRelease } from "@/components/ReleaseMode";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { EventReminderClient } from "@/lib/events/reminder-client";
 import type { EventModerationClient } from "@/lib/events/moderation-client";
@@ -14,6 +15,7 @@ import { EventHostConfirm, eventControl, useEventLeaveWarning } from "./EventHos
 import { useEventHostTask } from "./useEventHostTask";
 
 export function EventHostWorkspace({ client, exportClient, reviewClient, reminderClient, moderationClient, initialEventId, onDirtyChange }: { client: EventHostClient; exportClient?: EventExportClient; reviewClient?: EventReviewClient; reminderClient?: EventReminderClient; moderationClient?: EventModerationClient; initialEventId?: string; onDirtyChange?(dirty: boolean): void }) {
+  const recovery = useRecoveryRelease();
   const task = useEventHostTask(client), [support, setSupport] = useState<"checking" | "ready" | "unavailable">("checking");
   const [page, setPage] = useState<EventHostList | null>(null), [selected, setSelected] = useState<EventHostSummary | null>(null), [creating, setCreating] = useState(false);
   const [form, setForm] = useState<EventCreateInput>(defaultEventInput), [pending, setPending] = useState<{ eventId: string; event: EventCreateInput } | null>(null), [confirm, setConfirm] = useState(false);
@@ -42,7 +44,7 @@ export function EventHostWorkspace({ client, exportClient, reviewClient, reminde
     });
   }, [client, initialEventId, run]);
   const create = () => {
-    if (task.isBusy()) return;
+    if (recovery || task.isBusy()) return;
     const request = pending ?? { eventId: crypto.randomUUID(), event: structuredClone({ ...form, title: form.title.trim() }) };
     setPending(request);
     void task.run(async (signal, check) => {
@@ -63,10 +65,10 @@ export function EventHostWorkspace({ client, exportClient, reviewClient, reminde
         <EventHostForm value={pending?.event ?? form} onChange={setForm} disabled={task.busy || Boolean(pending)} />
         <p className="text-sm leading-relaxed text-foreground/70">Create a draft, choose its look, then open it to guests. Photos stay private until approved for sharing.</p>
         {pending && <p role="status" className="rounded-xl bg-muted p-4 text-sm leading-relaxed">Retry here to avoid creating a duplicate. If you leave, refresh your event list before creating again.</p>}
-        <div className="flex flex-wrap gap-2"><button type="submit" className={`${eventControl} bg-accent text-accent-foreground`} disabled={task.busy}>{pending ? "Retry this creation" : "Create draft"}</button><button type="button" className={eventControl} disabled={task.busy} onClick={event => { setReturnFocus(event.currentTarget); setConfirm(true); }}>Back to events</button></div>
+        <div className="flex flex-wrap gap-2"><button type="submit" className={`${eventControl} bg-accent text-accent-foreground`} disabled={recovery || task.busy}>{pending ? "Retry this creation" : "Create draft"}</button><button type="button" className={eventControl} disabled={task.busy} onClick={event => { setReturnFocus(event.currentTarget); setConfirm(true); }}>Back to events</button></div>
       </form> : <>
         <p className="mt-3 max-w-2xl text-sm leading-relaxed text-foreground/70">After an interrupted request, refresh first. Your event may already exist.</p>
-        <button className={`${eventControl} my-5 bg-accent text-accent-foreground`} disabled={task.busy} onClick={() => { setCreating(true); setForm(defaultEventInput()); setNotice(null); requestAnimationFrame(() => title.current?.focus()); }}>Create an event</button>
+        <button className={`${eventControl} my-5 bg-accent text-accent-foreground`} disabled={recovery || task.busy} onClick={() => { setCreating(true); setForm(defaultEventInput()); setNotice(null); requestAnimationFrame(() => title.current?.focus()); }}>Create an event</button>
         {!page?.events.length ? <p className="py-5 text-sm">No events on this page. Create a draft or ask the owner to invite your account as a moderator.</p> : <ul className="divide-y divide-border">{page.events.map(item => <li key={item.eventId} className="flex flex-wrap items-center justify-between gap-4 py-5"><div className="min-w-0"><h3 className="break-words font-display text-xl">{item.title}</h3><p className="mt-1 text-sm text-foreground/70">{item.role === "owner" ? "Owner" : item.membership === "invited" ? "Moderator invitation" : "Moderator"} · {item.status} · {new Date(item.expiresAt) <= new Date() ? "Expired" : `Expires ${new Date(item.expiresAt).toLocaleDateString("en-AU", { timeZone: item.timezone })}`}</p></div><button className={`${eventControl} border border-border`} disabled={task.busy} onClick={() => setSelected(item)}>{item.membership === "invited" ? "Review invitation" : "Open event"}</button></li>)}</ul>}
         <div className="mt-5 flex flex-wrap gap-2"><button className={eventControl} disabled={task.busy} onClick={() => void load()}>First page</button>{page?.nextCursor && <button className={`${eventControl} border border-border`} disabled={task.busy} onClick={() => void load(page.nextCursor!)}>Next page</button>}</div>
       </>}

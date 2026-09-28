@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { readFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
-import { nextEventGuestRecord, validateEventGuestRecord, matchEventGuestImage, reserveEventGuestRecord, uploadEventGuestRecord, type EventGuestRecord, type EventGuestJournal } from "../lib/events/guest-journal";
+import { finaliseInterruptedEventGuestRecord, nextEventGuestRecord, validateEventGuestRecord, matchEventGuestImage, reserveEventGuestRecord, uploadEventGuestRecord, type EventGuestRecord, type EventGuestJournal } from "../lib/events/guest-journal";
 import { createEventGuestClient } from "../lib/events/client";
 import { inspectImageHeader } from "../lib/projects/images";
 const eventId = "11111111-1111-4111-8111-111111111111", guestId = "22222222-2222-4222-8222-222222222222", id = "33333333-3333-4333-8333-333333333333", now = Date.parse("2026-09-23T00:00:00Z");
@@ -58,4 +58,37 @@ test("legacy records preserve reservation identity and mission records pin exact
     client.close();
   }
   assert.throws(() => validateEventGuestRecord({ ...legacy, missionChoice: { version: 1, missionId: "unlisted" } }));
+});
+
+
+test("lost PUT acknowledgement recovery finalises without minting or resending an original", async () => {
+  for (const sourcePresent of [true, false]) {
+    let stored = { ...await record(true), stage: "uploading" as const, receipt } as EventGuestRecord;
+    const original = stored, calls: string[] = [];
+    const journal = { eventId, guestId, assertActive() {}, get: async () => stored, update: async (_id: string, revision: number, patch: Parameters<EventGuestJournal["update"]>[2]) => { assert.equal(stored.revision, revision); return stored = nextEventGuestRecord(stored, patch, now); } } as unknown as EventGuestJournal;
+    const client = createEventGuestClient({ appOrigin: "https://app.example", eventId, identity: () => ({ eventId, guestId, epoch: 1 }), fetch: async (url, init) => {
+      assert.equal(new URL(String(url)).origin, "https://app.example");
+      const body = JSON.parse(String(init?.body)); calls.push(body.operation);
+      assert.equal(body.submissionId, id);
+      if (body.operation === "reserve") { assert.equal(body.requestId, original.requestId); return Response.json({ receipt, receiptToken: Buffer.alloc(32).toString("base64url"), replacesBrowserReceipt: true, fragmentOnly: true }); }
+      assert.equal(body.operation, "finalise");
+      return sourcePresent ? Response.json({ ...receipt, state: "ready" }) : Response.json({ error: "source_unavailable" }, { status: 409 });
+    } });
+    if (sourcePresent) { await finaliseInterruptedEventGuestRecord(journal, client, id); assert.equal(stored.stage, "ready"); assert.equal(stored.blob, null); }
+    else { await assert.rejects(finaliseInterruptedEventGuestRecord(journal, client, id)); assert.strictEqual(stored, original); assert(stored.blob); }
+    assert.deepEqual(calls, ["reserve", "finalise"]);
+    assert.equal(stored.requestId, original.requestId); assert.equal(stored.expiresAt, original.expiresAt); assert.deepEqual(stored.image, original.image);
+    client.close();
+  }
+});
+
+test("finalise-only recovery refuses unattempted uploads without a server call", async () => {
+  let calls = 0;
+  const client = createEventGuestClient({ appOrigin: "https://app.example", eventId, identity: () => ({ eventId, guestId, epoch: 1 }), fetch: async () => { calls++; throw new Error("Unexpected request"); } });
+  for (const stage of ["prepared", "reserving", "reserved"] as const) {
+    const stored = { ...await record(true), stage, receipt };
+    const journal = { eventId, guestId, assertActive() {}, get: async () => stored } as unknown as EventGuestJournal;
+    await assert.rejects(finaliseInterruptedEventGuestRecord(journal, client, id), /reservation_required/);
+  }
+  assert.equal(calls, 0); client.close();
 });
