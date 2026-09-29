@@ -85,9 +85,9 @@ export function MobileNav({ links, canNavigate, collapsible = false }: { links: 
   const tabStyle = "group flex min-h-14 min-w-[4.5rem] shrink-0 flex-col items-center justify-center gap-1 rounded-full px-1 py-1 text-xs font-medium transition-colors hover:text-accent focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring";
   const glass = "rounded-full border border-border/70 bg-background/85 backdrop-blur-xl";
   return <nav ref={tray} aria-label="Mobile navigation" className={`fixed left-[calc(0.375rem+env(safe-area-inset-left))] right-[calc(0.375rem+env(safe-area-inset-right))] bottom-[calc(0.375rem+env(safe-area-inset-bottom))] z-[45] md:hidden ${collapsible ? "pointer-events-none flex h-11 justify-end" : `${glass} px-2 py-2`}`}>
-    {collapsible && <button ref={trigger} type="button" aria-expanded={expanded} aria-controls={panelId} onClick={() => setExpanded(value => !value)} className={`${glass} pointer-events-auto flex h-11 min-w-11 items-center justify-center gap-2 px-4 text-sm font-medium transition-colors hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring motion-reduce:transition-none`}><Menu size={18} aria-hidden />Menu</button>}
-    {visible && <div id={panelId} className={collapsible ? `${glass} pointer-events-auto absolute inset-x-0 bottom-[calc(100%+0.375rem)] px-2 py-2 motion-safe:animate-[surface-enter_180ms_ease-out]` : undefined}>
-    <div className="mx-auto flex max-w-lg items-center gap-1">
+    <div className={collapsible ? `absolute inset-x-0 bottom-0 ${expanded ? `${glass} pointer-events-auto px-2 py-2 motion-safe:animate-[surface-enter_180ms_ease-out]` : "pointer-events-none"}` : undefined}>
+    <div className={`flex items-center gap-1 ${visible ? "mx-auto max-w-lg" : "justify-end"}`}>
+      {visible && <div id={panelId} className="contents">
       <button type="button" aria-label="Scroll mobile menu to start" aria-controls={scrollId} disabled={edges.start} onClick={() => scroll(false)} className={arrowStyle}><ChevronLeft size={18} aria-hidden /></button>
       <div ref={viewport} id={scrollId} onScroll={measureScroll} onFocusCapture={revealFocus} className="scrollbar-hide min-w-0 flex-1 overflow-x-auto overscroll-x-contain rounded-full">
       <div ref={options} className="flex w-max min-w-full items-center justify-between gap-1">
@@ -98,8 +98,9 @@ export function MobileNav({ links, canNavigate, collapsible = false }: { links: 
       </div>
       </div>
       <button type="button" aria-label="Scroll mobile menu to end" aria-controls={scrollId} disabled={edges.end} onClick={() => scroll(true)} className={arrowStyle}><ChevronRight size={18} aria-hidden /></button>
-      {collapsible && <button type="button" aria-label="Collapse mobile menu" onClick={() => { setExpanded(false); trigger.current?.focus(); }} className={arrowStyle}><X size={18} aria-hidden /></button>}
+      </div>}
+      {collapsible && <button ref={trigger} type="button" aria-label={expanded ? "Collapse mobile menu" : "Menu"} aria-expanded={expanded} aria-controls={panelId} onClick={() => setExpanded(value => !value)} className={expanded ? arrowStyle : `${glass} pointer-events-auto flex h-11 min-w-11 items-center justify-center gap-2 px-4 text-sm font-medium transition-colors hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring motion-reduce:transition-none`}>{expanded ? <X size={18} aria-hidden /> : <><Menu size={18} aria-hidden />Menu</>}</button>}
     </div>
-    </div>}
+    </div>
   </nav>;
 }
