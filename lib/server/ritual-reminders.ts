@@ -2,6 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { cloudTimestamp, cloudUuid } from "../projects/cloud-contract";
 import { computeRitualProof, ritualObject, ritualRevision, ritualTitle, validateRitualDefinition } from "../memories/ritual-contract";
 import type { ReminderAdapter } from "./reminders";
+import { validPushEndpoint } from "../push-endpoint";
 
 export interface RitualTarget { recipientId: string; channel: string; target: { email: string | null } | { id: string; endpoint: string | null; p256dh: string | null; auth: string | null } }
 export interface RitualClaim { id: string; dateId: string; revision: number; cycle: number; scheduledAt: string; title: string; token: string; targets: RitualTarget[]; terminal?: boolean }
@@ -69,7 +70,7 @@ export async function processRitualReminders(
   for (let index = 0; index < options.limit && Date.now() - started < 45000; index++) {
     if (!await provider.acquire(options.token)) return unavailable();
     const claim = await rituals.claim(options.token, randomUUID()); if (!claim) break;
-    result.processed++; let failed = false, uncertain = false, next = 0, delivered = 0;
+    result.processed++; let failed = false, unsupported = false, uncertain = false, next = 0, delivered = 0;
     if (claim.terminal) { result.failed++; continue; }
     const run = async () => {
       while (!failed && next < claim.targets.length) {
@@ -90,6 +91,7 @@ export async function processRitualReminders(
           } else {
             const subscription = "id" in target.target ? target.target : null;
             if (!options.pushEnabled || !subscription?.endpoint || !subscription.p256dh || !subscription.auth) return unavailable();
+            if (!validPushEndpoint(subscription.endpoint)) { unsupported = true; continue; }
             const actual = { id: subscription.id, endpoint: subscription.endpoint, p256dh: subscription.p256dh, auth: subscription.auth };
             checkBudget();
             const state = await rituals.begin(claim, target, digest(JSON.stringify({ target: actual, title: claim.title, topic: key.slice(0, 32) })));
@@ -107,7 +109,7 @@ export async function processRitualReminders(
       }
     };
     await Promise.all([run(), run()]);
-    try { if (failed) throw new Error("ritual target failed"); await rituals.finish(claim); if (delivered) result.sent++; else result.skipped++; }
+    try { if (failed || unsupported) throw new Error("ritual target failed"); await rituals.finish(claim); if (delivered) result.sent++; else result.skipped++; }
     catch { result.failed++; await rituals.fail(claim, uncertain); }
   }
   return result;

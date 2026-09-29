@@ -66,6 +66,18 @@ test("push 410 is durably skipped and does not count as a delivered occurrence",
   f.adapter.push = async () => { throw Object.assign(new Error("gone"), { statusCode: 410 }); };
   const response = await f.handler()(request()); assert.equal(response.status, 200); assert.deepEqual(await response.json(), { processed: 1, sent: 0, failed: 0, skipped: 1 }); assert.equal(f.states.get(`${id(1)}:${target.channel}`), "gone");
 });
+
+test("unsupported ritual endpoint stays unsent without blocking valid sibling targets", async () => {
+  const blocked: RitualTarget = { recipientId: id(1), channel: `push:${id(3)}`, target: { id: id(3), endpoint: "https://jmt17.google.com/fcm/send/fixture", p256dh: "fixture", auth: "fixture" } };
+  const f = fixture([blocked, email(1), email(2)]);
+  const response = await f.handler()(request());
+  assert.equal(response.status, 503);
+  assert.ok(!f.calls.includes("push"));
+  assert.ok(!f.states.has(`${id(1)}:${blocked.channel}`));
+  assert.equal(f.messages.length, 2);
+  assert.ok(f.calls.includes("fail:false"));
+  assert.ok(!f.calls.includes("finish"));
+});
 test("provider concurrency never exceeds two for the maximum 22 targets and carries abort signals", async () => {
   const targets = [email(1), email(2), ...Array.from({ length: 20 }, (_, i): RitualTarget => ({ recipientId: id(i % 2 + 1), channel: `push:${id(100 + i)}`, target: { id: id(100 + i), endpoint: "https://fcm.googleapis.com/fixture", p256dh: "fixture", auth: "fixture" } }))], f = fixture(targets);
   let active = 0, peak = 0, count = 0;

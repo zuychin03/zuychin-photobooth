@@ -1,8 +1,10 @@
 # Event worker readiness and scheduler runbook
 
+Hosted measurement, 29/09/2026: the separately approved one-room/25-session sample completed a 60.016-second HTTP window and two private JPEG finalisations/downloads. The third pending reservation was refused as intended. The normal worker finalised each image on its first attempt; final database evidence showed zero pending, worker ready, event closed and room ended. Only 21 guest-context reads completed during the window. The 2,541 ms completed-response p95 excludes pacing/queue wait and is not a provider resource metric. Staging holds remain until signed-upload grants expire. See `capacity-1x-retry-acceptance.json` and [current status](V2_STATUS.md#current-hosted-checkpoint-29092026). Sustained load, browser media and 2x/5x capacity remain open; retain the two-pending admission limit.
+
 ## Bounded HTTP load preparation, 29/09/2026
 
-`scripts/deployment-load-harness.mjs` prepares an HTTP-only workload; it does not run a worker or establish camera, TURN, provider CPU, database capacity or user-cohort acceptance. No hosted load has been executed with this harness. Use existing authorised fixtures and supply a JSON scenario, for example:
+`scripts/deployment-load-harness.mjs` prepares an HTTP-only workload; it does not run a worker or establish camera, TURN, provider CPU, database capacity or user-cohort acceptance. On 29/09/2026 it completed 24 anonymous public/capability requests against production `7eff723`, all HTTP 200, at 1x/2x/5x repetitions of one three-request journey. This is a completed public-response sample, not the agreed launch workload of one four-person room and a 25-guest event with two pending uploads. See the current status and `public-http-burst-acceptance.json`; do not repeat the completed sample for checklist bookkeeping. Use existing authorised fixtures and supply a JSON scenario, for example:
 
 ```json
 {

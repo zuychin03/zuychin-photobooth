@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import { eventInstant, eventInteger, eventObject, eventUuid } from "./event-http-input";
 import type { ReminderAdapter } from "./reminders";
+import { validPushEndpoint } from "../push-endpoint";
 
 type Rpc = (name: string, args: Record<string, unknown>) => Promise<unknown>;
 export interface EventReminderClaim { eventId: string; expiryRevision: number; expiresAt: string; timezone: string; title: string; token: string; channels: string[] }
@@ -44,6 +45,7 @@ export async function processEventReminders(store: EventReminderAdapter, provide
         if (channel === "email" ? !options.emailEnabled : !options.pushEnabled) { failed = true; continue; }
         await check(); if (Date.parse(claim.expiresAt) <= Date.now()) return unavailable();
         const first = await store.dispatch(claim, channel); if (first.state !== "send") continue;
+        if (channel !== "email" && !validPushEndpoint(first.target!.endpoint as string)) { failed = true; continue; }
         const target = first.target!, url = `/events/${claim.eventId}`, deadline = new Intl.DateTimeFormat("en-AU", { timeZone: claim.timezone, dateStyle: "medium", timeStyle: "short" }).format(new Date(claim.expiresAt));
         const title = "Your event photos expire soon", body = `${claim.title}. Export before ${deadline} (${claim.timezone}). Expiry is not delayed by this reminder.`;
         const key = hash([claim.eventId, claim.expiryRevision, claim.expiresAt, channel]), payload = { target, title, body, url, from: options.emailFrom };

@@ -2,6 +2,8 @@ import { createEventReminderAdapter, processEventReminders, type EventReminderAd
 import { createHash, randomUUID } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
 import webpush from "web-push";
+import { validPushEndpoint } from "../push-endpoint";
+export { validPushEndpoint } from "../push-endpoint";
 import { type Cadence, nextOccurrence } from "../photo-dates";
 import { authorizeCron, canonicalPublicOrigin, privateJson, type CronConfig, type CronEnvironment } from "./cron-auth";
 import { createRitualReminderAdapter, processRitualReminders, type RitualReminderAdapter } from "./ritual-reminders";
@@ -234,12 +236,4 @@ function productionAdapter(config: CronConfig, env: CronEnvironment): ReminderAd
       if (error) throw new Error("subscription deletion failed");
     },
   };
-}
-
-export function validPushEndpoint(value: string): boolean {
-  try {
-    const url = new URL(value);
-    return value.length <= 4096 && url.protocol === "https:" && !url.username && !url.password && !url.hash && !url.port
-      && (url.hostname === "fcm.googleapis.com" || url.hostname === "android.googleapis.com" || url.hostname === "web.push.apple.com" || url.hostname === "updates.push.services.mozilla.com" || /^[a-z0-9-]+\.notify\.windows\.com$/.test(url.hostname));
-  } catch { return false; }
 }

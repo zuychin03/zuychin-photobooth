@@ -68,10 +68,34 @@ test("slow lease renewal crossing the budget prevents provider dispatch", async 
   assert.equal(result.failed, 1); assert.equal(f.messages.length, 0); assert.ok(!f.calls.includes("send"));
 });
 test("push gone acknowledgement includes the exact attempted subscription for conditional removal", async () => {
-  const f = fixture(), target = { id: eventId, endpoint: "https://push.example/sub", p256dh: "key", auth: "auth" }; let captured: unknown;
+  const f = fixture(), target = { id: eventId, endpoint: "https://fcm.googleapis.com/sub", p256dh: "key", auth: "auth" }; let captured: unknown;
   f.store.claim = async () => ({ ...claim, channels: [`push:${eventId}`] }); f.store.dispatch = async () => ({ state: "send", target });
   f.provider.push = async () => { throw { statusCode: 410 }; }; f.store.record = async (_c, _channel, outcome, exact) => { assert.equal(outcome, "gone"); captured = exact; };
   await processEventReminders(f.store, f.provider, options()); assert.deepEqual(captured, target);
+});
+
+test("unsupported push stays unsent while supported sibling receives a checkpointed delivery", async () => {
+  const f = fixture(), supportedId = "10000000-0000-4000-8000-000000000002";
+  const blockedChannel = `push:${eventId}`, supportedChannel = `push:${supportedId}`;
+  const targets: Record<string, { id: string; endpoint: string; p256dh: string; auth: string }> = {
+    [blockedChannel]: { id: eventId, endpoint: "https://jmt17.google.com/fcm/send/fixture", p256dh: "key", auth: "auth" },
+    [supportedChannel]: { id: supportedId, endpoint: "https://fcm.googleapis.com/fcm/send/fixture", p256dh: "key", auth: "auth" },
+  };
+  const dispatches: string[] = [], delivered: string[] = [], sent: string[] = [];
+  f.store.claim = async () => ({ ...claim, channels: [blockedChannel, supportedChannel] });
+  f.store.dispatch = async (_claim, channel, payloadHash) => {
+    if (payloadHash) dispatches.push(channel);
+    return { state: "send", target: targets[channel] };
+  };
+  f.store.record = async (_claim, channel, outcome) => { assert.equal(outcome, "delivered"); delivered.push(channel); };
+  f.provider.push = async target => { sent.push(target.id); };
+  const result = await processEventReminders(f.store, f.provider, options());
+  assert.deepEqual(sent, [supportedId]);
+  assert.deepEqual(dispatches, [supportedChannel]);
+  assert.deepEqual(delivered, [supportedChannel]);
+  assert.equal(result.failed, 1);
+  assert.equal(result.sent, 0);
+  assert.ok(f.calls.includes("failed"));
 });
 test("client cancellation settles even when token, fetch or body ignores abort", async () => {
   for (const phase of ["token", "fetch", "body"]) {
