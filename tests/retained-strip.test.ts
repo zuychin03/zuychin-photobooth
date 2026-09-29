@@ -74,6 +74,63 @@ test("archive requires fresh exact authenticated resource and signs only private
   assert.deepEqual(await objects.read({ ...descriptor, availability: "archived", archive }, true, new AbortController().signal), new Uint8Array(bytes)); assert.equal(downloads, 1);
   wrong = true; await assert.rejects(objects.read({ ...descriptor, availability: "archived", archive }, true, new AbortController().signal)); assert.equal(downloads, 1);
 });
+async function archiveReadFixture(path: string, metadataPath = path) {
+  const bytes = await png(), info = inspectImageHeader(bytes), publicId = `zuychin-photobooth/${owner}/${id}`;
+  const archive = { publicId, url: `https://res.cloudinary.com${path}`, verifiedAt: "2026-01-01T00:00:00Z" };
+  const methods: string[] = [];
+  const objects = createRetainedStripObjects(env, async (input, init) => {
+    const url = String(input), parsed = new URL(url);
+    assert.equal(parsed.origin, "https://api.cloudinary.com");
+    assert.equal(init?.redirect, "error");
+    if (parsed.pathname.includes("/resources/")) {
+      assert.equal(parsed.pathname, `/v1_1/fixture-cloud/resources/image/authenticated/${encodeURIComponent(publicId)}`);
+      return responseAt(url, JSON.stringify({ public_id: publicId, secure_url: `https://res.cloudinary.com${metadataPath}`, type: "authenticated", resource_type: "image", format: "png", version: 9, bytes: bytes.length, width: info.width, height: info.height }), { headers: { "content-type": "application/json" } });
+    }
+    assert.equal(parsed.pathname, "/v1_1/fixture-cloud/image/download");
+    assert.equal(parsed.searchParams.get("public_id"), publicId);
+    assert.equal(parsed.searchParams.get("type"), "authenticated");
+    assert.equal(parsed.searchParams.get("format"), "png");
+    assert.equal(init?.headers, undefined);
+    methods.push(init?.method ?? "GET");
+    return responseAt(url, init?.method === "HEAD" ? null : bytes, { headers: { "content-type": "image/png", "content-length": String(bytes.length) } });
+  });
+  return { bytes, methods, read: (download: boolean) => objects.read({ ...descriptor, availability: "archived", archive }, download, new AbortController().signal) };
+}
+
+test("archive accepts canonical unsigned and provider-signed original paths for resolve and download", async () => {
+  const suffix = `v9/zuychin-photobooth/${owner}/${id}.png`;
+  for (const signature of ["", "s--Aa0_-b9Z--/", `s--${"Aa0_-b9Z".repeat(4)}--/`]) {
+    const f = await archiveReadFixture(`/fixture-cloud/image/authenticated/${signature}${suffix}`);
+    assert.equal(await f.read(false), null);
+    assert.deepEqual(await f.read(true), new Uint8Array(f.bytes));
+    assert.deepEqual(f.methods, ["HEAD", "GET"]);
+  }
+});
+
+test("archive rejects malformed signed paths and mismatched metadata before private download", async () => {
+  const prefix = "/fixture-cloud/image/authenticated/", suffix = `v9/zuychin-photobooth/${owner}/${id}.png`;
+  const signed = `${prefix}s--Aa0_-b9Z--/${suffix}`;
+  const invalid = [
+    ...[7, 9, 31, 33].map(length => `${prefix}s--${"a".repeat(length)}--/${suffix}`),
+    ...["Aa0_+b9Z", "Aa0_=b9Z", "Aa0_.b9Z", "Aa0_%2F9Z"].map(signature => `${prefix}s--${signature}--/${suffix}`),
+    `${prefix}s--Aa0_-b9Z--/s--Aa0_-b9Z--/${suffix}`,
+    `${prefix}s--Aa0_-b9Z--/w_100/${suffix}`,
+    signed.replace("fixture-cloud", "another-cloud"),
+    signed.replace("authenticated", "upload"),
+    signed.replace("v9/", "v10/"),
+    signed.replace(id, other),
+    `${signed}/extra`, `${signed}?download=true`, `${signed}#fragment`,
+  ];
+  for (const path of invalid) {
+    const f = await archiveReadFixture(path);
+    await assert.rejects(f.read(false), RetainedStripError);
+    assert.deepEqual(f.methods, []);
+  }
+  const changed = await archiveReadFixture(signed, signed.replace("Aa0_-b9Z", "Ba0_-b9Z"));
+  await assert.rejects(changed.read(true), /source_unavailable/);
+  assert.deepEqual(changed.methods, []);
+});
+
 test("native retained verifier accepts actual PNG, rejects relabelled JPEG, corruption and oversized dimensions", async () => {
   const bytes = await png(); assert.equal((await verifyRetainedStrip(bytes)).verified.mime, "image/png");
   await assert.rejects(verifyRetainedStrip(await sharp(bytes).jpeg().toBuffer()), /invalid_image/);

@@ -2,7 +2,15 @@
 
 Prepared 23/09/2026 from the approved plan, route/component source and recorded local receipts. This is a queue, not a passed P9 review. The dated follow-up receipts supersede pending entries in the original inventory where explicitly covered. The initial inventory itself did not perform browser, real account, provider, device or print checks.
 
-For current work, use the [reconciled acceptance queue, 25/09/2026](V2_STATUS.md#current-acceptance-queue-reconciled-25092026). The original route/component tables below are historical coverage inventories, not a fresh instruction to rerun every passing workflow. The detailed feature report, synthetic cloud versions, kiosk queue, dropdown fallback, media session, worker update and local rollback already have receipts. Reopen a case only for a relevant source change, a new failure or the explicitly missing genuine-service boundary.
+For current work, use the [current hosted checkpoint, 29/09/2026](V2_STATUS.md#current-hosted-checkpoint-29092026), then the dated local receipts. The original route/component tables below are historical coverage inventories, not a fresh instruction to rerun every passing workflow. The detailed feature report, synthetic cloud versions, kiosk queue, dropdown fallback, media session, worker update and local rollback already have receipts. Reopen a case only for a relevant source change, a new failure or the explicitly missing genuine-service boundary.
+
+## Current checkpoint, 29/09/2026
+
+Reviewed commit `bd7d6ff02d36ad41bc17fedd938b43be974f6689` passed 1,206 local tests and [exact-source CI](https://github.com/zuychin03/zuychin-photobooth/actions/runs/36434126900). Vercel deployment `7NNdGQYmT5xGk7PszdbCBRkyMs9U` is the latest verified Ready production checkpoint. Production wording was inspected and the development TURN diagnostic remained unavailable at HTTP 404. The newer concurrent copy batch is not part of this release.
+
+The Supabase callback allowlist inspection passed without changes to the shared Gallery configuration. The scheduled media worker completed the existing legacy archive's normal verification in one attempt, but opening it through Memories returned HTTP 409. Danny authorised the private-provider diagnostic: the unsigned-only URL check rejected the valid signed reference. The narrow correction passed 17 focused tests, independent review and a real-provider HEAD/GET/native PNG decode; production deployment and the ordinary authenticated UI read remain pending. Voice save/reload/playback passed; removal and OS download remain open. Hosted different-release rollback awaits the private test invitation approval. Cross-network room/TURN, push delivery, deployment load and user cohorts remain separate gates. Second-account and physical-device checks remain explicitly deferred.
+
+The checkpoints below are historical evidence for their named source and scope. Their deployment IDs, feature states and pending work do not override the current checkpoint.
 
 ## Reconciled checkpoint, 28/09/2026
 
@@ -14,7 +22,7 @@ Environment-only deployment `Hcg15hQGZdEH27pHNoBY1rTsQYj4` reached Ready at 12:0
 
 These bounded results establish hosted lobby/cookie authentication and private text persistence only. WebRTC/media transfer, cross-network/forced TURN and the provider audio lifecycle remain unverified. The closed-room status and late-refresh fix is published with the validation recorded above. Challenges remain disabled, with the second-account challenge check explicitly deferred by Danny. The approved reminder email and active scheduling are recorded above. That canary used paused admission revision 13; routine admission has since resumed at revision 14 as recorded above. Deferred physical-device checks and the existing broader P9 gates remain open.
 
-Use the [current hosted checkpoint](V2_STATUS.md#current-hosted-checkpoint-28092026) for the latest gates. Staging cleanup for the withdrawn original and the two private ready A/B photos is complete: the 10:29 UTC provider/database receipt shows absent sources, zero staging-held bytes and completed deletion jobs. Do not repeat that completed gate.
+Use the [current hosted checkpoint](V2_STATUS.md#current-hosted-checkpoint-29092026) for the latest gates. Staging cleanup for the withdrawn original and the two private ready A/B photos is complete: the 10:29 UTC provider/database receipt shows absent sources, zero staging-held bytes and completed deletion jobs. Do not repeat that completed gate.
 
 Local editor rollback from `e55a4bb` to frozen `5643ff3` preserved four synthetic original hashes/order, caption and export settings. The downloaded portable projects differ only in `manifest.updatedAt`; root recorded an 18,364-byte 1,080-square JPG download. This closes that local different-release editor case. The separate disposable-PostgreSQL receipt rehearsal uses synthetic provider bytes and does not establish hosted or different-version receipt compatibility.
 
