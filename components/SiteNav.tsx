@@ -91,6 +91,7 @@ export function SiteNav() {
   const scrollButtonStyle = "flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-accent/10 hover:text-accent disabled:cursor-default disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-muted-foreground focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring";
   const accountHref = user ? "/timeline?signout=1" : recovery ? "/login?next=/projects/cloud" : "/login?next=/timeline";
   const accountLabel = user ? "Sign out" : "Sign in";
+  const collapsibleMobileNav = pathname === "/booth" || pathname === "/customize" || /^\/room\/[^/]+\/?$/.test(pathname) || /^\/relay\/(?!new\/?$)[^/]+\/?$/.test(pathname);
   const account = (compact: boolean) => {
     const iconOnly = compact || Boolean(user);
     const className = iconOnly ? "flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-muted transition-colors hover:bg-accent/15 hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring" : `${linkStyle} gap-2 bg-muted`;
@@ -118,5 +119,5 @@ export function SiteNav() {
       </div>
     </div>
     {locked && <p className="pb-2 text-center text-xs text-muted-foreground">Kiosk locked. Use Operator to exit.</p>}
-  </header>{!locked && <MobileNav key={`${pathname}:${user?.id ?? "guest"}`} links={links} canNavigate={guard} />}</>;
+  </header>{!locked && <MobileNav key={`${pathname}:${user?.id ?? "guest"}`} links={links} canNavigate={guard} collapsible={collapsibleMobileNav} />}</>;
 }

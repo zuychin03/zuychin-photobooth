@@ -1,5 +1,13 @@
 # P9 final review queue
 
+## V2 release closure, 29/09/2026
+
+Application release `2fe553d8cff9e586c695db9c6541587a33b7f454` is committed and pushed to `main` with Duy Nguyen as the sole author and no attribution trailers. [Exact-commit CI 36574758289](https://github.com/zuychin03/zuychin-photobooth/actions/runs/36574758289) passed all ten steps, including checks, rehearsals and build. Production deployment `J7UrUdsmbK4YVQ8XbcoEeg7SB8ea` reached Ready at 13:24:15 UTC and serves the canonical domain. Challenges is enabled: its live Together entry opens cloud projects, and the API reaches its method guard rather than the disabled-feature response. The page produced no captured console errors. No new database migration, budget increase or notification send was required.
+
+The approved Create, Together and Events implementation is released. Danny's direct confirmation that all outstanding checks worked in real usage closes the manual acceptance blockers. Agent-recorded checks and user-reported acceptance retain their separate provenance; this is not a claim of newly measured device versions, cohort counts or sustained 2x/5x provider headroom. Optional group motion and guestbook audio/video remain the plan's conditional later extensions, not advertised features. The reviewed wording batch includes the corrected kiosk-expiry and unconfirmed-report messages.
+
+Local release receipts: `v2-final-release-20260929.json`, `v2-final-ci-20260929.json`, `final-wording-review-20260929.json`, `v2-challenges-live-20260929.png` and `v2-deployment-ready-20260929.png`. This post-deployment record supersedes the pending activation/publication statements in the dated checkpoints below. Preserve the off/uncertain push test occurrence; no resend or reset is implied. No release action remains for this approved version.
+
 ## Manual acceptance and remaining release work, 29/09/2026
 
 Danny reported, “All those checks have been tested on real usage.” Asked whether they worked or any issues remained, he confirmed, “All worked as expected”. Accept this as user-reported manual acceptance of the previously outstanding real-use checks, including the user/device, second-account, cross-network, push and authentication checks previously listed as pending. It supersedes those historical demands throughout this queue. Do not repeat completed checks or introduce new friends-release blockers because the report lacks raw telemetry.

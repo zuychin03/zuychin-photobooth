@@ -108,6 +108,16 @@ body {
   min-height: calc(100dvh - var(--app-nav-height, 0px) - var(--app-bottom-nav-height, 0px));
 }
 
+@media (max-width: 767px) and (max-height: 540px) and (orientation: landscape) {
+  .strip-editor { flex-direction: row; }
+  .strip-editor-preview { width: 35%; }
+  .strip-editor-preview .strip-print {
+    width: min(100%, calc((100dvh - var(--app-nav-height, 0px) - var(--app-bottom-nav-height, 0px) - 2rem) * var(--strip-ar)));
+  }
+  .editor-finish-trigger { width: 2.75rem; justify-content: center; padding-inline: 0; }
+  .editor-finish-trigger span, .editor-finish-chevron { display: none; }
+}
+
 /* Individual scale preserves positioned controls' existing transforms. */
 :where(button, a[href], summary, [role="button"], [role="option"], input, textarea, select) {
   transition-property: color, background-color, border-color, outline-color, box-shadow, opacity, scale, transform;

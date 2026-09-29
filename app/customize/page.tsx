@@ -66,6 +66,8 @@ import { useCuratedAssets } from "@/hooks/useCuratedAssets";
 import { VisualPackPicker } from "@/components/VisualPackPicker";
 import { TemplateSourcePanel } from "@/components/TemplateSourcePanel";
 import { Dropdown } from "@/components/Dropdown";
+import { EditorFinishMenu } from "@/components/EditorFinishMenu";
+import { StripPreview } from "@/components/StripPreview";
 import dynamic from "next/dynamic";
 
 const ExportStudio = dynamic(() => import("@/components/ExportStudio"), { ssr: false });
@@ -114,6 +116,7 @@ function CustomizeWorkspace({ project }: { project: PhotoProject }) {
   const [saving, setSaving] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
   const exportTrigger = useRef<HTMLButtonElement>(null);
+  const mobileFinishTrigger = useRef<HTMLButtonElement>(null);
   const [segmentation, setSegmentation] = useState<{ sources: ShotSet; cutouts: ShotSet } | null>(null);
   const cutouts = segmentation?.sources === session.shots ? segmentation.cutouts : null;
   const [segmenting, setSegmenting] = useState(false);
@@ -301,6 +304,7 @@ function CustomizeWorkspace({ project }: { project: PhotoProject }) {
 
   const onPointerDown = (e: React.PointerEvent) => {
     if (!canvasRef.current) return;
+    if (activeTool !== "stickers" && window.matchMedia("(max-width: 767px)").matches) return;
     const p = toStripCoords(e);
     // topmost sticker wins
     for (let i = stickers.length - 1; i >= 0; i--) {
@@ -514,15 +518,39 @@ function CustomizeWorkspace({ project }: { project: PhotoProject }) {
 
   const activePack = STICKER_PACKS.find((p) => p.id === pack) ?? STICKER_PACKS[0];
 
+  const finishingActions = (compact: boolean) => <>
+    <div className={compact ? "contents" : "flex gap-3"}>
+      <button type="button" onClick={event => {
+        exportTrigger.current = compact ? mobileFinishTrigger.current : event.currentTarget;
+        void openExportStudio();
+      }} disabled={saving}
+        className={`flex items-center justify-center gap-2 bg-accent font-semibold text-accent-foreground disabled:opacity-50 ${compact ? "min-h-11 rounded-xl text-sm" : "min-h-13 flex-1 rounded-2xl shadow-lg shadow-accent/25"}`}>
+        <Download size={18} /> {saving ? "Preparing…" : "Export"}
+      </button>
+      <button type="button" onClick={share} disabled={saving} aria-label="Share"
+        className={`glass-card flex items-center justify-center gap-2 disabled:opacity-50 ${compact ? "min-h-11 rounded-xl text-sm" : "min-h-13 w-16 rounded-2xl"}`}>
+        <Share2 size={18} /> {compact && "Share"}
+      </button>
+    </div>
+    {authEnabled && <button type="button" onClick={saveToTimeline} disabled={saveState === "saving"}
+      aria-label={saveState === "saved" ? "Saved to Shared Vault" : user ? "Save to our Shared Vault" : "Sign in to save"}
+      className={`flex items-center justify-center gap-2 border border-border font-semibold disabled:opacity-50 ${compact ? "min-h-11 rounded-xl text-sm" : "min-h-12 rounded-2xl"}`}>
+      {saveState === "saved" ? <Check size={18} className="text-success" /> : <Heart size={18} className="text-accent" />}
+      {saveState === "saving" ? "Saving…" : saveState === "saved" ? compact ? "Saved" : "Saved to Shared Vault" : user ? compact ? "Save to vault" : "Save to our Shared Vault" : "Sign in to save"}
+    </button>}
+  </>;
+
   return (
-    <main className="flex h-[calc(100dvh-var(--app-nav-height,0px)-var(--app-bottom-nav-height,0px))] flex-col overflow-hidden md:flex-row md:items-stretch md:justify-center" aria-busy={restoring || saving || saveState === "saving"} inert={restoring || saving || saveState === "saving"} onKeyDown={event => {
+    <main className="strip-editor flex h-[calc(100dvh-var(--app-nav-height,0px)-var(--app-bottom-nav-height,0px))] flex-col overflow-hidden md:flex-row md:items-stretch md:justify-center" aria-busy={restoring || saving || saveState === "saving"} inert={restoring || saving || saveState === "saving"} onKeyDown={event => {
       if (!(event.ctrlKey || event.metaKey) || event.altKey || restoring || exportOpen || saving) return;
       const target = event.target as HTMLElement;
       if (target.matches("input, textarea, select, [contenteditable='true']")) return;
       if (event.key.toLowerCase() === "z") { event.preventDefault(); void applyHistory(event.shiftKey ? "redo" : "undo"); }
       else if (event.key.toLowerCase() === "y") { event.preventDefault(); void applyHistory("redo"); }
     }}>
-      <div className="flex shrink-0 items-center justify-center bg-muted/40 p-3 sm:p-4 md:max-w-4xl md:flex-1 md:p-6">
+      <div className="strip-editor-preview relative flex shrink-0 items-center justify-center bg-muted/40 p-3 sm:p-4 md:max-w-4xl md:flex-1 md:p-6">
+        <EditorFinishMenu triggerRef={mobileFinishTrigger}>{finishingActions(true)}</EditorFinishMenu>
+        <StripPreview input={input} assetsVersion={assetsTick} gesturesEnabled={activeTool !== "stickers"} className="contents">
         <div
           className="strip-print w-[min(100%,280px,28dvh*var(--strip-ar))] sm:w-[min(100%,320px,28dvh*var(--strip-ar))] md:w-[min(100%,300px,78dvh*var(--strip-ar))] lg:w-[min(100%,360px,78dvh*var(--strip-ar))]"
           style={
@@ -535,7 +563,7 @@ function CustomizeWorkspace({ project }: { project: PhotoProject }) {
           <canvas
             ref={canvasRef}
             tabIndex={0}
-            aria-label="Strip preview. Select a sticker, then use arrow keys to move it or Delete to remove it."
+            aria-label="Strip preview. Tap to enlarge, or choose Stickers to move a sticker with the arrow keys and Delete to remove it."
             onKeyDown={event => {
               if (selected === null) return;
               if (event.key === "Delete" || event.key === "Backspace") { event.preventDefault(); deleteSelected(); }
@@ -548,9 +576,12 @@ function CustomizeWorkspace({ project }: { project: PhotoProject }) {
             onPointerDown={onPointerDown}
             onPointerMove={onPointerMove}
             onPointerUp={onPointerUp}
-            className="h-full w-full touch-none rounded-md shadow-2xl shadow-black/25"
+            onPointerCancel={onPointerUp}
+            onLostPointerCapture={onPointerUp}
+            className={`h-full w-full rounded-md shadow-2xl shadow-black/25 md:touch-none ${activeTool === "stickers" ? "touch-none" : "touch-pan-y cursor-zoom-in md:cursor-auto"}`}
           />
         </div>
+        </StripPreview>
       </div>
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden md:max-w-md xl:max-w-lg">
@@ -572,6 +603,7 @@ function CustomizeWorkspace({ project }: { project: PhotoProject }) {
             <button type="button" aria-label="Redo edit" disabled={!project.history.future.length || draft.pending} onClick={() => void applyHistory("redo")} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-border disabled:opacity-30"><Redo2 size={18} /></button>
           </div>
           <p role="status" className="text-sm text-muted-foreground">{draft.error || storageError ? "Some changes didn't save" : draft.pending || storageStatus === "saving" ? "Saving on this device…" : "Saved on this device"}</p>
+          {saveError && <p role="alert" className="max-h-20 overflow-y-auto text-sm text-destructive">{saveError}</p>}
         </div>
         <div ref={toolScroll} className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto overscroll-contain p-4 md:p-5" aria-label="Editing tools">
           <div className={toolClass("project")}>
@@ -858,48 +890,8 @@ function CustomizeWorkspace({ project }: { project: PhotoProject }) {
           </div>
         </div>
 
-        <div className="flex max-h-[35dvh] shrink-0 flex-col gap-3 overflow-y-auto border-t border-border bg-background px-4 pt-3 pb-[max(0.75rem,calc(env(safe-area-inset-bottom)-var(--app-bottom-nav-height,0px)))] md:px-5">
-          <div className="flex gap-3">
-            <button
-              ref={exportTrigger}
-              onClick={() => void openExportStudio()}
-              disabled={saving}
-              className="flex min-h-13 flex-1 items-center justify-center gap-2 rounded-2xl bg-accent font-semibold text-accent-foreground shadow-lg shadow-accent/25 transition active:scale-[0.99] disabled:opacity-50"
-            >
-              <Download size={18} /> {saving ? "Preparing…" : "Export"}
-            </button>
-            <button
-              onClick={share}
-              disabled={saving}
-              aria-label="Share"
-              className="glass-card flex min-h-13 w-16 items-center justify-center rounded-2xl transition active:scale-[0.99] disabled:opacity-50"
-            >
-              <Share2 size={18} />
-            </button>
-          </div>
-          {authEnabled && (
-            <button
-              onClick={saveToTimeline}
-              disabled={saveState === "saving"}
-              className="flex min-h-12 items-center justify-center gap-2 rounded-2xl border border-border font-semibold transition active:scale-[0.99] disabled:opacity-50"
-            >
-              {saveState === "saved" ? (
-                <>
-                  <Check size={18} className="text-success" /> Saved to Shared Vault
-                </>
-              ) : (
-                <>
-                  <Heart size={18} className="text-accent" />
-                  {saveState === "saving"
-                    ? "Saving…"
-                    : user
-                      ? "Save to our Shared Vault"
-                      : "Sign in to save"}
-                </>
-              )}
-            </button>
-          )}
-          {saveError && <p role="alert" className="text-sm text-destructive">{saveError}</p>}
+        <div className="hidden max-h-[35dvh] shrink-0 flex-col gap-3 overflow-y-auto border-t border-border bg-background px-5 py-3 md:flex">
+          {finishingActions(false)}
         </div>
       </div>
 

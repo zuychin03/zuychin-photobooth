@@ -1,5 +1,13 @@
 # V2 development status
 
+## V2 release closure, 29/09/2026
+
+Application release `2fe553d8cff9e586c695db9c6541587a33b7f454` is committed and pushed to `main` with Duy Nguyen as the sole author and no attribution trailers. [Exact-commit CI 36574758289](https://github.com/zuychin03/zuychin-photobooth/actions/runs/36574758289) passed all ten steps, including checks, rehearsals and build. Production deployment `J7UrUdsmbK4YVQ8XbcoEeg7SB8ea` reached Ready at 13:24:15 UTC and serves the canonical domain. Challenges is enabled: its live Together entry opens cloud projects, and the API reaches its method guard rather than the disabled-feature response. The page produced no captured console errors. No new database migration, budget increase or notification send was required.
+
+The approved Create, Together and Events implementation is released. Danny's direct confirmation that all outstanding checks worked in real usage closes the manual acceptance blockers. Agent-recorded checks and user-reported acceptance retain their separate provenance; this is not a claim of newly measured device versions, cohort counts or sustained 2x/5x provider headroom. Optional group motion and guestbook audio/video remain the plan's conditional later extensions, not advertised features. The reviewed wording batch includes the corrected kiosk-expiry and unconfirmed-report messages.
+
+Local release receipts: `v2-final-release-20260929.json`, `v2-final-ci-20260929.json`, `final-wording-review-20260929.json`, `v2-challenges-live-20260929.png` and `v2-deployment-ready-20260929.png`. This post-deployment record supersedes the pending activation/publication statements in the dated checkpoints below. Preserve the off/uncertain push test occurrence; no resend or reset is implied. No release action remains for this approved version.
+
 Updated 29/09/2026. [Approved scope](../../V2_PLAN.md). Release version: `2.0.0`. Latest verified production checkpoint source: `main` at `944356733420faa3c452711e19de644b01a1f0fb`. Danny authorised committing, pushing and hosted activation; full V2 acceptance remains separate.
 
 Danny approved development and requires Astra for all subagents. Existing planning artefacts and 24 generated image sources are preserved. Package and lockfile declare `2.0.0`. The deployed app now permits accounts, cloud projects, event setup and Memories. Bounded event-worker, hosted mode recovery and different-release accepted-photo recovery passed; routine admission is enabled at revision 16 within existing limits. Rooms V2 and voice captions are enabled for controlled canaries. Challenges remain disabled. Event reminders and all maintenance switches are enabled; the approved canary email has been delivered exactly once.
