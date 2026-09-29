@@ -9,10 +9,11 @@ export function EventReminderPanel({ client, eventId, disabled = false, onBusyCh
   const [value, setValue] = useState<Projection | null>(null), [pending, setPending] = useState<Choice | null>(null), [busy, setBusy] = useState(false), [error, setError] = useState<string | null>(null), [notice, setNotice] = useState<string | null>(null), [lost, setLost] = useState(false);
   const active = useRef<AbortController | null>(null), live = useRef(false), external = useRef(disabled), callbacks = useRef({ onBusyChange, onDirtyChange, onInitialReadSettled });
   const initialReadSettled = useRef(false);
-  useEffect(() => { external.current = disabled; callbacks.current = { onBusyChange, onDirtyChange, onInitialReadSettled }; if (disabled) active.current?.abort(); }, [disabled, onBusyChange, onDirtyChange, onInitialReadSettled]);
+  useEffect(() => { external.current = disabled; callbacks.current = { onBusyChange, onDirtyChange, onInitialReadSettled }; if (disabled) active.current?.abort("panel_disabled"); }, [disabled, onBusyChange, onDirtyChange, onInitialReadSettled]);
   const run = useCallback(async (save?: Choice) => {
     if (active.current || external.current) return;
     const controller = new AbortController(); active.current = controller; setBusy(true); setError(null); setNotice(null);
+    let interruptedRead = false;
     try {
       const next = save ? await client.save(eventId, save, controller.signal) : await client.read(eventId, controller.signal);
       client.assertActive(controller.signal); if (!live.current) return;
@@ -22,6 +23,8 @@ export function EventReminderPanel({ client, eventId, disabled = false, onBusyCh
         setNotice(null);
         const code = failure && typeof failure === "object" && "code" in failure ? String(failure.code) : "";
         const accessLost = ["identity_changed", "access_denied", "expired"].includes(code);
+        interruptedRead = !save && code === "cancelled" && controller.signal.aborted && controller.signal.reason === "panel_disabled";
+        if (interruptedRead) return;
         if (accessLost) { setValue(null); setPending(null); setLost(true); }
         setError(save || accessLost ? eventError(failure) : "Couldn't load reminder settings. Try again later.");
       }
@@ -29,13 +32,13 @@ export function EventReminderPanel({ client, eventId, disabled = false, onBusyCh
       if (active.current === controller) active.current = null;
       if (live.current) {
         setBusy(false);
-        if (!save && !initialReadSettled.current) { initialReadSettled.current = true; callbacks.current.onInitialReadSettled?.(); }
+        if (!save && !interruptedRead && !initialReadSettled.current) { initialReadSettled.current = true; callbacks.current.onInitialReadSettled?.(); }
       }
     }
   }, [client, eventId]);
   useEffect(() => { live.current = true; const timer = setTimeout(() => void run(), 0); const hide = () => active.current?.abort(); addEventListener("pagehide", hide); return () => { live.current = false; clearTimeout(timer); removeEventListener("pagehide", hide); active.current?.abort(); callbacks.current.onBusyChange?.(false); callbacks.current.onDirtyChange?.(false); }; }, [run]);
   useEffect(() => { onBusyChange?.(busy); }, [busy, onBusyChange]);
-  useEffect(() => { if (!disabled && !value && !error && !lost) { const timer = setTimeout(() => void run(), 0); return () => clearTimeout(timer); } }, [disabled, value, error, lost, run]);
+  useEffect(() => { if (!disabled && !value && !busy && !pending && !error && !lost) { const timer = setTimeout(() => void run(), 0); return () => clearTimeout(timer); } }, [disabled, value, busy, pending, error, lost, run]);
   useEffect(() => { onDirtyChange?.(!!pending); }, [pending, onDirtyChange]);
   const change = (channel: "email" | "push", enabled: boolean) => { if (!value || busy || disabled || pending) return; const next = { expectedRevision: value.settings.revision, email: value.settings.email, push: value.settings.push, [channel]: enabled }; setPending(next); void run(next); };
   return <section className="border-t border-border py-7" aria-label="Expiry reminder"><h3 className="font-display text-2xl">Expiry reminder <HelpTooltip label="About expiry reminders">Scheduled once per expiry date, about 24 hours before expiry, or at the next check if enabled later.</HelpTooltip></h3><p className="mt-3 max-w-2xl text-sm text-foreground/70">Reminders can fail. Photos still expire on time, so keep your own reminder too.</p>

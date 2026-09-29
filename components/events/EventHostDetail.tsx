@@ -125,7 +125,7 @@ export function EventHostDetail({ client, exportClient, reviewClient, reminderCl
         </section>}
         {exportBusy && <p role="status" className="my-4 text-sm">Exporting. Other controls are paused until it&apos;s done.</p>}
         {exportDirty && !exportBusy && <p role="status" className="my-4 text-sm">Finish or discard the export before changing this event.</p>}
-        {reminderBusy && <p role="status" className="my-4 text-sm">Saving reminder settings…</p>}
+        {reminderBusy && <p role="status" className="my-4 text-sm">Updating reminder settings…</p>}
         {reminderDirty && !reminderBusy && <p role="status" className="my-4 text-sm">Save or discard your reminder settings before changing this event.</p>}
         {!recovery && owner && reminderClient && !deleted && !expired && <EventReminderPanel client={reminderClient} eventId={summary.eventId} disabled={task.busy || Boolean(pending) || dirty || exportBusy || exportDirty || previewBusy || moderationBlocked || guestbookBlocked || Boolean(confirmation)} onBusyChange={setReminderBusy} onDirtyChange={setReminderDirty} onInitialReadSettled={onReminderReadSettled} />}
         {!recovery && reviewClient && !deleted && !expired && <EventHostContributionPreview client={reviewClient} eventId={summary.eventId} disabled={task.busy || Boolean(pending) || dirty || exportBusy || exportDirty || testBusy || reminderBlocked || moderationBlocked || guestbookBlocked || Boolean(confirmation)} onBusyChange={setReviewBusy} />}
