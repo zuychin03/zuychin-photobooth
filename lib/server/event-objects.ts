@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { EVENT_LIMITS, type EventObjectAccess, type EventUploadAuthorisation } from "../events/contract";
 import { supabaseServiceOrigin } from "./cron-auth";
 import { isStorageObjectAbsent } from "./storage-absence";
@@ -131,7 +131,7 @@ export function createEventObjects(config: { origin: string; serviceRoleKey: str
       const d = eventObjectLocation(object), removed = await request("DELETE", `/object/${d.bucket}`, 65536, signal, JSON.stringify({ prefixes: [d.path] }), { "content-type": "application/json" });
       if (removed.status !== 200) return fail("provider_failure");
       let confirmed = await request("HEAD", `/object/${d.bucket}/${d.path}`, 0, signal);
-      if (confirmed.status === 400) confirmed = await request("GET", `/object/authenticated/${d.bucket}/${d.path}`, 0, signal, undefined, undefined, true);
+      if (confirmed.status === 400) confirmed = await request("GET", `/object/authenticated/${d.bucket}/${d.path}?cacheNonce=${randomUUID()}`, 0, signal, undefined, undefined, true);
       if (confirmed.status === 404) return true;
       if (confirmed.status === 200) return false;
       return fail("provider_failure");

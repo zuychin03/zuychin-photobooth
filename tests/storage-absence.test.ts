@@ -54,11 +54,67 @@ test("all three cleanup adapters confirm legacy400 through one authenticated GET
   for (const remove of adapters(fetcher(() => json(missing, 403), calls))) await assert.rejects(remove());
 });
 
+test("cleanup absence probes use a fresh cacheNonce without changing the exact object path", async () => {
+  const nonces = new Set<string>();
+  const transport: typeof fetch = async (input, init) => {
+    const url = new URL(String(input));
+    assert.equal(url.origin, origin);
+    assert.equal(init?.cache, "no-store");
+    assert.equal(init?.redirect, "error");
+    assert.equal(new Headers(init?.headers).get("authorization"), `Bearer ${key}`);
+    if (init?.method === "GET") {
+      assert.deepEqual([...url.searchParams.keys()], ["cacheNonce"]);
+      const nonce = url.searchParams.get("cacheNonce")!;
+      assert.match(nonce, /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/);
+      assert(!nonces.has(nonce)); nonces.add(nonce);
+      assert([
+        `/storage/v1/object/authenticated/photobooth-events-v2/${ids[0]}/${ids[1]}/image`,
+        `/storage/v1/object/authenticated/photobooth-projects-v2/${ids.join("/")}`,
+        `/storage/v1/object/authenticated/photobooth-voice-captions/${ids.join("/")}.wav`,
+      ].includes(url.pathname));
+    } else assert.equal(url.search, "");
+    const response = init?.method === "DELETE" ? Response.json([]) : init?.method === "HEAD" ? new Response(null, { status: 400 }) : json();
+    return Object.defineProperty(response, "url", { value: url.href });
+  };
+  for (const remove of adapters(transport)) { assert.equal(await remove(), true); assert.equal(await remove(), true); }
+  assert.equal(nonces.size, 6);
+});
+
+test("cleanup refuses a missing or changed response nonce and redirects before certifying absence", async () => {
+  for (const change of ["missing", "changed", "redirected"] as const) {
+    const transport: typeof fetch = async (input, init) => {
+      const url = new URL(String(input));
+      const response = init?.method === "DELETE" ? Response.json([]) : init?.method === "HEAD" ? new Response(null, { status: 400 }) : json();
+      if (init?.method === "GET") {
+        if (change === "missing") url.search = "";
+        if (change === "changed") url.searchParams.set("cacheNonce", "different");
+        if (change === "redirected") Object.defineProperty(response, "redirected", { value: true });
+      }
+      return Object.defineProperty(response, "url", { value: url.href });
+    };
+    for (const remove of adapters(transport)) await assert.rejects(remove());
+  }
+});
+
 test("cleanup presence probes cancel200 bodies without downloading remaining originals", async () => {
   let cancelled = 0;
   const transport = fetcher(() => new Response(new ReadableStream<Uint8Array>({ cancel() { cancelled++; } }), { headers: { "content-length": "2000000000" } }), []);
   for (const remove of adapters(transport)) assert.equal(await remove(), false);
   assert.equal(cancelled, 3);
+});
+
+test("ordinary object reads retain their original URLs without cleanup nonces", async () => {
+  let reads = 0;
+  const data = new Uint8Array(46);
+  const transport: typeof fetch = async (input, init) => {
+    const url = new URL(String(input));
+    assert.equal(init?.method, "GET"); assert.equal(url.search, ""); reads++;
+    return Object.defineProperty(new Response(data, { headers: { "content-length": String(data.length) } }), "url", { value: url.href });
+  };
+  assert.deepEqual(await createEventObjects({ origin, serviceRoleKey: key }, { fetch: transport }).download({ eventId: ids[0], submissionId: ids[1], kind: "source" }), data);
+  assert.deepEqual(await createProjectObjects({ origin, serviceRoleKey: key }, { fetch: transport }).download({ bucket: "photobooth-projects-v2", path: ids.join("/"), bytes: data.length }), data);
+  assert.deepEqual(await createVoiceObjects({ NEXT_PUBLIC_SUPABASE_URL: origin, SUPABASE_SERVICE_ROLE_KEY: key }, transport).read({ actor: ids[0], activityId: ids[1], generation: ids[2], path: `${ids.join("/")}.wav`, samples: 1, bytes: data.length, sha256: "a".repeat(64) }), data);
+  assert.equal(reads, 3);
 });
 
 test("event derivative preflight recognises missing legacy400 but does not convert provider corruption into an invalid photo", async () => {

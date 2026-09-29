@@ -1,4 +1,5 @@
 import { CLOUD_PROJECT_LIMITS, PROJECT_BUCKET, cloudTimestamp, cloudUuid, projectAssetPath, type ProjectAssetAccess, type ProjectUploadAuthorisation } from "../projects/cloud-contract";
+import { randomUUID } from "node:crypto";
 import { supabaseServiceOrigin } from "./cron-auth";
 import { isStorageObjectAbsent } from "./storage-absence";
 
@@ -138,7 +139,7 @@ export function createProjectObjects(config: { origin: string; serviceRoleKey: s
       if (status === 404) return true;
       if (status === 200) return false;
       if (status !== 400) return fail("provider_failure");
-      return request(`/object/authenticated/${PROJECT_BUCKET}/${path}`, "GET", async (response, signal) => {
+      return request(`/object/authenticated/${PROJECT_BUCKET}/${path}?cacheNonce=${randomUUID()}`, "GET", async (response, signal) => {
         try { if (response.status === 200) return false; if (await isStorageObjectAbsent(response, signal)) return true; }
         finally { discard(response); }
         return fail("provider_failure");
