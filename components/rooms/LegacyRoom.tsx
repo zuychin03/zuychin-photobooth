@@ -380,7 +380,7 @@ function RoomInner({ rehearsal }: { rehearsal?: LegacyRoomRehearsal }) {
       finishTimer.current = setTimeout(() => {
         if (!cancelled.current && planRef.current) {
           setIncomplete(true);
-          setSaveError("Some photos are missing or still saving. Keep this page open to try again, or carry on with the ones you have.");
+          setSaveError("Some photos are missing or still saving. Keep this page open to try again, or continue with the ones you have.");
         }
       }, FINISH_TIMEOUT_MS);
     },

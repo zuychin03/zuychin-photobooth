@@ -49,12 +49,12 @@ export function takeEventFragment(kind: "invite" | "receipt", locationValue: Pic
 export function eventGuestError(error: unknown): string {
   const code = error && typeof error === "object" && "code" in error ? error.code : "";
   const messages: Record<string, string> = {
-    unavailable: "This event connection is unavailable. Keep your photo and try again later.", not_ready: "Event uploads are not available here yet. Your photo stays on this device.",
-    access_denied: "This invitation or guest session is no longer available. Ask the host for help; keep your local photo.", expired: "This invitation or upload window has ended. You can still download your local photo.",
-    capacity: "This event has reached its current capacity. Download your local photo and ask the host for help.", identity_changed: "The guest session changed. Refresh this page before continuing.",
-    conflict: "This saved request changed in another tab. Refresh its status before retrying.", rate_limited: "Too many requests were made. Wait a minute, then try again.",
-    queue_capacity: "This device's temporary queue is full. Review and export pending photos before removing them.", journal_unavailable: "This browser could not save the recovery request. Nothing new was uploaded. Download your photo or allow device storage, then retry.", journal_blocked: "Another tab is blocking device storage. Close it, then try again.",
-    upload_uncertain: "The upload was not confirmed. Keep this request and retry with the same photo.", original_required: "Choose the exact finished photo saved for this request.", image_mismatch: "That file does not match. Choose the exact finished photo saved for this request.", queue_expired: "This temporary device request has expired. Ask the host whether a new contribution is still possible.",
+    unavailable: "Couldn't reach the event. Keep your photo and try again later.", not_ready: "Event uploads aren't open here yet. Your photo stays on this device.",
+    access_denied: "This invitation doesn't work any more. Ask the host for help. Your photo stays on this device.", expired: "Uploads for this event have closed. You can still download your photo.",
+    capacity: "This event is full. Download your photo and ask the host for help.", identity_changed: "Something changed in this browser. Refresh the page to continue.",
+    conflict: "This changed in another tab. Refresh, then try again.", rate_limited: "Too many requests. Wait a minute, then try again.",
+    queue_capacity: "This device has too many unsent photos. Download them before you remove any.", journal_unavailable: "This browser couldn't save your progress, so nothing was sent. Download your photo or allow storage, then try again.", journal_blocked: "Another tab is using this event. Close it, then try again.",
+    upload_uncertain: "We couldn't confirm the upload. Try again with the same photo.", original_required: "Choose the same finished photo you saved earlier.", image_mismatch: "That's a different file. Choose the same finished photo you saved earlier.", queue_expired: "This upload has expired. Ask the host if you can still add a photo.",
   };
-  return typeof code === "string" && messages[code] || "This action could not finish. Keep your photo and retry the same request, or refresh its status.";
+  return typeof code === "string" && messages[code] || "Something went wrong. Keep your photo, then try again or refresh.";
 }

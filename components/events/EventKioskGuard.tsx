@@ -23,6 +23,6 @@ export default function EventKioskGuard({ children }: { children: ReactNode }) {
     return()=>{clearInterval(timer);window.removeEventListener("pb-kiosk-lock",check);window.removeEventListener("storage",check);window.removeEventListener("pageshow",check);window.removeEventListener("pagehide",hide);window.removeEventListener("popstate",check);document.removeEventListener("visibilitychange",visible);document.removeEventListener("click",navigation,true);};
   },[]);
   const current = ready ? readLock() : lock;
-  if(!ready || current && pathname!==current.path) return <main className="min-h-dvh" aria-label="Checking shared-device privacy" />;
+  if(!ready || current && pathname!==current.path) return <main className="min-h-dvh" aria-label="Loading" />;
   return <KioskLockedContext.Provider value={Boolean(current)}>{children}</KioskLockedContext.Provider>;
 }

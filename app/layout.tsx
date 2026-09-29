@@ -69,7 +69,7 @@ export default async function RootLayout({
       <body className="min-h-full flex flex-col">
         <PwaRegister />
         {!localOnly && <AuthCookieMigration />}
-        <Suspense fallback={<main className="min-h-dvh" aria-label="Checking shared-device privacy" />}>
+        <Suspense fallback={<main className="min-h-dvh" aria-label="Loading" />}>
           <EventKioskGuard><AuthProvider accountsEnabled={!localOnly}>
             <ReleaseModeProvider localOnly={localOnly} recovery={isRecoveryRelease()}><SessionProvider><AppNavigationProvider><SiteNav /><div className="app-content flex min-h-0 flex-1 flex-col"><ReleaseFeatureBoundary>{children}</ReleaseFeatureBoundary></div></AppNavigationProvider></SessionProvider></ReleaseModeProvider>
           </AuthProvider></EventKioskGuard>

@@ -9,16 +9,16 @@ export function takeEventAudienceFragment(location: Pick<Location, "hash" | "sea
 export function eventAudienceError(error: unknown): string {
   const code = error && typeof error === "object" && "code" in error ? String(error.code) : "";
   return ({
-    access_denied: "This viewing link is no longer available. Ask the host for a current link.",
-    identity_changed: "The viewing session changed in this browser. Reopen the event to continue.",
-    expired: "This viewing link or event has expired. Its photos are no longer shown.",
-    rate_limited: "Viewing is temporarily paused. Wait a minute, then check again.",
-    unavailable: "Event viewing is unavailable here. Ask the host to check the event connection.",
-    stale: "Photos were hidden because their permission check is out of date. Check again to continue.",
-    offline: "You are offline. Photos are hidden until this page can check their permissions again.",
-    hidden: "Viewing is paused while this page is hidden.",
-    paused: "Viewing is paused and photos are hidden. Check again to resume with fresh permission checks.",
-    capacity: "The report limit has been reached. Please contact the host directly.",
-    conflict: "That report differs from the earlier request. Keep the original report or start a new one.",
-  } as Record<string, string>)[code] ?? "Photos are hidden because the latest check did not finish. Check again when the connection is ready.";
+    access_denied: "This link doesn't work any more. Ask the host for a new one.",
+    identity_changed: "Something changed in this browser. Open the event link again.",
+    expired: "This link or event has expired.",
+    rate_limited: "Too many requests. Wait a minute, then refresh.",
+    unavailable: "Event photos aren't available here. Ask the host for help.",
+    stale: "Photos are hidden until the page refreshes. Tap Refresh.",
+    offline: "You're offline. Photos will show again when you reconnect.",
+    hidden: "Paused while this page is hidden.",
+    paused: "Paused. Tap Refresh to show the photos again.",
+    capacity: "You can't send more reports. Contact the host directly.",
+    conflict: "This report changed. Cancel it and start again.",
+  } as Record<string, string>)[code] ?? "Couldn't load the photos. Check your connection, then refresh.";
 }
