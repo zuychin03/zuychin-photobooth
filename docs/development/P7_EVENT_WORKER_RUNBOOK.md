@@ -1,5 +1,36 @@
 # Event worker readiness and scheduler runbook
 
+## Bounded HTTP load preparation, 29/09/2026
+
+`scripts/deployment-load-harness.mjs` prepares an HTTP-only workload; it does not run a worker or establish camera, TURN, provider CPU, database capacity or user-cohort acceptance. No hosted load has been executed with this harness. Use existing authorised fixtures and supply a JSON scenario, for example:
+
+```json
+{
+  "version": 1,
+  "target": "https://photobooth.zuychin.me",
+  "budgets": { "requests": 20, "concurrency": 2, "wallMs": 30000, "uploadBytes": 65536, "downloadBytes": 1048576 },
+  "actors": [{ "steps": [{
+    "method": "POST", "path": "/api/projects",
+    "json": { "operation": "list", "limit": 5 },
+    "headersEnv": { "authorization": "PB_LOAD_OWNER_AUTHORIZATION" },
+    "expectedStatuses": [200], "timeoutMs": 10000, "responseBytes": 65536
+  }] }]
+}
+```
+
+```powershell
+node scripts/deployment-load-harness.mjs --scenario=operator-scenario.json
+node scripts/deployment-load-harness.mjs --scenario=operator-scenario.json --scale=1 --execute --confirm-target=https://photobooth.zuychin.me
+```
+
+The first command validates and reports planned 1×/2×/5× request counts and ceilings without reading secrets or contacting a service. Execution requires the exact target confirmation. The only remote target is the canonical HTTPS app; explicit HTTP loopback origins on ports 1024–65535 support local fixtures. Environment values are read only during execution, never loaded from env files. `headersEnv` permits only `authorization` and `cookie`; supply the complete header value through the named variable. Optional `jsonEnv` maps top-level JSON fields to named variables, but cannot replace the operation or action. No response tokens, cookies, signed URLs or other payload fields are captured or reused.
+
+Each actor's steps run sequentially. Actors may run concurrently; scale repeats the configured journeys and their existing identities and immutable IDs. It does **not** create distinct guests or assets. Supply distinct prepared actors when the intended workload needs distinct principals, and distinguish exact-ID replay from new reservations in interpreting results. The receipt labels this a burst-only workload: there is no pacing, sustained-load claim, automatic retry, polling schedule, generated identity or cleanup. Expected busy/rate-limit statuses may be listed explicitly; authentication failures and redirects always stop the entire run.
+
+The operation allowlist covers project capability/list/view/read/status/reserve/upload/finalise; event capabilities and existing host dashboard/settings; existing guest context/reserve/reserveMission/upload/finalise; existing receipt read/media; and gallery/wall capability/list/validate/access/media. Existing prepared rooms permit POST state with an empty body, poll and signal at `/api/rooms/{roomId}/{action}`, without an operation field. Use already-admitted/exchanged room credentials; returned cookie rotations are not adopted, and connection renewal, room creation/joining, capture and host controls are refused. GET is limited to home, booth, templates, offline, manifest and `/api/rooms/capabilities`. All other paths/operations, query strings, maintenance, auth/session, invitation, membership, moderation, admission and lifecycle actions are refused. Signed upload/read grants are discarded; this harness does not follow them to Storage or upload original media. Prepared staged sources are needed to measure real finalisation through it.
+
+Hard ceilings are 100 configured actors, 400 base steps, 2,000 scaled requests, 10 concurrent journeys, five minutes, 20 MiB dispatched request bodies and 64 MiB observed decoded response bodies. Each request has at most ten seconds and a 2 MiB response ceiling. Configuration is at most 128 KiB. Request/upload totals are checked before execution. Response byte limits are read-and-cancel thresholds: one received chunk can cross a limit before cancellation, and that chunk is counted honestly. Counts exclude HTTP headers, transport buffering and provider wire egress; compressed responses are measured after decoding rather than compared to compressed Content-Length. Output contains only fixed measurement labels, counts, HTTP statuses, observed bytes, elapsed time, completed-response latency percentiles and a sanitised stop code; it contains no request paths, header values or payloads. Redirecting stdout can retain that receipt. Interrupted/uncertain writes still require ordinary authorised fixture recovery; the harness never assumes cancellation undoes a request.
+
 Source-only correction, 23/09/2026. No scheduler, hosted migration, event flag or provider configuration was activated. The hosting provider is still an activation decision in V2_PLAN. Do not infer scheduling support from this repository or enable uploads merely because a provider adapter exists.
 
 ## Authority and admission

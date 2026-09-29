@@ -9,7 +9,7 @@
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "test": "node --import tsx --test tests/*.test.ts scripts/brand-assets.test.cjs",
-    "test:rehearsal": "node --import tsx --test scripts/sw-update-harness.test.mjs scripts/local-fallback-artifact.test.mjs scripts/local-rollback-rehearsal.test.mjs scripts/local-auth-app.test.mjs scripts/local-supabase-prepare.test.mjs",
+    "test:rehearsal": "node --import tsx --test scripts/sw-update-harness.test.mjs scripts/local-fallback-artifact.test.mjs scripts/local-rollback-rehearsal.test.mjs scripts/local-auth-app.test.mjs scripts/local-supabase-prepare.test.mjs scripts/deployment-load-harness.test.mjs",
     "check": "npm run typecheck -- --incremental false && npm run lint && npm test"
   },
   "dependencies": {
