@@ -35,7 +35,9 @@ export function createRetainedStripObjects(env: Record<string, string | undefine
         });
         if (metadata.public_id !== publicId || metadata.secure_url !== d.archive.url || metadata.type !== "authenticated" || metadata.resource_type !== "image" || metadata.format !== "png" || !Number.isSafeInteger(metadata.bytes) || (metadata.bytes as number) < 1 || (metadata.bytes as number) > RETAINED_STRIP_LIMITS.bytes || !Number.isSafeInteger(metadata.width) || !Number.isSafeInteger(metadata.height) || (metadata.width as number) < 1 || (metadata.height as number) < 1 || (metadata.width as number) > RETAINED_STRIP_LIMITS.edge || (metadata.height as number) > RETAINED_STRIP_LIMITS.edge || (metadata.width as number) * (metadata.height as number) > RETAINED_STRIP_LIMITS.pixels) return fail();
         const persisted = new URL(d.archive.url);
-        if (persisted.pathname !== `/${name}/image/authenticated/v${metadata.version}/${publicId}.png` || !Number.isSafeInteger(metadata.version) || (metadata.version as number) < 1) return fail();
+        const prefix = `/${name}/image/authenticated/`;
+        const original = persisted.pathname.startsWith(prefix) ? persisted.pathname.slice(prefix.length).replace(/^s--(?:[A-Za-z0-9_-]{8}|[A-Za-z0-9_-]{32})--\//, "") : "";
+        if (original !== `v${metadata.version}/${publicId}.png` || !Number.isSafeInteger(metadata.version) || (metadata.version as number) < 1) return fail();
         const timestamp = Math.floor(Date.now() / 1000), expires = timestamp + 30;
         const options = { cloud_name: name, api_key: apiKey, api_secret: secret, upload_prefix: "https://api.cloudinary.com", secure: true, resource_type: "image" as const, type: "authenticated" as const, timestamp, expires_at: expires, attachment: false };
         url = cloudinary.utils.private_download_url(publicId, "png", options);

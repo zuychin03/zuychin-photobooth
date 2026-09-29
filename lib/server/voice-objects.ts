@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { VoiceError } from "../memories/voice-contract";
 import { supabaseServiceOrigin } from "./cron-auth";
 import { VOICE_BUCKET, voiceDescriptor, type VoiceObject, type VoiceStage } from "./voice-store";
@@ -51,7 +52,7 @@ export function createVoiceObjects(env: Record<string, string | undefined>, tran
       const object = voiceDescriptor(input), r = await request("DELETE", `/object/${VOICE_BUCKET}`, 65536, signal, JSON.stringify({ prefixes: [object.path] }), { "content-type": "application/json" });
       if (r.status !== 200) throw new VoiceError("unavailable");
       let head = await request("HEAD", `/object/${VOICE_BUCKET}/${object.path}`, 2880044, signal);
-      if (head.status === 400) head = await request("GET", `/object/authenticated/${VOICE_BUCKET}/${object.path}`, 0, signal, undefined, undefined, true);
+      if (head.status === 400) head = await request("GET", `/object/authenticated/${VOICE_BUCKET}/${object.path}?cacheNonce=${randomUUID()}`, 0, signal, undefined, undefined, true);
       if (head.status !== 200 && head.status !== 404) throw new VoiceError("unavailable"); return head.status === 404;
     },
   };
