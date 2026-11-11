@@ -44,15 +44,28 @@ function exifOrientation(bytes: Uint8Array): number {
 }
 
 export function inspectImageHeader(bytes: Uint8Array): ProjectImageInfo {
-  return imageHeader(bytes, RESOURCE_LIMITS.photoBytes);
+  return imageHeader(bytes, RESOURCE_LIMITS.photoBytes).info;
 }
 
 export function inspectRetainedPngHeader(bytes: Uint8Array): ProjectImageInfo {
   if (bytes.length < 33 || ascii(bytes, 0, 8) !== "\x89PNG\r\n\x1a\n") invalid("This retained photograph is not a supported PNG");
-  return imageHeader(bytes, 16 * 1024 * 1024);
+  return imageHeader(bytes, 16 * 1024 * 1024).info;
 }
 
-function imageHeader(bytes: Uint8Array, maximumBytes: number): ProjectImageInfo {
+// Cameras append data after a JPEG's EOI (Samsung SEF, motion photo video, MPF images). It is not part of the
+// image, and the server's strictJpeg rejects it, so stored and uploaded originals end at the EOI.
+// Only the first photoBytes are read, so size limits apply to the image alone. Input that does not parse comes
+// back unchanged for the caller's size and header checks to reject.
+export async function withoutImageTrailer(blob: Blob): Promise<Blob> {
+  const bytes = new Uint8Array(await blob.slice(0, RESOURCE_LIMITS.photoBytes).arrayBuffer());
+  if (bytes[0] !== 0xff || bytes[1] !== 0xd8) return blob;
+  try {
+    const { length } = imageHeader(bytes, RESOURCE_LIMITS.photoBytes);
+    return length < blob.size ? blob.slice(0, length, "image/jpeg") : blob;
+  } catch { return blob; }
+}
+
+function imageHeader(bytes: Uint8Array, maximumBytes: number): { info: ProjectImageInfo; length: number } {
   if (!bytes.length || bytes.length > maximumBytes) invalid(`Choose an image smaller than ${maximumBytes / (1024 * 1024)} MiB`);
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   if (bytes.length >= 33 && ascii(bytes, 0, 8) === "\x89PNG\r\n\x1a\n") {
@@ -75,23 +88,24 @@ function imageHeader(bytes: Uint8Array, maximumBytes: number): ProjectImageInfo 
       if (type === "IDAT") data = true;
       if (type === "IEND") {
         if (size !== 0 || !data || offset + 12 !== bytes.length) invalid();
-        return dimensions("image/png", width, height, orientation);
+        return { info: dimensions("image/png", width, height, orientation), length: bytes.length };
       }
       offset += size + 12;
     }
     invalid();
   }
   if (bytes.length >= 4 && bytes[0] === 0xff && bytes[1] === 0xd8) {
-    let offset = 2, width = 0, height = 0, orientation = 1, exif = false;
+    let offset = 2, width = 0, height = 0, orientation = 1, exif = false, scanned = false;
     while (offset + 2 <= bytes.length) {
       if (bytes[offset++] !== 0xff) invalid();
       while (bytes[offset] === 0xff) offset++;
       const marker = bytes[offset++];
-      if (marker === 0xda) {
-        if (!width || !height || bytes[bytes.length - 2] !== 0xff || bytes[bytes.length - 1] !== 0xd9) invalid();
-        return dimensions("image/jpeg", width, height, orientation);
+      if (marker === 0xd9) {
+        if (!scanned) invalid();
+        return { info: dimensions("image/jpeg", width, height, orientation), length: offset };
       }
-      if (marker === 0xd9 || marker === 0 || offset + 2 > bytes.length) invalid();
+      if (marker === 0 || offset + 2 > bytes.length) invalid();
+      if (scanned && ![0xc4, 0xcc, 0xda, 0xdb, 0xdc, 0xdd, 0xfe].includes(marker) && (marker < 0xe0 || marker > 0xef)) invalid();
       const size = view.getUint16(offset);
       if (size < 2 || offset + size > bytes.length) invalid();
       if ([0xc0, 0xc1, 0xc2].includes(marker)) {
@@ -99,12 +113,19 @@ function imageHeader(bytes: Uint8Array, maximumBytes: number): ProjectImageInfo 
         height = view.getUint16(offset + 3); width = view.getUint16(offset + 5);
         dimensions("image/jpeg", width, height);
       } else if (marker >= 0xc0 && marker <= 0xcf && ![0xc4, 0xc8, 0xcc].includes(marker)) invalid();
-      if (marker === 0xe1 && ascii(bytes, offset + 2, 6) === "Exif\0\0") {
+      if (marker === 0xe1 && !scanned && ascii(bytes, offset + 2, 6) === "Exif\0\0") {
         if (exif) invalid();
         orientation = exifOrientation(bytes.subarray(offset + 2, offset + size));
         exif = true;
       }
       offset += size;
+      if (marker === 0xda) {
+        if (!width || !height) invalid();
+        scanned = true;
+        // Entropy-coded data ends at the next marker; FF00 is byte stuffing and FFD0-FFD7 are restarts.
+        while ((offset = bytes.indexOf(0xff, offset)) >= 0 && (bytes[offset + 1] === 0 || (bytes[offset + 1] >= 0xd0 && bytes[offset + 1] <= 0xd7))) offset += 2;
+        if (offset < 0) invalid();
+      }
     }
     invalid();
   }
@@ -138,7 +159,7 @@ function imageHeader(bytes: Uint8Array, maximumBytes: number): ProjectImageInfo 
       offset = start + size + (size % 2);
     }
     if (offset !== bytes.length || (canvasWidth && (canvasWidth !== width || canvasHeight !== height))) invalid();
-    return dimensions("image/webp", width, height, orientation);
+    return { info: dimensions("image/webp", width, height, orientation), length: bytes.length };
   }
   invalid("Choose a still JPEG, PNG or WebP image");
 }

@@ -1,4 +1,4 @@
-import { inspectProjectImage, projectImageToCanvas } from "./projects/images";
+import { inspectProjectImage, projectImageToCanvas, withoutImageTrailer } from "./projects/images";
 import { createProject, validatePhotoProject } from "./projects/model";
 import { openProjectRepository } from "./projects/storage";
 import { projectBlobHash } from "./projects/bundle";
@@ -9,7 +9,7 @@ export async function importRelayPhotos(files: readonly Blob[], count: number, a
   try {
     for (const file of files) {
       if (!active()) throw new Error("Capture closed");
-      const frame = await decode(file); frames.push(frame);
+      const frame = await decode(await withoutImageTrailer(file)); frames.push(frame);
       if (!active()) throw new Error("Capture closed");
     }
     return frames;

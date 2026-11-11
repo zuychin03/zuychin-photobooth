@@ -6,7 +6,7 @@ import { useAuth } from "./auth";
 import { appendProjectMedia, applyProjectEdit, applyTemplateToProject, attachProjectReference, configureProjectCapture, createProject, createReferencedProject, redoProject, undoProject, type CreateProjectInput, type PhotoProject, type ProjectCaptureSettings, type ProjectEditorSettings, type ProjectScope, type ProjectSourceOrder } from "./projects/model";
 import { validateThenNowPlan, type ThenNowPlan } from "./memories/then-and-now";
 import { openProjectRepository } from "./projects/storage";
-import { inspectImageHeader, projectImageToCanvas } from "./projects/images";
+import { inspectImageHeader, projectImageToCanvas, withoutImageTrailer } from "./projects/images";
 import { exportProjectBundle } from "./projects/bundle";
 import { RESOURCE_LIMITS } from "./projects/resource-bounds";
 import type { TemplateDesign } from "./templates/model";
@@ -215,9 +215,9 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     const previous = await requireProject(token);
     const participant = previous.participants.find(person => person.role === role);
     if (!participant) throw new Error("This participant does not belong to the project");
-    if (blob.size > RESOURCE_LIMITS.photoBytes) throw new Error("Choose an image under 10 MB.");
-    const info = inspectImageHeader(new Uint8Array(await blob.arrayBuffer()));
-    const original = blob.slice(0, blob.size, info.mime);
+    const source = await withoutImageTrailer(blob);
+    if (source.size > RESOURCE_LIMITS.photoBytes) throw new Error("Choose an image under 10 MB.");
+    const info = inspectImageHeader(new Uint8Array(await source.arrayBuffer())), original = source.slice(0, source.size, info.mime);
     const canvas = await projectImageToCanvas(original, info);
     const id = crypto.randomUUID(), order = [...previous.sourceOrder[role]];
     while (order.length <= index) order.push(null);
@@ -239,8 +239,9 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
 
   const saveReference = useCallback(async (previous: PhotoProject, blob: Blob, plan: ThenNowPlan, token: number) => {
     const id = crypto.randomUUID(), checked = validateThenNowPlan({ ...plan, reference: { ...plan.reference, mediaId: id } });
-    if (blob.size > RESOURCE_LIMITS.photoBytes) throw new Error("Choose an old photo under 10 MB.");
-    const info = inspectImageHeader(new Uint8Array(await blob.arrayBuffer())), original = blob.slice(0, blob.size, info.mime);
+    const source = await withoutImageTrailer(blob);
+    if (source.size > RESOURCE_LIMITS.photoBytes) throw new Error("Choose an old photo under 10 MB.");
+    const info = inspectImageHeader(new Uint8Array(await source.arrayBuffer())), original = source.slice(0, source.size, info.mime);
     const next = attachProjectReference(previous, { ...info, id, bytes: original.size, kind: "reference", participantId: null }, checked);
     const canvas = await projectImageToCanvas(original, info);
     try {

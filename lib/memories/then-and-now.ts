@@ -1,4 +1,4 @@
-import { inspectImageHeader } from "../projects/images";
+import { inspectImageHeader, withoutImageTrailer } from "../projects/images";
 import { RESOURCE_LIMITS } from "../projects/resource-bounds";
 import { photoPlacement } from "../projects/transforms";
 
@@ -153,8 +153,10 @@ export interface PreparedThenNowReference { readonly canvas: HTMLCanvasElement; 
 export interface ThenNowPrepareOptions { signal?: AbortSignal; decode?: (blob: Blob) => Promise<HTMLCanvasElement>; createCanvas?: () => HTMLCanvasElement }
 let preparing = false;
 async function decodeReference(blob: Blob): Promise<HTMLCanvasElement> {
-  const info = inspectImageHeader(new Uint8Array(await blob.arrayBuffer()));
-  const bitmap = await createImageBitmap(blob.slice(0, blob.size, info.mime), { imageOrientation: "from-image" });
+  const source = await withoutImageTrailer(blob);
+  if (source.size > RESOURCE_LIMITS.photoBytes) invalid();
+  const info = inspectImageHeader(new Uint8Array(await source.arrayBuffer()));
+  const bitmap = await createImageBitmap(source.slice(0, source.size, info.mime), { imageOrientation: "from-image" });
   let canvas: HTMLCanvasElement | null = null;
   try {
     if (bitmap.width !== info.width || bitmap.height !== info.height) throw new Error("Reference image dimensions could not be verified");
@@ -168,7 +170,7 @@ async function decodeReference(blob: Blob): Promise<HTMLCanvasElement> {
 }
 export async function prepareThenNowReference(blob: Blob, input: ThenNowPlan, options: ThenNowPrepareOptions = {}): Promise<PreparedThenNowReference> {
   const plan = validateThenNowPlan(input), signal = options.signal;
-  if (!blob.size || blob.size > RESOURCE_LIMITS.photoBytes) return invalid();
+  if (!blob.size) return invalid();
   if (signal?.aborted) throw new DOMException("Reference preparation cancelled", "AbortError");
   if (preparing) throw new Error("Another reference is still being prepared");
   preparing = true;

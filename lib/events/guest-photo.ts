@@ -1,4 +1,4 @@
-import { inspectImageHeader } from "../projects/images";
+import { inspectImageHeader, withoutImageTrailer } from "../projects/images";
 import { composeStrip } from "../compose";
 import { stripSize, type StripLayout } from "../layouts";
 import { FRAMES } from "../decor";
@@ -7,6 +7,7 @@ import { EVENT_LIMITS } from "./contract";
 
 let occupied = false;
 export async function prepareEventGuestPhoto(blob: Blob, context: EventGuestContext, signal?: AbortSignal, capturedAt: string | null = null): Promise<{ blob: Blob; width: number; height: number; warning: string | null }> {
+  blob = await withoutImageTrailer(blob);
   if (occupied) throw new Error("Photo processing is busy"); if (blob.size > 10 * 1024 * 1024 || blob.size < 1) throw new Error("Choose a still photo no larger than 10 MiB"); occupied = true;
   let source: HTMLCanvasElement | undefined, output: HTMLCanvasElement | undefined, bitmap: ImageBitmap | undefined, expired = false;
   const deadline = new AbortController(), timer = setTimeout(() => { expired = true; deadline.abort(); }, 15000), active = AbortSignal.any([deadline.signal, ...(signal ? [signal] : [])]);

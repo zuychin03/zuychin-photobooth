@@ -1,6 +1,6 @@
 import { CLOUD_PROJECT_LIMITS, cloudUuid, validateCloudAsset, type CloudAssetInput, type ProjectFinalisationStatus, type ProjectProtection } from "./cloud-contract";
 import { CloudClientError, cloudSha256, type CloudProjectClient } from "./cloud-client";
-import { inspectProjectImage, type ProjectImageInfo } from "./images";
+import { inspectProjectImage, withoutImageTrailer, type ProjectImageInfo } from "./images";
 import { validateCloudUploadRecord, type CloudUploadJournal, type CloudUploadRecord } from "./cloud-upload-journal";
 export { openCloudUploadJournal } from "./cloud-upload-journal";
 export type { CloudUploadJournal, CloudUploadRecord } from "./cloud-upload-journal";
@@ -24,9 +24,10 @@ export function createCloudUploadManager(options: CloudUploadOptions) {
   async function checked<T>(promise: Promise<T>, signal?: AbortSignal): Promise<T> { const result = await promise; active(signal); return result; }
   async function describe(blob: Blob, kind: CloudAssetInput["kind"], signal?: AbortSignal) {
     active(signal);
-    if (blob.size < 1 || blob.size > (kind === "decoration" ? 4 * 1024 * 1024 : CLOUD_PROJECT_LIMITS.assetBytes)) throw new CloudClientError("invalid_image");
-    const info = await checked(inspect(blob), signal), bytes = await checked(blob.arrayBuffer(), signal), sha256 = await checked(cloudSha256(bytes), signal);
-    return { ...info, bytes: blob.size, sha256 };
+    const original = await checked(withoutImageTrailer(blob), signal);
+    if (original.size < 1 || original.size > (kind === "decoration" ? 4 * 1024 * 1024 : CLOUD_PROJECT_LIMITS.assetBytes)) throw new CloudClientError("invalid_image");
+    const info = await checked(inspect(original), signal), bytes = await checked(original.arrayBuffer(), signal), sha256 = await checked(cloudSha256(bytes), signal);
+    return { original, description: { ...info, bytes: original.size, sha256 } };
   }
   async function save(record: CloudUploadRecord, state: CloudUploadRecord["state"], signal?: AbortSignal) {
     active(signal); const next = { ...record, state, updatedAt: new Date(now()).toISOString() }; await checked(journal.put(next), signal); return next;
@@ -35,7 +36,7 @@ export function createCloudUploadManager(options: CloudUploadOptions) {
     async prepare(projectId: string, blob: Blob, input: { kind: CloudAssetInput["kind"]; protection?: ProjectProtection }, signal?: AbortSignal): Promise<CloudUploadRecord> {
       active(signal); cloudUuid(projectId); if (preparing || running) throw new CloudClientError("busy"); preparing = true;
       try {
-        const description = await describe(blob, input.kind, signal);
+        const { description } = await describe(blob, input.kind, signal);
         const asset = validateCloudAsset({ id: crypto.randomUUID(), requestId: crypto.randomUUID(), kind: input.kind, ...description, protection: input.protection ?? { kind: "none", id: null } });
         const timestamp = new Date(now()).toISOString(), record: CloudUploadRecord = { id: asset.id, ownerId: client.ownerId, projectId, asset, state: "prepared", createdAt: timestamp, updatedAt: timestamp, reservedUntil: null };
         await checked(journal.put(record), signal); return record;
@@ -49,7 +50,7 @@ export function createCloudUploadManager(options: CloudUploadOptions) {
         if (!existing) throw new CloudClientError("journal_missing");
         let record = validateCloudUploadRecord(existing); if (record.ownerId !== client.ownerId) throw new CloudClientError("account_changed");
         if (blob) {
-          const description = await describe(blob, record.asset.kind, combined);
+          const { original, description } = await describe(blob, record.asset.kind, combined); blob = original;
           if ((Object.keys(description) as (keyof typeof description)[]).some(key => description[key] !== record.asset[key])) throw new CloudClientError("file_mismatch");
         }
         if (record.state === "prepared") {
