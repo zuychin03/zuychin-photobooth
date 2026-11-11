@@ -84,10 +84,63 @@ for (const fixture of layoutFixtures) {
 }
 
 test("shared rooms offer layouts for two, three and four participants", () => {
-  assert.equal(LAYOUTS.length, 9);
+  assert.equal(LAYOUTS.filter((layout) => layout.legacy).length, 9);
   assert.deepEqual(layoutsForMembers(2).map((layout) => layout.id), ["duo-alternate", "duo-split", "duo-twin"]);
   assert.deepEqual(layoutsForMembers(3).map((layout) => layout.id), ["trio"]);
   assert.deepEqual(layoutsForMembers(4).map((layout) => layout.id), ["trio", "quad", "quad-story"]);
+});
+
+const row = (y: number, h: number, xs: number[], w = 480) => xs.map((x) => [x, y, w, h]);
+const v3Fixtures: { id: string; size: [number, number]; cells: string[]; clips: number[][] }[] = [
+  { id: "strip2", size: [536, 846], cells: ["A0", "A1"], clips: [...row(28, 320, [28]), ...row(366, 320, [28])] },
+  { id: "square4", size: [1034, 1166], cells: ["A0", "A1", "A2", "A3"], clips: [...row(28, 480, [28, 526]), ...row(526, 480, [28, 526])] },
+  { id: "feature3", size: [1034, 1178], cells: ["A0", "A1", "A2"], clips: [...row(28, 652, [28], 978), ...row(698, 320, [28, 526])] },
+  { id: "feature4", size: [1034, 1172], cells: ["A0", "A1", "A2", "A3"], clips: [...row(28, 652, [28], 978), ...row(698, 314, [28, 360, 692], 314)] },
+  { id: "film4", size: [2030, 828], cells: ["A0", "A1", "A2", "A3"], clips: row(28, 640, [28, 526, 1024, 1522]) },
+  { id: "polaroid", size: [536, 668], cells: ["A0"], clips: row(28, 480, [28]) },
+  { id: "grid6", size: [1034, 1304], cells: ["A0", "A1", "A2", "A3", "A4", "A5"], clips: [28, 406, 784].flatMap((y) => row(y, 360, [28, 526])) },
+  { id: "cut8", size: [1034, 1522], cells: ["A0", "A1", "A2", "A3", "A4", "A5", "A6", "A7"], clips: [28, 366, 704, 1042].flatMap((y) => row(y, 320, [28, 526])) },
+  { id: "duo-grid", size: [1034, 846], cells: ["A0", "B0", "B1", "A1"], clips: [...row(28, 320, [28, 526]), ...row(366, 320, [28, 526])] },
+  { id: "duo-film", size: [2030, 1486], cells: ["A0", "A1", "A2", "A3", "B0", "B1", "B2", "B3"], clips: [...row(28, 640, [28, 526, 1024, 1522]), ...row(686, 640, [28, 526, 1024, 1522])] },
+  { id: "trio-split", size: [1034, 1982], cells: [0, 1, 2, 3].flatMap((shot) => ["A", "B", "C"].map((role) => `${role}${shot}`)), clips: [28, 481, 934, 1387].flatMap((y) => [0, 1, 2].map(() => [28, y, 978, 435])) },
+  { id: "quad-split", size: [1034, 1546], cells: [0, 1, 2, 3].flatMap((shot) => ["A", "B", "C", "D"].map((role) => `${role}${shot}`)), clips: [28, 372, 716, 1060].flatMap((y) => [0, 1, 2, 3].map(() => [28, y, 978, 326])) },
+  { id: "trio-row", size: [1532, 828], cells: ["A0", "B0", "C0"], clips: row(28, 640, [28, 526, 1024]) },
+  { id: "quad-grid", size: [1034, 926], cells: ["A0", "B0", "C0", "D0"], clips: [...row(28, 360, [28, 526]), ...row(406, 360, [28, 526])] },
+];
+
+for (const fixture of v3Fixtures) {
+  test(`${fixture.id}: V3 strip size, cell rectangles and shot ownership`, (t) => {
+    installCanvasEnvironment(t);
+    const shots: ShotSet = {}, sourceNames = new Map<unknown, string>();
+    for (const role of ["A", "B", "C", "D"] as Role[]) shots[role] = Array.from({ length: 8 }, (_, index) => {
+      const source = immutableSource(1200, 800); sourceNames.set(source, `${role}${index}`); return source;
+    });
+    const target = new RecordingCanvas();
+    composeStrip(target.element, inputFor(fixture.id, shots));
+    assert.equal(getLayout(fixture.id).id, fixture.id);
+    assert.deepEqual([target.width, target.height], fixture.size);
+    assert.deepEqual(target.context.draws.map((draw) => sourceNames.get(draw.source)), fixture.cells);
+    assert.deepEqual(target.context.draws.map((draw) => draw.clip), fixture.clips);
+    for (const draw of target.context.draws) {
+      const [x, y, width, height] = draw.coordinates.slice(-4), [clipX, clipY, clipWidth, clipHeight] = draw.clip!;
+      assert(x >= clipX - 1e-9 && y >= clipY && x + width <= clipX + clipWidth + 1e-9 && y + height <= clipY + clipHeight);
+      assert(y + height <= target.height - 160);
+    }
+    assert.equal(target.context.savedStateCount, 0);
+  });
+}
+
+test("three- and four-way split frames give each person an equal slice and cover-crop the whole photo", (t) => {
+  installCanvasEnvironment(t);
+  for (const [id, parts, width, height] of [["trio-split", 3, 326, 435], ["quad-split", 4, 244.5, 326]] as const) {
+    const target = new RecordingCanvas(), source = immutableSource(1200, 800);
+    composeStrip(target.element, inputFor(id, { A: [source], B: [source], C: [source], D: [source] }));
+    const slices = target.context.draws.map((draw) => draw.coordinates.slice(-4));
+    assert.equal(slices.length, parts);
+    slices.forEach(([x, y, w, h], part) => assert.deepEqual([x, y, w, h], [28 + part * width, 28, width, height]));
+    const [sx, sy, sw, sh] = target.context.draws[0].coordinates;
+    assert(Math.abs(sw / sh - width / height) < 1e-9 && sy === 0 && Math.abs(sx - (1200 - sw) / 2) < 1e-9);
+  }
 });
 
 test("cover fitting crops wide and tall originals centrally without stretching", (t) => {

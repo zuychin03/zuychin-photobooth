@@ -1,6 +1,6 @@
 import { composeStrip, compositionSize, type ComposeInput } from "../compose";
 import { RESOURCE_LIMITS } from "../projects/resource-bounds";
-import { boundedRaster, exportGeometry, sourceResolution, type ExportGeometry, type ResolutionReport } from "./geometry";
+import { boundedRaster, exportGeometry, placedWidth, sourceResolution, type ExportGeometry, type ResolutionReport } from "./geometry";
 import { getExportProfile, type ExportOptions, type ExportProfileId, type StillProfileId } from "./profiles";
 
 export interface ExportArtifact {
@@ -70,9 +70,13 @@ export function paintExportGeometry(canvas: HTMLCanvasElement, source: HTMLCanva
   try {
     ctx.fillStyle = background; ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.scale(canvas.width / geometry.width, canvas.height / geometry.height);
-    for (const { box, draw } of geometry.placements) {
+    for (const { box, draw, rotated } of geometry.placements) {
       ctx.save(); ctx.beginPath(); ctx.rect(box.x, box.y, box.width, box.height); ctx.clip();
-      ctx.drawImage(source, draw.x, draw.y, draw.width, draw.height); ctx.restore();
+      if (rotated) {
+        ctx.translate(draw.x + draw.width / 2, draw.y + draw.height / 2); ctx.rotate(Math.PI / 2);
+        ctx.drawImage(source, -draw.height / 2, -draw.width / 2, draw.height, draw.width);
+      } else ctx.drawImage(source, draw.x, draw.y, draw.width, draw.height);
+      ctx.restore();
     }
     if (geometry.unit === "mm" && geometry.cutMarks) {
       ctx.strokeStyle = "#555555"; ctx.lineWidth = .15;
@@ -114,7 +118,7 @@ export function renderExportPreview(canvas: HTMLCanvasElement, input: ComposeInp
   const ratio = Math.min(1, maxEdge / Math.max(geometry.width, geometry.height));
   const previewScale = geometry.unit === "mm" ? maxEdge / Math.max(geometry.width, geometry.height) : ratio;
   canvas.width = Math.max(1, Math.round(geometry.width * previewScale)); canvas.height = Math.max(1, Math.round(geometry.height * previewScale));
-  const desiredScale = Math.min(geometry.raster.scale, Math.max(...geometry.placements.map(item => item.draw.width / geometry.source.width * previewScale)));
+  const desiredScale = Math.min(geometry.raster.scale, Math.max(...geometry.placements.map(item => placedWidth(item) / geometry.source.width * previewScale)));
   const previewGeometry = { ...geometry, raster: boundedRaster(geometry.source, desiredScale) };
   const source = composeExportSource(input, previewGeometry, job);
   try { paintExportGeometry(canvas, source, geometry, geometry.unit === "mm" ? "#ffffff" : input.style.frameColor); job.check(); return geometry; }

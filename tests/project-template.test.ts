@@ -43,8 +43,8 @@ test("legacy manifest migration preserves identity, revision, source ownership, 
 test("version one rejects new template fields while future versions retain exact raw text", () => {
   const project = draft(), design = designFromRecipe(templateFixture());
   assert.throws(() => parsePhotoProject(JSON.stringify({ ...project, schemaVersion: 1, editor: { ...project.editor, template: design } })));
-  const raw = ' { "schemaVersion": 5, "unknown": "keep exactly" } ';
-  assert.deepEqual(parsePhotoProject(raw), { kind: "unsupported", schemaVersion: 5, rawJson: raw, readOnly: true });
+  const raw = ' { "schemaVersion": 6, "unknown": "keep exactly" } ';
+  assert.deepEqual(parsePhotoProject(raw), { kind: "unsupported", schemaVersion: 6, rawJson: raw, readOnly: true });
 });
 
 test("version two migration preserves template edits and rejects story fields claimed by an older schema", () => {

@@ -10,7 +10,7 @@ import { settingRow, switchTrack } from "./CaptureFeedbackSettings";
 import { useBoothSession } from "@/lib/session";
 import type { PhotoProject } from "@/lib/projects/model";
 import { openProjectRepository, type ProjectListItem } from "@/lib/projects/storage";
-import { getLayout } from "@/lib/layouts";
+import { getLayout, shotAspect } from "@/lib/layouts";
 import { downloadProjectBlob, projectDownloadName } from "@/lib/projects/download";
 import { createExportCanvas, encodeExportCanvas, ExportJob, releaseExportCanvas } from "@/lib/exports/still";
 import { DEFAULT_THEN_NOW_ALIGNMENT, drawThenNowAlternatingFrame, drawThenNowComparison, drawThenNowGhost, thenNowDateFromInstant, thenNowDateLabel, thenNowOutputSize, validateThenNowPlan, type ThenNowPlan } from "@/lib/memories/then-and-now";
@@ -56,7 +56,7 @@ export default function ThenNowStudio({ project, disabled = false, onBusyChange 
   const photos = session.shots.A.map((canvas, index) => ({ canvas, index })).filter(item => item.canvas);
   const current = photos.find(item => String(item.index) === selected)?.canvas ?? photos[0]?.canvas ?? null;
   const currentDate = thenNowDateFromInstant(project.capturedAt, project.captureTimeZone);
-  const aspect = getLayout(project.editor.layoutId).cellAspect;
+  const aspect = shotAspect(getLayout(project.editor.layoutId), 0);
   const blocked = disabled || working || motionBusy;
   const motionBusyChange = useCallback((busy: boolean) => {
     motionOperation.current = busy;

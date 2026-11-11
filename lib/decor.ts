@@ -5,6 +5,10 @@ export interface FrameOption {
   name: string;
   color: string;
   ink: string;
+  /** painted top-left to bottom-right over `color` */
+  gradient?: readonly [string, string];
+  /** V3 frame that older clients can't parse */
+  v3?: boolean;
 }
 
 export const FRAMES: FrameOption[] = [
@@ -15,6 +19,12 @@ export const FRAMES: FrameOption[] = [
   { id: "sage", name: "Sage", color: "#d1fae5", ink: "#064e3b" },
   { id: "sky", name: "Sky", color: "#e0f2fe", ink: "#0c4a6e" },
   { id: "lavender", name: "Lavender", color: "#ede9fe", ink: "#4c1d95" },
+  { id: "cherry", name: "Cherry", color: "#be123c", ink: "#fff1f2", v3: true },
+  { id: "midnight", name: "Midnight", color: "#1e293b", ink: "#e2e8f0", v3: true },
+  { id: "kraft", name: "Kraft", color: "#c8a27a", ink: "#3b2a1a", v3: true },
+  { id: "peach", name: "Peach sunset", color: "#fecaca", ink: "#7c2d12", gradient: ["#fecaca", "#fde68a"], v3: true },
+  { id: "lilac", name: "Lilac haze", color: "#ddd6fe", ink: "#4c1d95", gradient: ["#ddd6fe", "#fbcfe8"], v3: true },
+  { id: "seaglass", name: "Sea glass", color: "#a7f3d0", ink: "#134e4a", gradient: ["#a7f3d0", "#bae6fd"], v3: true },
 ];
 
 // Sticker rendering styles: Fluent Emoji (MIT) flat SVGs and 3D PNGs are

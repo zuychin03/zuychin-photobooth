@@ -19,7 +19,7 @@ import { useCuratedAssets } from "@/hooks/useCuratedAssets";
 import { getCuratedAsset } from "@/lib/assets/registry";
 import { canvasToJpeg, captureFrame } from "@/lib/capture";
 import { getFilter } from "@/lib/filters";
-import { Role, getLayout, layoutsForMembers } from "@/lib/layouts";
+import { Role, getLayout, layoutCells, layoutsForMembers } from "@/lib/layouts";
 import { newPromptSeed, rollPrompts } from "@/lib/prompts";
 import { isValidRoomCode } from "@/lib/room-code";
 import { LiveScenePainter } from "@/lib/live-preview";
@@ -303,7 +303,7 @@ function RoomInner({ rehearsal }: { rehearsal?: LegacyRoomRehearsal }) {
     async (plan: ShotPlan) => {
       const video = videoRef.current;
       if (!video || planRef.current) return;
-      if (!Number.isInteger(plan.shots) || plan.shots < 1 || plan.shots > 4 || getLayout(plan.layoutId).shots !== plan.shots || !Array.isArray(plan.members) || plan.members.length < 2 || plan.members.length > 4 || new Set(plan.members).size !== plan.members.length) {
+      if (!Number.isInteger(plan.shots) || plan.shots < 1 || plan.shots > 4 || getLayout(plan.layoutId).shots !== plan.shots || !getLayout(plan.layoutId).legacy || !Array.isArray(plan.members) || plan.members.length < 2 || plan.members.length > 4 || new Set(plan.members).size !== plan.members.length) {
         reportFailure(new Error("Couldn't start this round. Everyone might need to refresh the page.")); return;
       }
       applyScene(plan.sceneId, false);
@@ -488,8 +488,9 @@ function RoomInner({ rehearsal }: { rehearsal?: LegacyRoomRehearsal }) {
   // Pane geometry mirrors the strip: split cells give each person half a cell
   // (portrait), everything else a full cell. A Together scene fills the whole
   // cell regardless, so the split preview is suspended while one is active.
-  const isSplit = !roomScene && !!activeLayout.duoPattern?.includes("AB");
-  const paneAr = isSplit ? activeLayout.cellAspect / 2 : activeLayout.cellAspect;
+  const firstCell = layoutCells(activeLayout)[0];
+  const isSplit = !roomScene && firstCell.owners.length > 1;
+  const paneAr = isSplit ? firstCell.aspect / firstCell.owners.length : firstCell.aspect;
   const paneCount = 1 + Math.max(remotes.length, 1);
   const colsSm = isSplit || paneCount >= 3 ? 2 : 1;
   const colsMd = Math.min(paneCount, 2);

@@ -1,9 +1,9 @@
-import { ROLES, type Role } from "../layouts";
+import { ROLES, type Role, type ShotCount } from "../layouts";
 import { validateTemplateDesign, type TemplateDesign, type TemplatePhotoSlot } from "./model";
 
 export function reviseTemplate(design: TemplateDesign, patch: Partial<TemplateDesign>): TemplateDesign {
-  const next = { ...design, ...patch }, requiredSources: Partial<Record<Role, 1 | 2 | 3 | 4>> = {};
-  for (const slot of next.slots) for (const source of [slot, ...(slot.companions ?? [])]) requiredSources[source.role] = Math.max(requiredSources[source.role] ?? 0, source.sourceIndex + 1) as 1 | 2 | 3 | 4;
+  const next = { ...design, ...patch }, requiredSources: Partial<Record<Role, ShotCount>> = {};
+  for (const slot of next.slots) for (const source of [slot, ...(slot.companions ?? [])]) requiredSources[source.role] = Math.max(requiredSources[source.role] ?? 0, source.sourceIndex + 1) as ShotCount;
   const used = new Set(next.layers.flatMap(layer => layer.kind === "decoration" ? [layer.mediaId] : []));
   const places = next.places ? Object.fromEntries(Object.entries(next.places).filter(([role]) => requiredSources[role as Role])) : null;
   return validateTemplateDesign({ ...next, requiredSources, ...(places ? { places } : {}), decorations: next.decorations.filter(item => used.has(item.id)) });

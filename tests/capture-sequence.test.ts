@@ -158,3 +158,12 @@ test("pose guidance advances before its full countdown and stops before an unsta
   assert(events.indexOf("pose:1") < events.indexOf("count:10"));
   assert(!events.includes("pose:3")); assert.equal(events.filter(event => event === "pause:1000").length, 10);
 });
+
+test("an Eight-cut session shoots all 8 positions, then retakes only the selected ones", async () => {
+  const first = ports();
+  assert.equal(await runCaptureSequence([0, 1, 2, 3, 4, 5, 6, 7], 3, first.adapter), true);
+  assert.deepEqual(first.events.filter(event => event.startsWith("saved:")), [0, 1, 2, 3, 4, 5, 6, 7].map(index => `saved:${index}`));
+  const retake = ports();
+  assert.equal(await runCaptureSequence([5, 7], 3, retake.adapter), true);
+  assert.deepEqual(retake.events.filter(event => event.startsWith("persist:")), ["persist:5:shot-1", "persist:7:shot-2"]);
+});

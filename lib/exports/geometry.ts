@@ -1,5 +1,5 @@
 import type { ComposeInput } from "../compose";
-import { CELL_W, ROLES, cellShotIndex, stripSize, type Role } from "../layouts";
+import { ROLES, splitSlice, stripSize, stripGeometry, type Role } from "../layouts";
 import { getScene } from "../scenes";
 import { RESOURCE_LIMITS } from "../projects/resource-bounds";
 import { defaultCellEdit, photoPlacement, type PhotoCellEdit } from "../projects/transforms";
@@ -7,7 +7,10 @@ import { getExportProfile, type ExportFit, type ExportOptions, type ExportProfil
 
 export interface Size { width: number; height: number }
 export interface Rect extends Size { x: number; y: number }
-export interface ExportPlacement { tile: Rect; box: Rect; draw: Rect }
+/** `draw` is the page area the image covers; a rotated image is turned 90° clockwise to fill it. */
+export interface ExportPlacement { tile: Rect; box: Rect; draw: Rect; rotated: boolean }
+/** Page width of the image's own horizontal axis, whichever way it is placed. */
+export const placedWidth = (placement: ExportPlacement) => placement.rotated ? placement.draw.height : placement.draw.width;
 export interface ExportGeometry extends Size {
   profileId: ExportProfileId;
   unit: "px" | "mm";
@@ -59,10 +62,13 @@ export function exportGeometry(source: Size, profileId: ExportProfileId, options
   const inset = unit === "px" ? 0 : profileId === "a4-contact" ? 2 : marginMm;
   const placements = tiles.map(tile => {
     const box = { x: tile.x + inset, y: tile.y + inset, width: tile.width - 2 * inset, height: tile.height - 2 * inset };
-    return { tile, box, draw: fitRect(source, box, fit) };
+    const level = fitRect(source, box, fit), turned = fitRect({ width: source.height, height: source.width }, box, fit);
+    // Print tiles are portrait strips; wide strips turn to run down the paper when that prints them at least 1.5x larger.
+    const rotated = unit === "mm" && fit === "contain" && turned.width * turned.height >= level.width * level.height * 1.5;
+    return { tile, box, draw: rotated ? turned : level, rotated };
   });
   const pixelsPerUnit = unit === "mm" ? PRINT_PPI / 25.4 : 1;
-  const desiredScale = Math.max(...placements.map(item => item.draw.width / source.width * pixelsPerUnit));
+  const desiredScale = Math.max(...placements.map(item => placedWidth(item) / source.width * pixelsPerUnit));
   return { profileId, width, height, unit, fit, marginMm, cutMarks: options.cutMarks ?? unit === "mm", source: { ...source }, placements, raster: boundedRaster(source, desiredScale) };
 }
 
@@ -75,8 +81,8 @@ export interface SourceResolution {
 export interface ResolutionReport { sources: SourceResolution[]; minimumPpi: number | null; minimumPixelRatio: number | null; warnings: string[] }
 export function sourceResolution(input: ComposeInput, geometry: ExportGeometry): ResolutionReport {
   const sources: SourceResolution[] = [];
-  const size = input.template?.canvas ?? stripSize(input.layout);
-  const unitScale = Math.max(...geometry.placements.map(item => item.draw.width / size.width));
+  const size = input.template?.canvas ?? stripSize(input.layout, input.strip);
+  const unitScale = Math.max(...geometry.placements.map(item => placedWidth(item) / size.width));
   const pixelsPerUnit = geometry.unit === "mm" ? PRINT_PPI / 25.4 : 1;
   const rasterRatio = geometry.raster.scale / (unitScale * pixelsPerUnit);
   const add = (cell: number, role: Role, sourceIndex: number, width: number, height: number, edit: PhotoCellEdit, slice = 1, kind: "photo" | "cutout" = "photo", cutHeight?: number) => {
@@ -95,16 +101,14 @@ export function sourceResolution(input: ComposeInput, geometry: ExportGeometry):
         together ? "cutout" : "photo", height * (group.length > 2 ? .8 : .92) * (input.together?.places[source.role]?.scale ?? 1));
     }
   });
-  else for (let cell = 0; cell < input.layout.cols * input.layout.rows; cell++) {
-    const index = cellShotIndex(input.layout, cell), height = CELL_W / input.layout.cellAspect;
+  else for (const { index: cell, shot, owners, width: cellWidth, height } of stripGeometry(input.layout, input.strip).cells) {
     const roles = ROLES.filter(role => input.shots[role]?.some(Boolean));
-    const editFor = (role: Role) => input.cellEdits?.[`${cell}:${role}`] ?? defaultCellEdit(index);
+    const editFor = (role: Role) => input.cellEdits?.[`${cell}:${role}`] ?? defaultCellEdit(shot);
     const together = input.together && getScene(input.together.sceneId) && roles.length > 0 && roles.every(role => input.cutouts?.[role]?.[editFor(role).sourceIndex]);
-    const owner = input.layout.duoPattern?.[cell] ?? "A";
-    const displayed = together ? roles : owner === "AB" ? ["A", "B"] as Role[] : [owner];
+    const displayed = together ? roles : owners;
     for (const role of displayed) {
-      const edit = editFor(role), split = !together && owner === "AB";
-      add(cell, role, edit.sourceIndex, CELL_W / (split ? 2 : 1), height, edit, split ? .5 : 1, together ? "cutout" : "photo",
+      const edit = editFor(role), parts = together ? 1 : owners.length, [start, end] = splitSlice(parts);
+      add(cell, role, edit.sourceIndex, cellWidth / parts, height, edit, end - start, together ? "cutout" : "photo",
         height * (roles.length > 2 ? .8 : .92) * (input.together?.places[role]?.scale ?? 1));
     }
   }

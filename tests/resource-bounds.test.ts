@@ -69,11 +69,13 @@ test("participant modes enforce one solo participant or two to four shared parti
   assert.throws(() => validateResourceManifest(shared), /participants/);
 });
 
-test("each participant needs one to four unique sources with exclusive ownership", () => {
+test("each participant needs unique sources with exclusive ownership, up to 8 solo and 4 shared", () => {
   const empty = fixture();
   empty.participants[0].sourceIds = [];
   assert.throws(() => validateResourceManifest(empty), /sourceIds/);
-  assert.throws(() => validateResourceManifest(fixture(1, 5)), /sourceIds/);
+  assert.equal(validateResourceManifest(fixture(1, 8)).participants[0].sourceIds.length, 8);
+  assert.throws(() => validateResourceManifest(fixture(1, 9)), /sourceIds/);
+  assert.throws(() => validateResourceManifest(fixture(2, 5)), /sourceIds/);
   const repeated = fixture();
   repeated.participants[0].sourceIds.push(repeated.participants[0].sourceIds[0]);
   assert.throws(() => validateResourceManifest(repeated), /Duplicate identifier/);

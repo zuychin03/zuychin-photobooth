@@ -203,7 +203,7 @@ async function renderPng(options: RenderOptions, ports: ChallengeRenderPorts): P
       const frame = FRAMES.find(item => item.id === view.design.look.frameId)!;
       const input: ComposeInput = { layout: LAYOUTS[0], shots, template: view.design, stickers: [], decorations, resources: prepared.resources, materialId: view.design.look.materialId,
         theme: THEMES.find(item => item.id === view.design.look.themeId) ?? null, together: null,
-        style: { frameColor: frame.color, inkColor: frame.ink, patternId: view.design.look.patternId, filterId: view.design.look.filterId, caption: view.design.defaults.caption, showDate: false, stickerStyle: "flat" } };
+        style: { frameColor: frame.color, inkColor: frame.ink, frameGradient: frame.gradient ?? null, patternId: view.design.look.patternId, filterId: view.design.look.filterId, caption: view.design.defaults.caption, showDate: false, stickerStyle: "flat" }, strip: view.design.look.strip };
       const result = await ports.render(input, controller.signal); check();
       if (result.blob.type !== "image/png" || !result.blob.size || result.blob.size > RESOURCE_LIMITS.totalEncodedBytes || ![result.width, result.height].every(value => Number.isInteger(value) && value > 0 && value <= RESOURCE_LIMITS.photoEdge) || result.width * result.height > RESOURCE_LIMITS.photoPixels) return fail("resource_limit");
       let latest: RenderSnapshot;

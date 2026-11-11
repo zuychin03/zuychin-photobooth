@@ -3,7 +3,7 @@ import { validateExportSettings, type ProjectExportSettings } from "../exports/s
 import { validateThenNowPlan, type ThenNowPlan } from "../memories/then-and-now";
 import { FRAMES, STICKER_PACKS, STICKER_STYLES, type StickerStyle } from "../decor";
 import { FILTERS } from "../filters";
-import { LAYOUTS, ROLES, type Role } from "../layouts";
+import { LAYOUTS, ROLES, layoutCellCount, type Role, type ShotCount } from "../layouts";
 import { PATTERNS } from "../patterns";
 import { SCENES } from "../scenes";
 import { THEMES } from "../themes";
@@ -11,9 +11,10 @@ import type { StickerInstance, TogetherPlacement } from "../compose";
 import { validateCellEdit, type PhotoCellEdit } from "./transforms";
 import { RESOURCE_LIMITS, validateMediaResource, type MediaResource } from "./resource-bounds";
 import { getCuratedAsset } from "../assets/registry";
-import { validateTemplateDesign, type TemplateDesign } from "../templates/model";
+import { templateSchemaFor, validateTemplateDesign, type TemplateDesign } from "../templates/model";
+import { isDefaultStrip, storedStrip, validateStripOptions, withStrip, type StripOptions } from "../strip-style";
 
-export const PROJECT_SCHEMA_VERSION = 4;
+export const PROJECT_SCHEMA_VERSION = 5;
 export const PROJECT_HISTORY_LIMIT = 20;
 export type ProjectScope = { readonly kind: "device" } | { readonly kind: "account"; readonly ownerId: string };
 export interface ProjectParticipant { readonly id: string; readonly role: Role }
@@ -22,7 +23,7 @@ export type ProjectSourceOrder = Readonly<Record<Role, readonly (string | null)[
 export interface ProjectCaptureSettings {
   readonly style: "classic" | "flexible";
   readonly timerSeconds: 3 | 5 | 10;
-  readonly requiredShots: 1 | 2 | 3 | 4;
+  readonly requiredShots: ShotCount;
   readonly cameraId: string | null;
   readonly mirror: boolean;
   readonly fillLight: boolean;
@@ -45,13 +46,15 @@ export interface ProjectEditorSettings {
   readonly story?: StoryPlan | null;
   readonly thenNow?: ThenNowPlan | null;
   readonly exportSettings?: ProjectExportSettings;
+  /** stored only when it differs from the default look */
+  readonly strip?: StripOptions;
 }
 export interface ProjectEditSnapshot {
   readonly sourceOrder: ProjectSourceOrder;
   readonly editor: ProjectEditorSettings;
 }
 export interface PhotoProject extends ProjectEditSnapshot {
-  readonly schemaVersion: 3 | 4;
+  readonly schemaVersion: 3 | 4 | 5;
   readonly id: string;
   readonly name: string;
   readonly revision: number;
@@ -115,21 +118,37 @@ function freeze<T>(value: T): T {
   return value;
 }
 function bytes(value: unknown): number { return new TextEncoder().encode(JSON.stringify(value)).byteLength; }
+/** V3 strip features older clients can't parse; projects that use any of them save as schema 5. */
+export function editorNeedsV5(editor: Partial<ProjectEditorSettings>): boolean {
+  return (editor.layoutId !== undefined && !LAYOUTS.some(layout => layout.id === editor.layoutId && layout.legacy))
+    || storedStrip(editor.strip) !== undefined || Boolean(FRAMES.find(frame => frame.id === editor.frameId)?.v3)
+    || (editor.template ? templateSchemaFor(editor.template) === 2 : false)
+    || Object.values(editor.cellEdits ?? {}).some(edit => edit.sourceIndex >= RESOURCE_LIMITS.sourcesPerParticipant);
+}
+const sourceLimit = (mode: PhotoProject["mode"], version: number) => mode === "solo" && version >= 5 ? RESOURCE_LIMITS.soloSources : RESOURCE_LIMITS.sourcesPerParticipant;
+const SHOT_COUNTS: readonly ShotCount[] = [1, 2, 3, 4, 5, 6, 7, 8];
+/** Schema a project needs once it holds this editor; never lowers an existing version. */
+export function projectSchemaFor(project: Pick<PhotoProject, "schemaVersion">, editor: Partial<ProjectEditorSettings>): PhotoProject["schemaVersion"] {
+  return editorNeedsV5(editor) ? 5 : project.schemaVersion;
+}
 const editorKeys = ["frameId", "layoutId", "filterId", "caption", "showDate", "patternId", "themeId", "sceneId", "stickerStyle", "places", "stickers", "cellEdits"];
 const stickerDefinitions = new Map(STICKER_PACKS.flatMap(pack => pack.stickers.map(sticker => [sticker.slug, sticker.emoji] as const)));
 const filters = FILTERS.map(item => item.id);
 
 function editor(value: unknown, mode: PhotoProject["mode"], path: string, sourceVersion: number): ProjectEditorSettings {
   const item = object(value, null, path);
-  const allowed = sourceVersion === 1 ? editorKeys : [...editorKeys, "template", "materialId", ...(sourceVersion >= 3 ? ["story", "thenNow"] : []), ...(sourceVersion >= 4 ? ["exportSettings"] : [])];
-  if (Object.keys(item).some(key => !allowed.includes(key)) || editorKeys.some(key => !Object.hasOwn(item, key))) fail(path, "Unexpected or missing editor fields");
+  const allowed = sourceVersion === 1 ? editorKeys : [...editorKeys, "template", "materialId", ...(sourceVersion >= 3 ? ["story", "thenNow"] : []), ...(sourceVersion >= 4 ? ["exportSettings"] : []), ...(sourceVersion >= 5 ? ["strip"] : [])];
+  if (Object.keys(item).some(key => !allowed.includes(key) && !(key === "strip" && (item.strip === undefined || isDefaultStrip(item.strip as StripOptions)))) || editorKeys.some(key => !Object.hasOwn(item, key))) fail(path, "Unexpected or missing editor fields");
   const story = item.story == null ? null : validateStoryPlan(item.story);
   const thenNow = item.thenNow == null ? null : validateThenNowPlan(item.thenNow);
   const exportSettings = Object.hasOwn(item, "exportSettings") ? validateExportSettings(item.exportSettings) : undefined;
+  // A cleared or default strip is stored by omission.
+  let strip: StripOptions | undefined;
+  if (item.strip !== undefined) try { strip = storedStrip(validateStripOptions(item.strip, `${path}.strip`)); } catch { fail(`${path}.strip`, "Unsupported strip style"); }
   const template = item.template == null ? null : validateTemplateDesign(item.template);
   const materialId = item.materialId == null ? null : id(item.materialId, `${path}.materialId`);
   if (materialId && getCuratedAsset(materialId)?.kind !== "material") fail(path, "Unknown frame material");
-  const layoutId = choice(item.layoutId, LAYOUTS.filter(layout => layout.mode === mode).map(layout => layout.id), `${path}.layoutId`);
+  const layoutId = choice(item.layoutId, LAYOUTS.filter(layout => layout.mode === mode && (layout.legacy || sourceVersion >= 5)).map(layout => layout.id), `${path}.layoutId`);
   const layout = LAYOUTS.find(layout => layout.id === layoutId)!;
   const places: Partial<Record<Role, TogetherPlacement>> = {};
   for (const [key, value] of Object.entries(object(item.places, null, `${path}.places`))) {
@@ -151,19 +170,20 @@ function editor(value: unknown, mode: PhotoProject["mode"], path: string, source
   const cells = object(item.cellEdits, null, `${path}.cellEdits`);
   if (Object.keys(cells).length > RESOURCE_LIMITS.photoSlots * RESOURCE_LIMITS.participants) fail(path, "Too many cell edits");
   for (const [key, value] of Object.entries(cells)) {
-    if (!/^(0|[1-9][0-9]?):[ABCD]$/.test(key) || Number(key.split(":")[0]) >= layout.rows * layout.cols) fail(path, "Invalid cell key");
+    if (!/^(0|[1-9][0-9]?):[ABCD]$/.test(key) || Number(key.split(":")[0]) >= layoutCellCount(layout)) fail(path, "Invalid cell key");
     const edit = object(value, ["sourceIndex", "zoom", "offsetX", "offsetY", "rotation", "mirror", "filterId"], `${path}.cellEdits.${key}`);
     try { cellEdits[key] = validateCellEdit(edit); } catch { fail(`${path}.cellEdits.${key}`, "Photo adjustment is out of bounds"); }
+    if (cellEdits[key].sourceIndex >= sourceLimit(mode, sourceVersion)) fail(`${path}.cellEdits.${key}`, "Photo adjustment is out of bounds");
   }
   const sceneId = item.sceneId === null ? null : id(item.sceneId, `${path}.sceneId`);
   if (sceneId && !SCENES.some(scene => scene.id === sceneId) && getCuratedAsset(sceneId)?.kind !== "scene") fail(path, "Unknown scene");
-  return { frameId: choice(item.frameId, FRAMES.map(frame => frame.id), path), layoutId, filterId: choice(item.filterId, filters, path), caption: text(item.caption, RESOURCE_LIMITS.textCodePoints, path), showDate: bool(item.showDate, path), patternId: choice(item.patternId, ["none", ...PATTERNS.map(pattern => pattern.id)], path), themeId: item.themeId === null ? null : choice(item.themeId, THEMES.map(theme => theme.id), path), sceneId, stickerStyle: choice(item.stickerStyle, STICKER_STYLES.map(style => style.id), path), places, stickers, cellEdits, ...(template ? { template } : {}), ...(materialId ? { materialId } : {}), ...(story ? { story } : {}), ...(thenNow ? { thenNow } : {}), ...(exportSettings ? { exportSettings } : {}) };
+  return { frameId: choice(item.frameId, FRAMES.filter(frame => !frame.v3 || sourceVersion >= 5).map(frame => frame.id), path), layoutId, filterId: choice(item.filterId, filters, path), caption: text(item.caption, RESOURCE_LIMITS.textCodePoints, path), showDate: bool(item.showDate, path), patternId: choice(item.patternId, ["none", ...PATTERNS.map(pattern => pattern.id)], path), themeId: item.themeId === null ? null : choice(item.themeId, THEMES.map(theme => theme.id), path), sceneId, stickerStyle: choice(item.stickerStyle, STICKER_STYLES.map(style => style.id), path), places, stickers, cellEdits, ...(template ? { template } : {}), ...(materialId ? { materialId } : {}), ...(story ? { story } : {}), ...(thenNow ? { thenNow } : {}), ...(exportSettings ? { exportSettings } : {}), ...(strip ? { strip } : {}) };
 }
 
 function validate(value: unknown, enforceBudget: boolean, sourceVersion?: number): PhotoProject {
   const item = object(value, ["schemaVersion", "id", "name", "revision", "scope", "createdAt", "capturedAt", "captureTimeZone", "updatedAt", "mode", "role", "participants", "media", "capture", "sourceOrder", "editor", "history"], "project");
-  const version = sourceVersion ?? number(item.schemaVersion, 1, 4, "project.schemaVersion", true);
-  if (![1, 2, 3, 4].includes(version) || item.schemaVersion !== version) fail("project.schemaVersion", "Unsupported project version");
+  const version = sourceVersion ?? number(item.schemaVersion, 1, PROJECT_SCHEMA_VERSION, "project.schemaVersion", true);
+  if (![1, 2, 3, 4, 5].includes(version) || item.schemaVersion !== version) fail("project.schemaVersion", "Unsupported project version");
   const scopeData = object(item.scope, null, "project.scope");
   const scope: ProjectScope = scopeData.kind === "device" ? (object(scopeData, ["kind"], "project.scope"), { kind: "device" }) : (object(scopeData, ["kind", "ownerId"], "project.scope"), { kind: choice(scopeData.kind, ["account"] as const, "project.scope"), ownerId: id(scopeData.ownerId, "project.scope.ownerId") });
   const mode = choice(item.mode, ["solo", "duo", "group"] as const, "project.mode");
@@ -195,7 +215,7 @@ function validate(value: unknown, enforceBudget: boolean, sourceVersion?: number
     for (const role of ROLES) {
       const owner = participants.find(person => person.role === role)?.id;
       const seen = new Set<string>();
-      sourceOrder[role] = array(order[role], 4, `${path}.sourceOrder.${role}`).map(value => {
+      sourceOrder[role] = array(order[role], sourceLimit(mode, version), `${path}.sourceOrder.${role}`).map(value => {
         if (value === null) return null;
         const sourceId = id(value, path), source = byId.get(sourceId);
         if (!source || source.kind !== "photo" || !owner || source.participantId !== owner || seen.has(sourceId)) fail(path, "Missing, duplicate or foreign source reference");
@@ -223,20 +243,20 @@ function validate(value: unknown, enforceBudget: boolean, sourceVersion?: number
   const history = { past: array(historyData.past, PROJECT_HISTORY_LIMIT, "project.history.past").map(value => snapshot(value, "project.history.past")), future: array(historyData.future, PROJECT_HISTORY_LIMIT, "project.history.future").map(value => snapshot(value, "project.history.future")) };
   if (history.past.length + history.future.length > PROJECT_HISTORY_LIMIT) fail("project.history", "History limit exceeded");
   const captureData = object(item.capture, ["style", "timerSeconds", "requiredShots", "cameraId", "mirror", "fillLight"], "project.capture");
-  const capture: ProjectCaptureSettings = { style: choice(captureData.style, ["classic", "flexible"] as const, "project.capture"), timerSeconds: choice(captureData.timerSeconds, [3, 5, 10] as const, "project.capture"), requiredShots: choice(captureData.requiredShots, [1, 2, 3, 4] as const, "project.capture"), cameraId: captureData.cameraId === null ? null : text(captureData.cameraId, 256, "project.capture.cameraId"), mirror: bool(captureData.mirror, "project.capture"), fillLight: bool(captureData.fillLight, "project.capture") };
+  const capture: ProjectCaptureSettings = { style: choice(captureData.style, ["classic", "flexible"] as const, "project.capture"), timerSeconds: choice(captureData.timerSeconds, [3, 5, 10] as const, "project.capture"), requiredShots: choice(captureData.requiredShots, SHOT_COUNTS.slice(0, sourceLimit(mode, version)), "project.capture"), cameraId: captureData.cameraId === null ? null : text(captureData.cameraId, 256, "project.capture.cameraId"), mirror: bool(captureData.mirror, "project.capture"), fillLight: bool(captureData.fillLight, "project.capture") };
   const createdAt = date(item.createdAt, "project.createdAt"), updatedAt = date(item.updatedAt, "project.updatedAt"), capturedAt = item.capturedAt === null ? null : date(item.capturedAt, "project.capturedAt");
   if (createdAt > updatedAt || (capturedAt !== null && capturedAt > updatedAt) || (version < 4 && media.some(entry => entry.kind === "photo") && capturedAt === null)) fail("project", "Invalid capture or update timestamps");
   const captureTimeZone = text(item.captureTimeZone, 100, "project.captureTimeZone");
   if (!/^[A-Za-z][A-Za-z0-9_+/-]*$/.test(captureTimeZone)) fail("project.captureTimeZone", "Expected an IANA timezone");
   try { new Intl.DateTimeFormat("en", { timeZone: captureTimeZone }).format(0); } catch { fail("project.captureTimeZone", "Unknown IANA timezone"); }
-  const result: PhotoProject = { schemaVersion: version >= 4 ? 4 : 3, id: id(item.id, "project.id"), name: text(item.name, 100, "project.name"), revision: number(item.revision, 0, Number.MAX_SAFE_INTEGER, "project.revision", true), scope, createdAt, capturedAt, captureTimeZone, updatedAt, mode, role, participants, media, capture, ...current, history };
+  const result: PhotoProject = { schemaVersion: version >= 5 ? 5 : version >= 4 ? 4 : 3, id: id(item.id, "project.id"), name: text(item.name, 100, "project.name"), revision: number(item.revision, 0, Number.MAX_SAFE_INTEGER, "project.revision", true), scope, createdAt, capturedAt, captureTimeZone, updatedAt, mode, role, participants, media, capture, ...current, history };
   if (enforceBudget && bytes(result) > RESOURCE_LIMITS.manifestBytes) fail("project", "Project exceeds the UTF-8 manifest byte limit");
   return freeze(result);
 }
 
 export function validatePhotoProject(value: unknown): PhotoProject {
   const version = object(value, null, "project").schemaVersion;
-  if (version !== 3 && version !== 4) fail("project.schemaVersion", "Unsupported project version");
+  if (version !== 3 && version !== 4 && version !== 5) fail("project.schemaVersion", "Unsupported project version");
   return validate(value, true, version);
 }
 export function parsePhotoProject(rawJson: string): ProjectParseResult {
@@ -252,13 +272,16 @@ export function isProjectVisibleTo(project: PhotoProject, ownerId: string | null
 export function createProject(input: CreateProjectInput = {}): PhotoProject {
   const mode = input.mode ?? "solo", role = input.role ?? "A", createdAt = input.createdAt ?? new Date().toISOString();
   const layoutId = input.editor?.layoutId ?? LAYOUTS.find(layout => layout.mode === mode)!.id;
-  return validatePhotoProject({ schemaVersion: PROJECT_SCHEMA_VERSION, id: input.id ?? crypto.randomUUID(), name: input.name ?? "Untitled project", revision: 0, scope: input.scope ?? { kind: "device" }, createdAt, capturedAt: null, captureTimeZone: input.captureTimeZone ?? Intl.DateTimeFormat().resolvedOptions().timeZone, updatedAt: createdAt, mode, role, participants: input.participants ?? [{ id: crypto.randomUUID(), role }], media: [], capture: { style: "classic", timerSeconds: 3, requiredShots: LAYOUTS.find(layout => layout.id === layoutId)?.shots ?? 4, cameraId: null, mirror: true, fillLight: false, ...input.capture }, sourceOrder: { A: [], B: [], C: [], D: [] }, editor: { frameId: "film", layoutId, filterId: "none", caption: "", showDate: true, patternId: "none", themeId: null, sceneId: null, stickerStyle: "flat", places: {}, stickers: [], cellEdits: {}, ...input.editor }, history: { past: [], future: [] } });
+  const requiredShots = input.capture?.requiredShots ?? (LAYOUTS.find(layout => layout.id === layoutId)?.shots ?? 4) as ShotCount;
+  return validatePhotoProject({ schemaVersion: editorNeedsV5({ layoutId, ...input.editor }) || requiredShots > RESOURCE_LIMITS.sourcesPerParticipant ? 5 : 4, id: input.id ?? crypto.randomUUID(), name: input.name ?? "Untitled project", revision: 0, scope: input.scope ?? { kind: "device" }, createdAt, capturedAt: null, captureTimeZone: input.captureTimeZone ?? Intl.DateTimeFormat().resolvedOptions().timeZone, updatedAt: createdAt, mode, role, participants: input.participants ?? [{ id: crypto.randomUUID(), role }], media: [], capture: { style: "classic", timerSeconds: 3, cameraId: null, mirror: true, fillLight: false, ...input.capture, requiredShots }, sourceOrder: { A: [], B: [], C: [], D: [] }, editor: { frameId: "film", layoutId, filterId: "none", caption: "", showDate: true, patternId: "none", themeId: null, sceneId: null, stickerStyle: "flat", places: {}, stickers: [], cellEdits: {}, ...input.editor }, history: { past: [], future: [] } });
 }
 function currentSnapshot(project: PhotoProject): ProjectEditSnapshot { return { sourceOrder: project.sourceOrder, editor: project.editor }; }
 function update(project: PhotoProject, changes: Partial<PhotoProject>, updatedAt: string): PhotoProject {
   if (date(updatedAt, "project.updatedAt") < project.updatedAt) fail("project.updatedAt", "Update time cannot move backwards");
   const candidate = { ...project, ...changes, revision: project.revision + 1, updatedAt };
-  if (candidate.editor.exportSettings) candidate.schemaVersion = 4;
+  candidate.editor = withStrip(candidate.editor, candidate.editor.strip);
+  if (candidate.editor.exportSettings && candidate.schemaVersion < 4) candidate.schemaVersion = 4;
+  if (candidate.capture.requiredShots > RESOURCE_LIMITS.sourcesPerParticipant || [candidate, ...candidate.history.past, ...candidate.history.future].some(snapshot => editorNeedsV5(snapshot.editor))) candidate.schemaVersion = 5;
   const past = [...candidate.history.past], future = [...candidate.history.future];
   while (past.length + future.length > PROJECT_HISTORY_LIMIT) { if (past.length) past.shift(); else future.pop(); }
   let result = validate({ ...candidate, history: { past, future } }, false);
@@ -299,7 +322,7 @@ export function redoProject(project: PhotoProject, updatedAt = new Date().toISOS
 function historyCapture(project: PhotoProject, target: ProjectEditSnapshot): ProjectCaptureSettings {
   if (project.capturedAt !== null || project.media.some(item => item.kind === "photo")) return project.capture;
   const requiredShots = target.editor.template ? Math.max(...Object.values(target.editor.template.requiredSources)) : LAYOUTS.find(layout => layout.id === target.editor.layoutId)!.shots;
-  return { ...project.capture, requiredShots: requiredShots as 1 | 2 | 3 | 4 };
+  return { ...project.capture, requiredShots: requiredShots as ShotCount };
 }
 export function appendProjectMedia(project: PhotoProject, declarations: readonly ProjectMedia[], sourceOrder: ProjectSourceOrder, capturedAt: string, updatedAt = new Date().toISOString()): PhotoProject {
   const previous = validatePhotoProject(project);
@@ -310,7 +333,7 @@ export function appendProjectMedia(project: PhotoProject, declarations: readonly
 export function applyTemplateToProject(project: PhotoProject, design: TemplateDesign, decorations: readonly ProjectMedia[], updatedAt = new Date().toISOString()): PhotoProject {
   const previous = validatePhotoProject(project), template = validateTemplateDesign(design);
   if (decorations.some(item => item.kind !== "decoration" || item.participantId !== null)) fail("template", "Only decoration files can be added with a template");
-  const capture = previous.capturedAt !== null || previous.media.some(item => item.kind === "photo") ? previous.capture : { ...previous.capture, requiredShots: Math.max(...Object.values(template.requiredSources)) as 1 | 2 | 3 | 4 };
-  const editor: ProjectEditorSettings = { ...previous.editor, ...template.look, ...template.defaults, template, ...(Object.values(template.requiredSources).some(count => count !== 4) ? { story: null } : {}), places: template.places ?? {}, cellEdits: {}, stickers: [] };
+  const capture = previous.capturedAt !== null || previous.media.some(item => item.kind === "photo") ? previous.capture : { ...previous.capture, requiredShots: Math.max(...Object.values(template.requiredSources)) as ShotCount };
+  const editor: ProjectEditorSettings = { ...previous.editor, ...template.look, strip: template.look.strip, ...template.defaults, template, ...(Object.values(template.requiredSources).some(count => count !== 4) ? { story: null } : {}), places: template.places ?? {}, cellEdits: {}, stickers: [] };
   return update(previous, { capture, media: [...previous.media, ...decorations], editor, history: { past: [...previous.history.past, currentSnapshot(previous)], future: [] } }, updatedAt);
 }

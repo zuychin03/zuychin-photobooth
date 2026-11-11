@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { CELL_GAP, CELL_W, LAYOUTS, ROLES, STRIP_MARGIN, cellShotIndex, stripSize } from "../lib/layouts";
+import { LAYOUTS, ROLES, layoutCellCount, layoutCells, stripSize } from "../lib/layouts";
 import { createProject, validatePhotoProject } from "../lib/projects/model";
 import { defaultCellEdit } from "../lib/projects/transforms";
 import { templateFromProject } from "../lib/templates/from-project";
@@ -14,15 +14,15 @@ test("eight built-in layouts become bounded templates with unchanged roles, sour
     assert.deepEqual(design.canvas, size);
     assert.deepEqual(compositionSize({ layout, template: design }), size);
     let index = 0;
-    for (let cell = 0; cell < layout.cols * layout.rows; cell++) {
-      const owner = layout.duoPattern?.[cell] ?? "A", roles = owner === "AB" ? ["A", "B"] : [owner];
-      roles.forEach((role, half) => {
+    for (const cell of layoutCells(layout)) {
+      cell.owners.forEach((role, part) => {
         const slot = design.slots[index++];
-        assert.equal(slot.role, role); assert.equal(slot.sourceIndex, cellShotIndex(layout, cell));
-        assert(Math.abs(slot.x * size.width - (STRIP_MARGIN + (cell % layout.cols) * (CELL_W + CELL_GAP) + half * CELL_W / 2)) < 1e-8);
-        assert(Math.abs(slot.y * size.height - (STRIP_MARGIN + Math.floor(cell / layout.cols) * (CELL_W / layout.cellAspect + CELL_GAP))) < 1e-8);
-        assert(Math.abs(slot.width * size.width - CELL_W / roles.length) < 1e-8);
-        if (owner === "AB") assert.deepEqual(slot.sliceX, [0.25, 0.75]);
+        assert.equal(slot.role, role); assert.equal(slot.sourceIndex, cell.shot);
+        assert(Math.abs(slot.x * size.width - (cell.x + part * cell.width / cell.owners.length)) < 1e-8);
+        assert(Math.abs(slot.y * size.height - cell.y) < 1e-8);
+        assert(Math.abs(slot.width * size.width - cell.width / cell.owners.length) < 1e-8);
+        assert(Math.abs(slot.height * size.height - cell.height) < 1e-8);
+        if (cell.owners.length === 2) assert.deepEqual(slot.sliceX, [0.25, 0.75]);
       });
     }
     assert.equal(design.slots.length, index);
@@ -50,11 +50,11 @@ test("Together recipes keep every participant in each full-width cell and retain
     const roles = ROLES.slice(0, layout.mode === "duo" ? 2 : layout.minMembers!), places = { A: { dx: -0.1, dy: 0.05, scale: 1.15 }, B: { dx: 0.08, dy: 0, scale: 0.9 } };
     const project = createProject({ mode: layout.mode, participants: roles.map(role => ({ id: `person-${role}`, role })), editor: { layoutId: layout.id, sceneId: "studio-cream", places, cellEdits: { "0:A": { ...defaultCellEdit(2), filterId: "bw" } } } });
     const design = templateFromProject(project);
-    assert.equal(design.slots.length, layout.rows * layout.cols); assert.deepEqual(design.places, places);
-    for (const slot of design.slots) {
+    assert.equal(design.slots.length, layoutCellCount(layout)); assert.deepEqual(design.places, places);
+    design.slots.forEach((slot, cell) => {
       assert.deepEqual([slot.role, ...(slot.companions ?? []).map(source => source.role)].sort(), roles);
-      assert(Math.abs(slot.width * design.canvas.width - CELL_W) < 1e-8);
-    }
+      assert(Math.abs(slot.width * design.canvas.width - layoutCells(layout)[cell].width) < 1e-8);
+    });
     assert.equal(design.slots[0].sourceIndex, 2); assert.equal(design.slots[0].filterId, "bw");
     if (layout.id === "duo-split") { assert(design.slots.every(slot => slot.splitFallback)); assert.deepEqual(design.slots[0].companions?.[0].sliceX, [0.25, 0.75]); }
   }

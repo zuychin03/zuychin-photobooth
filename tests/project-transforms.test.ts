@@ -21,7 +21,7 @@ test("crop extremes stay within the photo for portrait, landscape and quarter-tu
 });
 
 test("malformed crop controls never reach drawing", () => {
-  for (const change of [{ zoom: 0.5 }, { zoom: Infinity }, { offsetX: 2 }, { rotation: 45 }, { sourceIndex: 4 }, { sourceIndex: 0.5 }, { filterId: "url(https://example.invalid)" }, { mirror: "true" }]) {
+  for (const change of [{ zoom: 0.5 }, { zoom: Infinity }, { offsetX: 2 }, { rotation: 45 }, { sourceIndex: 8 }, { sourceIndex: -1 }, { sourceIndex: 0.5 }, { filterId: "url(https://example.invalid)" }, { mirror: "true" }]) {
     assert.throws(() => validateCellEdit({ ...defaultCellEdit(0), ...change }));
   }
   assert.throws(() => validateCellEdit({ ...defaultCellEdit(0), url: "https://example.invalid" }));

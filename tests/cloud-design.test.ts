@@ -73,6 +73,19 @@ test("schema 4 saves require migration 028 while frozen schema 3 retries remain 
   const snapshot = fixture();
   assert.deepEqual(await store.save(projectId, null, requestId, { ...snapshot, project: { ...snapshot.project, schemaVersion: 3 } }), receipt);
 });
+test("schema 5 saves wait for migration 029 while schema 4 saves keep working", async () => {
+  const calls: string[] = [];
+  const store = await createProjectDesignStore("token", env, { authenticate: async () => owner, rpc: async name => {
+    calls.push(name); return { data: name === "pb_project_capabilities" ? cap : name === "pb_project_design_capabilities" ? designCap : receipt, error: null };
+  } });
+  const snapshot = fixture(), strip = applyProjectEdit(snapshot.project, { editor: { ...snapshot.project.editor, layoutId: "polaroid" }, sourceOrder: snapshot.project.sourceOrder });
+  assert.equal(strip.schemaVersion, 5);
+  await assert.rejects(store.save(projectId, null, requestId, { ...snapshot, project: strip }), /unavailable/);
+  assert.equal(calls.includes("pb_project_design_save"), false);
+  assert.deepEqual(await store.save(projectId, null, requestId, snapshot), receipt);
+  const migrated = await createProjectDesignStore("token", env, { authenticate: async () => owner, rpc: async name => ({ data: name === "pb_project_capabilities" ? cap : name === "pb_project_design_capabilities" ? { ...designCap, stripVersion: 1 } : receipt, error: null }) });
+  assert.deepEqual(await migrated.save(projectId, null, requestId, { ...snapshot, project: strip }), receipt);
+});
 test("store denies malformed projections and propagates source access loss", async () => {
   const store = await createProjectDesignStore("token", env, { authenticate: async () => owner, rpc: async name => ({ data: name === "pb_project_capabilities" ? cap : name === "pb_project_design_capabilities" ? designCap : null, error: name === "pb_project_design_read" ? { message: "PB_PROJECT_DENIED" } : null }) });
   await assert.rejects(store.read(projectId), (error: unknown) => error instanceof ProjectServerError && error.status === 403);

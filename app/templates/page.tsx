@@ -17,7 +17,7 @@ import { downloadProjectBlob, projectDownloadName } from "@/lib/projects/downloa
 import { designFromRecipe, templateForNewProject } from "@/lib/templates/application";
 import { exportTemplateBundle, importTemplateBundle, TEMPLATE_BUNDLE_MIME } from "@/lib/templates/bundle";
 import { templateFromProject } from "@/lib/templates/from-project";
-import { templateScopeKey, validateTemplateRecipe, type TemplateScope } from "@/lib/templates/model";
+import { templateSchemaFor, templateScopeKey, validateTemplateRecipe, type TemplateScope } from "@/lib/templates/model";
 import { openTemplateShelf } from "@/lib/templates/storage";
 
 const toggle = "relative h-7 w-12 shrink-0 cursor-pointer appearance-none rounded-full bg-[color-mix(in_srgb,var(--foreground)_16%,transparent)] transition-colors duration-200 checked:bg-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-50 before:absolute before:top-0.5 before:left-0.5 before:size-6 before:rounded-full before:bg-white before:shadow-[0_2px_6px_rgb(0_0_0/0.25)] before:transition-transform before:duration-300 before:ease-[var(--spring-bounce)] checked:before:translate-x-5 motion-reduce:before:transition-none";
@@ -102,7 +102,7 @@ function TemplateShelfPage({ owner, authLoading }: { owner: string | null; authL
     if (!project) throw new Error("Open a project first, then save its design as a template.");
     const design = templateFromProject(project), timestamp = new Date().toISOString();
     const scope: TemplateScope = destination === "account" && owner && !authLoading ? { kind: "account", ownerId: owner } : { kind: "device" };
-    const recipe = validateTemplateRecipe({ ...design, schemaVersion: 1, id: crypto.randomUUID(), name: name.trim(), revision: 0, scope, createdAt: timestamp, updatedAt: timestamp });
+    const recipe = validateTemplateRecipe({ ...design, schemaVersion: templateSchemaFor(design), id: crypto.randomUUID(), name: name.trim(), revision: 0, scope, createdAt: timestamp, updatedAt: timestamp });
     const available = session.getDecorationBlobs(), decorations = new Map(design.decorations.map(item => { const blob = available.get(item.id); if (!blob) throw new Error("One of the PNG decorations is missing. Reopen the project and try again."); return [item.id, blob] as const; }));
     const shelf = await openTemplateShelf(scope); try { guard(key, scope); await shelf.save(recipe, decorations, null); } finally { shelf.close(); }
     guard(key, scope); setSaving(false); setRefresh(value => value + 1); setNotice("Template saved.");

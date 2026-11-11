@@ -150,7 +150,7 @@ test("wire inputs reject executable data, URLs, new media references, unknown fi
     { ...proposal(ownCell()), edit: { kind: "shared", patch: { sourceOrder: { A: ["foreign-photo"] } } } },
     { ...proposal(ownCell()), edit: { kind: "shared", patch: { media: [{ url: "file:///private" }] } } },
   ]) assert.throws(() => validateRecipeProposal(value));
-  assert.throws(() => validateRecipeProposal({ ...proposal(ownCell()), schemaVersion: 2 }), code("update_required"));
+  assert.throws(() => validateRecipeProposal({ ...proposal(ownCell()), schemaVersion: 3 }), code("update_required"));
   const cyclic: Record<string, unknown> = {}; cyclic.self = cyclic;
   assert.throws(() => validateRecipeProposal(cyclic));
 });
@@ -214,4 +214,16 @@ test("templates must represent every member, including companions, independently
   assert.deepEqual(Object.keys((await initialRecipeCommit(ctx)).recipe.editor.template!.requiredSources), ["A", "B"]);
   const base = context(), split = { ...base, project: validatePhotoProject({ ...base.project, editor: { ...base.project.editor, layoutId: "duo-split" } }) };
   assert.deepEqual(Object.keys((await initialRecipeCommit(split)).recipe.owners), ["A", "B"]);
+});
+test("V3 layouts travel as recipe version 2 so older peers ask for a refresh", async () => {
+  const ctx = context(), initial = await initialRecipeCommit(ctx), coordinator = new RecipeCoordinator(initial, () => ctx);
+  assert.equal(initial.schemaVersion, 1);
+  await assert.rejects(coordinator.commit(host, proposal({ kind: "shared", patch: { layoutId: "duo-film" } })), code("invalid_recipe"));
+  const committed = await coordinator.commit(host, { ...proposal({ kind: "shared", patch: { layoutId: "duo-film" } }), schemaVersion: 2 });
+  assert.equal(committed.schemaVersion, 2); assert.equal(committed.recipe.editor.layoutId, "duo-film");
+  assert.equal((await acceptRecipeCommit(initial, committed, host, ctx)).schemaVersion, 2);
+  assert.throws(() => validateRecipeCommit({ ...committed, schemaVersion: 1 }));
+  const back = await coordinator.commit(host, proposal({ kind: "shared", patch: { layoutId: "duo-alternate" } }, 1));
+  assert.equal(back.schemaVersion, 1);
+  coordinator.close();
 });

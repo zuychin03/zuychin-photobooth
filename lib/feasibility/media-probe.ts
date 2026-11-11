@@ -117,7 +117,7 @@ async function probeStill(canvas: HTMLCanvasElement): Promise<ProbeResult> {
 }
 
 async function probeLayouts(): Promise<ProbeResult[]> {
-  const [{ composeStrip }, { LAYOUTS, ROLES, CELL_W, CELL_GAP, STRIP_MARGIN, stripSize }] = await Promise.all([import("../compose"), import("../layouts")]);
+  const [{ composeStrip }, { LAYOUTS, ROLES, layoutCells, stripSize }] = await Promise.all([import("../compose"), import("../layouts")]);
   const shots: Partial<Record<Role, HTMLCanvasElement[]>> = {};
   const colour = (role: Role, shot: number) => [40 + ROLES.indexOf(role) * 55, 40 + shot * 45, 180 - shot * 20, 255];
   const results: ProbeResult[] = [];
@@ -140,15 +140,11 @@ async function probeLayouts(): Promise<ProbeResult[]> {
         const expectedSize = stripSize(layout);
         const mismatches: string[] = [];
         let checkedSamples = 0;
-        for (let cell = 0; cell < layout.cols * layout.rows; cell++) {
-          const col = cell % layout.cols;
-          const row = Math.floor(cell / layout.cols);
-          const shot = layout.mode === "solo" ? cell : row;
-          const owner = layout.duoPattern?.[cell] ?? "A";
-          const owners: Role[] = owner === "AB" ? ["A", "B"] : [owner];
+        for (const { index: cell, owners, shot, ...rect } of layoutCells(layout)) {
+          if (shot > 3) continue;
           owners.forEach((role, part) => {
-            const x = STRIP_MARGIN + col * (CELL_W + CELL_GAP) + CELL_W * ((part + 0.5) / owners.length);
-            const y = STRIP_MARGIN + row * (CELL_W / layout.cellAspect + CELL_GAP) + CELL_W / layout.cellAspect / 2;
+            const x = rect.x + rect.width * ((part + 0.5) / owners.length);
+            const y = rect.y + rect.height / 2;
             const actual = [...context.getImageData(Math.floor(x), Math.floor(y), 1, 1).data];
             if (actual.join(",") !== colour(role, shot).join(",")) mismatches.push(`cell ${cell}, role ${role}, shot ${shot}`);
             checkedSamples++;

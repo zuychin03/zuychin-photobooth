@@ -1,4 +1,5 @@
 import { FILTERS } from "../filters";
+import { RESOURCE_LIMITS } from "./resource-bounds";
 
 export interface PhotoCellEdit {
   sourceIndex: number;
@@ -21,7 +22,7 @@ export function validateCellEdit(value: unknown): PhotoCellEdit {
   if (Object.keys(input).length !== keys.length || Object.keys(input).some(key => !keys.includes(key))
     || keys.some(key => !("value" in (Object.getOwnPropertyDescriptor(input, key) ?? {})))) throw new Error("Invalid photo adjustment fields");
   const within = (key: string, min: number, max: number) => typeof input[key] === "number" && Number.isFinite(input[key]) && input[key] >= min && input[key] <= max;
-  if (!within("sourceIndex", 0, 3) || !Number.isInteger(input.sourceIndex) || !within("zoom", 1, 4)
+  if (!within("sourceIndex", 0, RESOURCE_LIMITS.soloSources - 1) || !Number.isInteger(input.sourceIndex) || !within("zoom", 1, 4)
     || !within("offsetX", -1, 1) || !within("offsetY", -1, 1) || ![0, 90, 180, 270].includes(input.rotation as number)
     || typeof input.mirror !== "boolean" || (input.filterId !== null && !FILTERS.some(filter => filter.id === input.filterId))) throw new Error("Photo adjustment is out of bounds");
   return { sourceIndex: input.sourceIndex, zoom: input.zoom, offsetX: input.offsetX, offsetY: input.offsetY, rotation: input.rotation, mirror: input.mirror, filterId: input.filterId } as PhotoCellEdit;

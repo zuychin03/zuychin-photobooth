@@ -1,5 +1,5 @@
 import { composeStrip, compositionSize, type ComposeInput } from "../compose";
-import { CELL_GAP, CELL_W, STRIP_MARGIN, getLayout } from "../layouts";
+import { CELL_GAP, CELL_W, STRIP_MARGIN, getLayout, layoutCells } from "../layouts";
 import { projectBlobHash } from "../projects/bundle";
 import { createPhotoLoopFrames } from "../exports/photo-loop";
 import { ExportJob, createExportCanvas, encodeExportCanvas, exportStill, releaseExportCanvas, renderExportPreview } from "../exports/still";
@@ -84,7 +84,7 @@ export async function runExportCompositionProbe(): Promise<ProbeResult[]> {
           if (Math.max(bitmap.width, bitmap.height) > 640) throw new Error("Photo-loop frame exceeds its pixel limit");
           sample.width = bitmap.width; sample.height = bitmap.height;
           const context = sample.getContext("2d")!; context.drawImage(bitmap, 0, 0);
-          const pixel = context.getImageData(Math.floor((STRIP_MARGIN + CELL_W / 2) / size.width * bitmap.width), Math.floor((STRIP_MARGIN + CELL_W / input.layout.cellAspect / 2) / size.height * bitmap.height), 1, 1).data;
+          const pixel = context.getImageData(Math.floor((STRIP_MARGIN + CELL_W / 2) / size.width * bitmap.width), Math.floor((STRIP_MARGIN + layoutCells(input.layout)[0].height / 2) / size.height * bitmap.height), 1, 1).data;
           if (colours[index].some((value, channel) => Math.abs(pixel[channel] - value) > 3)) throw new Error(`Photo-loop frame ${index + 1} has the wrong source photo`);
         } finally { bitmap.close(); }
       }

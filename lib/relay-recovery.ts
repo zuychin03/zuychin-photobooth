@@ -1,5 +1,5 @@
 import { inspectProjectImage, projectImageToCanvas, withoutImageTrailer } from "./projects/images";
-import { createProject, validatePhotoProject } from "./projects/model";
+import { createProject, validatePhotoProject, type ProjectCaptureSettings } from "./projects/model";
 import { openProjectRepository } from "./projects/storage";
 import { projectBlobHash } from "./projects/bundle";
 
@@ -55,7 +55,7 @@ export async function saveRelayOriginals(input: RelayOriginalInput, open = openP
   const check = () => { if (!input.active()) throw new Error("Your account or this page changed, so nothing was uploaded."); };
   const shots = input.shots ?? input.originals.length;
   check(); if (!Number.isInteger(shots) || shots < 1 || shots > 4 || input.originals.length < 1 || input.originals.length > shots) throw new Error("Pick between one and four photos.");
-  const initial = createProject({ id: `relay-${input.id}-${input.role}`, scope: { kind: "account", ownerId: input.ownerId }, mode: "duo", role: input.role, name: "Relay photos", participants: [{ id: "relay-owner", role: input.role }], capture: { requiredShots: shots as 1 | 2 | 3 | 4 }, editor: { layoutId: input.layoutId, filterId: input.filterId, showDate: false } });
+  const initial = createProject({ id: `relay-${input.id}-${input.role}`, scope: { kind: "account", ownerId: input.ownerId }, mode: "duo", role: input.role, name: "Relay photos", participants: [{ id: "relay-owner", role: input.role }], capture: { requiredShots: shots as ProjectCaptureSettings["requiredShots"] }, editor: { layoutId: input.layoutId, filterId: input.filterId, showDate: false } });
   const media = [], blobs = new Map<string, Blob>();
   for (const [index, blob] of input.originals.entries()) { const info = await inspect(blob); check(); const id = `photo-${index}`; media.push({ id, kind: "photo" as const, participantId: "relay-owner", ...info, bytes: blob.size }); blobs.set(id, blob); }
   const repository = await open(initial.scope, { assertActive: check });
@@ -67,7 +67,7 @@ export async function saveRelayOriginals(input: RelayOriginalInput, open = openP
       if (existing.media.size === blobs.size) return existing.project;
     }
     const prior = existing?.kind === "current" ? existing.project : null;
-    const project = validatePhotoProject({ ...(prior ?? initial), schemaVersion: 4, media, sourceOrder: { ...initial.sourceOrder, [input.role]: media.map(item => item.id) }, revision: prior ? prior.revision + 1 : 0, updatedAt: new Date(Math.max(Date.now(), Date.parse(prior?.updatedAt ?? initial.updatedAt))).toISOString() });
+    const project = validatePhotoProject({ ...(prior ?? initial), schemaVersion: Math.max(4, (prior ?? initial).schemaVersion) as 4 | 5, media, sourceOrder: { ...initial.sourceOrder, [input.role]: media.map(item => item.id) }, revision: prior ? prior.revision + 1 : 0, updatedAt: new Date(Math.max(Date.now(), Date.parse(prior?.updatedAt ?? initial.updatedAt))).toISOString() });
     const saved = await repository.save(project, blobs, prior?.revision ?? null); check(); return saved;
   } finally { repository.close(); }
 }

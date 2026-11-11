@@ -1,13 +1,14 @@
 import { getCuratedAsset } from "../assets/registry";
 import { FRAMES, STICKER_PACKS, STICKER_STYLES, type StickerStyle } from "../decor";
 import { FILTERS } from "../filters";
-import { ROLES, type Role } from "../layouts";
+import { ROLES, type Role, type ShotCount } from "../layouts";
 import { PATTERNS } from "../patterns";
 import { SCENES } from "../scenes";
 import { THEMES } from "../themes";
 import { RESOURCE_LIMITS, validateMediaResource, type MediaResource } from "../projects/resource-bounds";
+import { storedStrip, validateStripOptions, type StripOptions } from "../strip-style";
 
-export const TEMPLATE_SCHEMA_VERSION = 1;
+export const TEMPLATE_SCHEMA_VERSION = 2;
 export type TemplateScope = { readonly kind: "device" } | { readonly kind: "account"; readonly ownerId: string };
 export interface TemplateBounds { readonly x: number; readonly y: number; readonly width: number; readonly height: number }
 export interface TemplateCrop { readonly zoom: number; readonly offsetX: number; readonly offsetY: number; readonly rotation: 0 | 90 | 180 | 270; readonly mirror: boolean }
@@ -19,12 +20,12 @@ export interface TemplateTextLayer extends LayerBase { readonly kind: "text"; re
 export interface TemplateStickerLayer extends LayerBase { readonly kind: "sticker"; readonly slug: string; readonly style: StickerStyle }
 export interface TemplateDecorationLayer extends LayerBase { readonly kind: "decoration"; readonly mediaId: string; readonly fit: "contain" | "cover" }
 export type TemplateLayer = TemplateTextLayer | TemplateStickerLayer | TemplateDecorationLayer;
-export interface TemplateLook { readonly frameId: string; readonly filterId: string; readonly patternId: string; readonly themeId: string | null; readonly sceneId: string | null; readonly materialId: string | null }
+export interface TemplateLook { readonly frameId: string; readonly filterId: string; readonly patternId: string; readonly themeId: string | null; readonly sceneId: string | null; readonly materialId: string | null; readonly strip?: StripOptions }
 export interface TemplateRecipe {
-  readonly schemaVersion: 1; readonly id: string; readonly name: string; readonly revision: number; readonly scope: TemplateScope;
+  readonly schemaVersion: 1 | 2; readonly id: string; readonly name: string; readonly revision: number; readonly scope: TemplateScope;
   readonly createdAt: string; readonly updatedAt: string;
   readonly canvas: { readonly width: number; readonly height: number };
-  readonly requiredSources: Readonly<Partial<Record<Role, 1 | 2 | 3 | 4>>>;
+  readonly requiredSources: Readonly<Partial<Record<Role, ShotCount>>>;
   readonly slots: readonly TemplatePhotoSlot[]; readonly layers: readonly TemplateLayer[];
   readonly decorations: readonly MediaResource[]; readonly look: TemplateLook;
   readonly defaults: { readonly caption: string; readonly showDate: boolean };
@@ -84,31 +85,39 @@ function crop(value: unknown): TemplateCrop {
   const raw = object(value, ["zoom", "offsetX", "offsetY", "rotation", "mirror"], "crop");
   return { zoom: number(raw.zoom, 1, 4, "zoom"), offsetX: number(raw.offsetX, -1, 1, "offsetX"), offsetY: number(raw.offsetY, -1, 1, "offsetY"), rotation: choice(raw.rotation, [0, 90, 180, 270], "rotation"), mirror: bool(raw.mirror, "mirror") };
 }
-function look(value: unknown): TemplateLook {
-  const raw = object(value, ["frameId", "filterId", "patternId", "themeId", "sceneId", "materialId"], "look");
+function look(value: unknown, version: number): TemplateLook {
+  const raw = object(value, ["frameId", "filterId", "patternId", "themeId", "sceneId", "materialId", ...(version >= 2 && value && typeof value === "object" && Object.hasOwn(value, "strip") ? ["strip"] : [])], "look");
+  let strip: StripOptions | undefined;
+  if (raw.strip !== undefined) try { strip = storedStrip(validateStripOptions(raw.strip, "look.strip")); } catch { fail("look.strip", "Unsupported strip style"); }
   const sceneId = raw.sceneId === null ? null : text(raw.sceneId, 80, "sceneId");
   const materialId = raw.materialId === null ? null : text(raw.materialId, 80, "materialId");
   if (sceneId !== null && !SCENES.some(item => item.id === sceneId) && getCuratedAsset(sceneId)?.kind !== "scene") fail("sceneId", "Unknown scene");
   if (materialId !== null && getCuratedAsset(materialId)?.kind !== "material") fail("materialId", "Unknown material");
-  return { frameId: choice(raw.frameId, FRAMES.map(item => item.id), "frameId"), filterId: choice(raw.filterId, FILTERS.map(item => item.id), "filterId"), patternId: choice(raw.patternId, ["none", ...PATTERNS.map(item => item.id)], "patternId"), themeId: raw.themeId === null ? null : choice(raw.themeId, THEMES.map(item => item.id), "themeId"), sceneId, materialId };
+  return { frameId: choice(raw.frameId, FRAMES.filter(item => !item.v3 || version >= 2).map(item => item.id), "frameId"), filterId: choice(raw.filterId, FILTERS.map(item => item.id), "filterId"), patternId: choice(raw.patternId, ["none", ...PATTERNS.map(item => item.id)], "patternId"), themeId: raw.themeId === null ? null : choice(raw.themeId, THEMES.map(item => item.id), "themeId"), sceneId, materialId, ...(strip ? { strip } : {}) };
+}
+/** Version 2 carries V3 strip features: a strip style, a V3 frame, or more than 4 photos for a solo design. */
+export function templateSchemaFor(design: Pick<TemplateDesign, "requiredSources" | "look">): 1 | 2 {
+  return Object.values(design.requiredSources).some(count => count! > RESOURCE_LIMITS.sourcesPerParticipant) || storedStrip(design.look.strip) !== undefined || FRAMES.some(frame => frame.id === design.look.frameId && frame.v3) ? 2 : 1;
 }
 function freeze<T>(value: T): T { if (value && typeof value === "object") { for (const child of Object.values(value)) freeze(child); Object.freeze(value); } return value; }
 
 export function validateTemplateRecipe(value: unknown): TemplateRecipe {
   const raw = object(value, null, "recipe");
   object(raw, ["schemaVersion", "id", "name", "revision", "scope", "createdAt", "updatedAt", "canvas", "requiredSources", "slots", "layers", "decorations", "look", "defaults", ...(Object.hasOwn(raw, "places") ? ["places"] : [])], "recipe");
-  if (raw.schemaVersion !== TEMPLATE_SCHEMA_VERSION) fail("schemaVersion", "Unsupported template version");
+  if (raw.schemaVersion !== 1 && raw.schemaVersion !== 2) fail("schemaVersion", "Unsupported template version");
+  const version = raw.schemaVersion;
   const canvas = object(raw.canvas, ["width", "height"], "canvas");
   const width = number(canvas.width, 128, 4096, "canvas.width", true), height = number(canvas.height, 128, 4096, "canvas.height", true);
   if (width * height > RESOURCE_LIMITS.photoPixels) fail("canvas", "Canvas exceeds 12 megapixels");
   const requirements = object(raw.requiredSources, null, "requiredSources");
-  const requiredSources: Partial<Record<Role, 1 | 2 | 3 | 4>> = {};
+  const requiredSources: Partial<Record<Role, ShotCount>> = {};
   if (Object.keys(requirements).length < 1 || Object.keys(requirements).length > 4) fail("requiredSources", "Expected one to four roles");
-  for (const [role, count] of Object.entries(requirements)) requiredSources[choice(role, ROLES, "role")] = choice(count, [1, 2, 3, 4] as const, "source count");
+  const sourceCounts: readonly ShotCount[] = version >= 2 && Object.keys(requirements).join() === "A" ? [1, 2, 3, 4, 5, 6, 7, 8] : [1, 2, 3, 4];
+  for (const [role, count] of Object.entries(requirements)) requiredSources[choice(role, ROLES, "role")] = choice(count, sourceCounts, "source count");
   const ids = new Set<string>(), used = new Map<Role, Set<number>>();
   const unique = (value: unknown) => { const id = templateId(value); if (ids.has(id)) fail("id", "Duplicate slot or layer identifier"); ids.add(id); return id; };
   const source = (slot: Record<string, unknown>): TemplatePhotoSource => {
-    const role = choice(slot.role, ROLES, "role"), sourceIndex = number(slot.sourceIndex, 0, 3, "sourceIndex", true);
+    const role = choice(slot.role, ROLES, "role"), sourceIndex = number(slot.sourceIndex, 0, RESOURCE_LIMITS.soloSources - 1, "sourceIndex", true);
     if (!requiredSources[role] || sourceIndex >= requiredSources[role]!) fail("sourceIndex", "Slot exceeds declared source requirement");
     if (!used.has(role)) used.set(role, new Set()); used.get(role)!.add(sourceIndex);
     let sliceX: readonly [number, number] | undefined;
@@ -175,7 +184,7 @@ export function validateTemplateRecipe(value: unknown): TemplateRecipe {
     const place = object(value, ["dx", "dy", "scale"], "place");
     places[role] = { dx: number(place.dx, -0.5, 0.5, "place.dx"), dy: number(place.dy, -0.25, 0.25, "place.dy"), scale: number(place.scale, 0.5, 1.6, "place.scale") };
   }
-  const recipe: TemplateRecipe = { schemaVersion: 1, id: templateId(raw.id), name: text(raw.name, 100, "name"), revision: number(raw.revision, 0, Number.MAX_SAFE_INTEGER, "revision", true), scope: validateTemplateScope(raw.scope), createdAt: date(raw.createdAt), updatedAt: date(raw.updatedAt), canvas: { width, height }, requiredSources, slots, layers, decorations, look: look(raw.look), defaults: { caption: text(defaults.caption, RESOURCE_LIMITS.textCodePoints, "caption"), showDate: bool(defaults.showDate, "showDate") }, ...(Object.hasOwn(raw, "places") ? { places } : {}) };
+  const recipe: TemplateRecipe = { schemaVersion: version, id: templateId(raw.id), name: text(raw.name, 100, "name"), revision: number(raw.revision, 0, Number.MAX_SAFE_INTEGER, "revision", true), scope: validateTemplateScope(raw.scope), createdAt: date(raw.createdAt), updatedAt: date(raw.updatedAt), canvas: { width, height }, requiredSources, slots, layers, decorations, look: look(raw.look, version), defaults: { caption: text(defaults.caption, RESOURCE_LIMITS.textCodePoints, "caption"), showDate: bool(defaults.showDate, "showDate") }, ...(Object.hasOwn(raw, "places") ? { places } : {}) };
   if (!recipe.name.trim() || recipe.updatedAt < recipe.createdAt) fail("recipe", "Invalid name or timestamps");
   if (new TextEncoder().encode(JSON.stringify(recipe)).length > RESOURCE_LIMITS.manifestBytes) fail("recipe", "Manifest exceeds 64 KiB");
   return freeze(recipe);
@@ -191,7 +200,7 @@ export function parseTemplateRecipe(rawJson: string): TemplateParseResult {
 export function validateTemplateDesign(value: unknown): TemplateDesign {
   const raw = object(value, null, "design");
   object(raw, ["canvas", "requiredSources", "slots", "layers", "decorations", "look", "defaults", ...(Object.hasOwn(raw, "places") ? ["places"] : [])], "design");
-  const { canvas, requiredSources, slots, layers, decorations, look, defaults, places } = validateTemplateRecipe({ ...raw, schemaVersion: 1, id: "embedded", name: "Embedded template", revision: 0, scope: { kind: "device" }, createdAt: "2000-01-01T00:00:00.000Z", updatedAt: "2000-01-01T00:00:00.000Z" });
+  const { canvas, requiredSources, slots, layers, decorations, look, defaults, places } = validateTemplateRecipe({ ...raw, schemaVersion: TEMPLATE_SCHEMA_VERSION, id: "embedded", name: "Embedded template", revision: 0, scope: { kind: "device" }, createdAt: "2000-01-01T00:00:00.000Z", updatedAt: "2000-01-01T00:00:00.000Z" });
   return Object.freeze({ canvas, requiredSources, slots, layers, decorations, look, defaults, ...(places ? { places } : {}) });
 }
 

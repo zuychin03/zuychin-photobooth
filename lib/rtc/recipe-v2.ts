@@ -1,13 +1,19 @@
-import { LAYOUTS, ROLES, type Role } from "../layouts";
-import { createProject, validatePhotoProject, type PhotoProject, type ProjectEditorSettings } from "../projects/model";
+import { LAYOUTS, ROLES, layoutRoles, type Role, type ShotCount } from "../layouts";
+import { createProject, editorNeedsV5, projectSchemaFor, validatePhotoProject, type PhotoProject, type ProjectEditorSettings } from "../projects/model";
 import { validateCellEdit, type PhotoCellEdit } from "../projects/transforms";
+import { RESOURCE_LIMITS } from "../projects/resource-bounds";
 import { validateTemplateDesign, type TemplateDesign, type TemplatePhotoSource } from "../templates/model";
 import type { StickerInstance, TogetherPlacement } from "../compose";
 
-export const RECIPE_SCHEMA_VERSION = 1;
+export const RECIPE_SCHEMA_VERSION = 2;
+/** Version 2 marks recipes with V3 strip features, so older peers ask for a refresh instead of misreading them. */
+export function recipeSchemaFor(editor: Partial<ProjectEditorSettings>): 1 | 2 {
+  return editorNeedsV5(editor) ? 2 : 1;
+}
 export const RECIPE_LIMITS = Object.freeze({ proposalBytes: 16 * 1024, commitBytes: 64 * 1024, queue: 16, receipts: 128 });
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const SHARED = ["frameId", "layoutId", "filterId", "caption", "showDate", "patternId", "themeId", "sceneId", "stickerStyle", "template", "materialId", "story"] as const;
+// A default strip resets the look; it validates to an omitted key, so the patch stays non-empty on the wire.
+const SHARED = ["frameId", "layoutId", "filterId", "caption", "showDate", "patternId", "themeId", "sceneId", "stickerStyle", "template", "materialId", "story", "strip"] as const;
 type SharedKey = typeof SHARED[number];
 export type SharedRecipePatch = Partial<Pick<ProjectEditorSettings, SharedKey>>;
 export type RecipeEdit =
@@ -16,14 +22,14 @@ export type RecipeEdit =
   | { readonly kind: "template-cell"; readonly role: Role; readonly slotId: string; readonly value: PhotoCellEdit }
   | { readonly kind: "placement"; readonly role: Role; readonly value: TogetherPlacement | null }
   | { readonly kind: "sticker"; readonly role: Role; readonly key: number; readonly value: StickerInstance | null };
-export interface RecipeProposal { readonly schemaVersion: 1; readonly id: string; readonly baseRevision: number; readonly edit: RecipeEdit }
+export interface RecipeProposal { readonly schemaVersion: 1 | 2; readonly id: string; readonly baseRevision: number; readonly edit: RecipeEdit }
 export interface CollaborativeRecipe {
   readonly editor: ProjectEditorSettings;
   readonly owners: Readonly<Partial<Record<Role, string>>>;
   readonly stickerOwners: Readonly<Record<string, string>>;
 }
 export interface RecipeCommit {
-  readonly schemaVersion: 1; readonly revision: number; readonly proposalId: string | null;
+  readonly schemaVersion: 1 | 2; readonly revision: number; readonly proposalId: string | null;
   readonly authorId: string; readonly recipeHash: string; readonly recipe: CollaborativeRecipe;
 }
 export interface RecipeContext {
@@ -85,7 +91,7 @@ function modelEditor(value: unknown): ProjectEditorSettings {
     const template = input.template == null ? null : validateTemplateDesign(input.template);
     const roles = layout.mode === "solo" ? ["A"] as const : layout.mode === "duo" ? ["A", "B"] as const : ROLES;
     const project = createProject({ id: "recipe-validation", mode: layout.mode, createdAt: "2026-01-01T00:00:00.000Z", captureTimeZone: "UTC", participants: roles.map(role => ({ id: `participant-${role}`, role })) });
-    return validatePhotoProject({ ...project, editor: input, media: (template?.decorations ?? []).map(item => ({ ...item, participantId: null })) }).editor;
+    return validatePhotoProject({ ...project, schemaVersion: projectSchemaFor(project, input as Partial<ProjectEditorSettings>), editor: input, media: (template?.decorations ?? []).map(item => ({ ...item, participantId: null })) }).editor;
   } catch { return fail(); }
 }
 function blankEditor(mode: PhotoProject["mode"] = "group"): ProjectEditorSettings {
@@ -98,11 +104,13 @@ function placement(value: unknown): TogetherPlacement | null {
   return item as unknown as TogetherPlacement;
 }
 function cell(value: unknown): PhotoCellEdit {
-  try { return validateCellEdit(value); } catch { return fail(); }
+  let edit: PhotoCellEdit;
+  try { edit = validateCellEdit(value); } catch { return fail(); }
+  return edit.sourceIndex < RESOURCE_LIMITS.sourcesPerParticipant ? edit : fail();
 }
 function proposal(input: unknown): RecipeProposal {
   const raw = record(input, ["schemaVersion", "id", "baseRevision", "edit"]);
-  if (raw.schemaVersion !== RECIPE_SCHEMA_VERSION) fail("update_required");
+  if (raw.schemaVersion !== 1 && raw.schemaVersion !== 2) fail("update_required");
   if (!isUuid(raw.id) || !integer(raw.baseRevision)) fail();
   const edit = record(raw.edit);
   if (edit.kind === "shared") {
@@ -111,6 +119,7 @@ function proposal(input: unknown): RecipeProposal {
     const layoutId = patch.layoutId ?? LAYOUTS.find(layout => layout.mode === "group")!.id;
     const base = modelEditor({ ...blankEditor(), layoutId });
     modelEditor({ ...base, ...patch });
+    if (recipeSchemaFor(patch as Partial<ProjectEditorSettings>) > (raw.schemaVersion as number)) fail();
   } else {
     if (!isRole(edit.role)) fail();
     if (edit.kind === "cell") {
@@ -144,10 +153,10 @@ function recipe(value: unknown): CollaborativeRecipe {
 }
 export function validateRecipeCommit(value: unknown): RecipeCommit {
   const raw = record(plainData(value, RECIPE_LIMITS.commitBytes), ["schemaVersion", "revision", "proposalId", "authorId", "recipeHash", "recipe"]);
-  if (raw.schemaVersion !== RECIPE_SCHEMA_VERSION) fail("update_required");
+  if (raw.schemaVersion !== 1 && raw.schemaVersion !== 2) fail("update_required");
   if (!integer(raw.revision) || (raw.proposalId !== null && !isUuid(raw.proposalId)) || !isUuid(raw.authorId) || typeof raw.recipeHash !== "string" || !/^[a-f0-9]{64}$/.test(raw.recipeHash)) fail();
   const validated = recipe(raw.recipe);
-  if (!Object.values(validated.owners).includes(raw.authorId)) fail();
+  if (!Object.values(validated.owners).includes(raw.authorId) || raw.schemaVersion !== recipeSchemaFor(validated.editor)) fail();
   return frozen({ ...raw, recipe: validated } as unknown as RecipeCommit);
 }
 function canonical(value: unknown): string {
@@ -175,9 +184,9 @@ export function validateRecipeContext(value: CollaborativeRecipe, context: Recip
   const validated = recipe(plainData(value, RECIPE_LIMITS.commitBytes));
   if (canonical(contextOwners(context)) !== canonical(validated.owners)) fail("recovery_required");
   const layout = LAYOUTS.find(item => item.id === validated.editor.layoutId)!;
-  const represented = new Set(validated.editor.template ? Object.keys(validated.editor.template.requiredSources) : (layout.duoPattern ?? ["A"]).flatMap(role => role === "AB" ? ["A", "B"] : [role]));
+  const represented = new Set<string>(validated.editor.template ? Object.keys(validated.editor.template.requiredSources) : layoutRoles(layout));
   if (context.members.some(member => !represented.has(member.role))) fail("invalid_recipe");
-  try { validatePhotoProject({ ...context.project, editor: validated.editor, history: { past: [], future: [] } }); }
+  try { validatePhotoProject({ ...context.project, schemaVersion: projectSchemaFor(context.project, validated.editor), editor: validated.editor, history: { past: [], future: [] } }); }
   catch { fail("media_unavailable"); }
   for (const decoration of validated.editor.template?.decorations ?? []) if (!context.availableMediaIds.has(decoration.id)) fail("media_unavailable");
   for (const mediaId of Object.values(context.project.sourceOrder).flat()) if (mediaId && !context.availableMediaIds.has(mediaId)) fail("media_unavailable");
@@ -245,8 +254,8 @@ function edited(before: CollaborativeRecipe, edit: RecipeEdit, authorId: string,
       };
       const slots = template.slots.map(slot => slot.id !== edit.slotId ? slot : { ...slot, ...adjust(slot), ...(slot.companions ? { companions: slot.companions.map(adjust) } : {}) });
       if (!changed) return fail("ownership_denied");
-      const requiredSources: Partial<Record<Role, 1 | 2 | 3 | 4>> = {};
-      for (const slot of slots) for (const source of [slot, ...(slot.companions ?? [])]) requiredSources[source.role] = Math.max(requiredSources[source.role] ?? 0, source.sourceIndex + 1) as 1 | 2 | 3 | 4;
+      const requiredSources: Partial<Record<Role, ShotCount>> = {};
+      for (const slot of slots) for (const source of [slot, ...(slot.companions ?? [])]) requiredSources[source.role] = Math.max(requiredSources[source.role] ?? 0, source.sourceIndex + 1) as ShotCount;
       editor = { ...editor, template: { ...template, slots, requiredSources } };
     }
   }
@@ -256,7 +265,7 @@ function edited(before: CollaborativeRecipe, edit: RecipeEdit, authorId: string,
 export async function initialRecipeCommit(context: RecipeContext, stickerOwners?: Readonly<Record<string, string>>): Promise<RecipeCommit> {
   const owners = contextOwners(context);
   const recipe = validateRecipeContext({ editor: context.project.editor, owners, stickerOwners: stickerOwners ?? Object.fromEntries(context.project.editor.stickers.map(item => [String(item.key), context.hostId])) }, context);
-  return validateRecipeCommit({ schemaVersion: 1, revision: 0, proposalId: null, authorId: context.hostId, recipeHash: await hashRecipe(recipe), recipe });
+  return validateRecipeCommit({ schemaVersion: recipeSchemaFor(recipe.editor), revision: 0, proposalId: null, authorId: context.hostId, recipeHash: await hashRecipe(recipe), recipe });
 }
 export async function acceptRecipeCommit(current: RecipeCommit, incoming: unknown, authenticatedSender: string, context: RecipeContext): Promise<RecipeCommit> {
   if (authenticatedSender !== context.hostId) fail("ownership_denied");
@@ -299,7 +308,7 @@ export class RecipeCoordinator {
       if (receipt) { if (receipt.fingerprint !== fingerprint) fail("ownership_denied"); return receipt.commit; }
       if (next.baseRevision !== this.current.revision || this.current.revision >= Number.MAX_SAFE_INTEGER) fail("recovery_required");
       const recipe = edited(this.current.recipe, next.edit, authenticatedSender, context);
-      const commit = validateRecipeCommit({ schemaVersion: 1, revision: this.current.revision + 1, proposalId: next.id, authorId: authenticatedSender, recipeHash: await hashRecipe(recipe), recipe });
+      const commit = validateRecipeCommit({ schemaVersion: recipeSchemaFor(recipe.editor), revision: this.current.revision + 1, proposalId: next.id, authorId: authenticatedSender, recipeHash: await hashRecipe(recipe), recipe });
       if (this.closed) fail("closed");
       const latest = this.context();
       if (this.contextIdentity(latest) !== this.identity) fail("recovery_required");

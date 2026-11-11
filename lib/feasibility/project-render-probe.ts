@@ -1,5 +1,5 @@
 import { composeStrip, type ComposeInput } from "../compose";
-import { CELL_GAP, CELL_W, STRIP_MARGIN, getLayout } from "../layouts";
+import { CELL_GAP, STRIP_MARGIN, getLayout, layoutCells } from "../layouts";
 import { exportProjectBundle, importProjectBundle, projectBlobHash } from "../projects/bundle";
 import { inspectImageHeader, inspectProjectImage, projectImageToCanvas } from "../projects/images";
 import { appendProjectMedia, createProject } from "../projects/model";
@@ -113,8 +113,8 @@ export async function runProjectRenderProbe(): Promise<ProjectRenderProbeResult[
       for (const scale of [1, 2]) {
         composeStrip(output, settings, scale);
         const sample = (cell: number, x: number, y: number, colour: number[]) => expectPixel(output,
-          (STRIP_MARGIN + CELL_W * x) * scale,
-          (STRIP_MARGIN + cell * (CELL_W / settings.layout.cellAspect + CELL_GAP) + CELL_W / settings.layout.cellAspect * y) * scale, colour);
+          (layoutCells(settings.layout)[cell].x + layoutCells(settings.layout)[cell].width * x) * scale,
+          (layoutCells(settings.layout)[cell].y + layoutCells(settings.layout)[cell].height * y) * scale, colour);
         sample(0, 0.25, 0.25, [255, 0, 0]); sample(0, 0.75, 0.25, [0, 255, 0]);
         sample(1, 0.25, 0.25, [0, 255, 0]); sample(1, 0.75, 0.25, [255, 0, 0]);
         sample(2, 0.25, 0.25, [0, 0, 255]); sample(2, 0.75, 0.25, [255, 0, 0]);

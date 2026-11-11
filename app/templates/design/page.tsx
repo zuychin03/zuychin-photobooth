@@ -5,6 +5,8 @@ import { Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from 
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, Download, Plus, Redo2, Save, Trash2, Undo2 } from "lucide-react";
 import { Dropdown } from "@/components/Dropdown";
+import { StripStyleControls } from "@/components/StripStyleControls";
+import { resolveStrip, withStrip } from "@/lib/strip-style";
 import { VisualPackPicker } from "@/components/VisualPackPicker";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { useCuratedAssets } from "@/hooks/useCuratedAssets";
@@ -25,7 +27,7 @@ import { getTheme } from "@/lib/themes";
 import { exportTemplateBundle } from "@/lib/templates/bundle";
 import { moveTemplateItem, newTemplateSlot, reviseTemplate } from "@/lib/templates/designer";
 import { templateFromProject } from "@/lib/templates/from-project";
-import { validateTemplateRecipe, type TemplateDesign, type TemplateLayer, type TemplatePhotoSlot, type TemplateRecipe, type TemplateScope } from "@/lib/templates/model";
+import { templateSchemaFor, validateTemplateRecipe, type TemplateDesign, type TemplateLayer, type TemplatePhotoSlot, type TemplateRecipe, type TemplateScope } from "@/lib/templates/model";
 import { openTemplateShelf } from "@/lib/templates/storage";
 
 const button = "btn btn-quiet min-h-10 text-sm";
@@ -134,7 +136,7 @@ function Designer() {
     if (!design) return null;
     const frame = FRAMES.find(frame => frame.id === design.look.frameId)!;
     return { layout: getLayout(project?.editor.layoutId ?? "strip4"), shots: session.shots, template: design,
-      style: { frameColor: frame.color, inkColor: frame.ink, patternId: design.look.patternId, filterId: design.look.filterId, ...design.defaults, stickerStyle: "flat" },
+      style: { frameColor: frame.color, inkColor: frame.ink, frameGradient: frame.gradient ?? null, patternId: design.look.patternId, filterId: design.look.filterId, ...design.defaults, stickerStyle: "flat" }, strip: design.look.strip,
       stickers: [], theme: getTheme(design.look.themeId), together: design.look.sceneId ? { sceneId: design.look.sceneId, places: design.places ?? {} } : null,
       cutouts: cuts?.sources === session.shots ? cuts.value : undefined, materialId: design.look.materialId, resources: curated.resources,
       capturedAt: project?.capturedAt, captureTimeZone: project?.captureTimeZone };
@@ -182,7 +184,7 @@ function Designer() {
   const makeRecipe = (copy = false) => {
     if (!design) throw new Error("Open a design first.");
     const now = new Date().toISOString();
-    return validateTemplateRecipe({ ...design, schemaVersion: 1, id: copy || !recipe ? crypto.randomUUID() : recipe.id, name,
+    return validateTemplateRecipe({ ...design, schemaVersion: templateSchemaFor(design), id: copy || !recipe ? crypto.randomUUID() : recipe.id, name,
       scope: recipe?.scope ?? scope, revision: copy || !recipe ? 0 : recipe.revision + 1, createdAt: copy || !recipe ? now : recipe.createdAt, updatedAt: now });
   };
   const filesForDesign = () => new Map((design?.decorations ?? []).map(media => [media.id, blobs.current.get(media.id)!]));
@@ -275,7 +277,7 @@ function Designer() {
             </>}
             <button className="btn btn-danger min-h-10 text-sm" disabled={Boolean(slot && design.slots.length === 1)} onClick={() => { edit({ slots: design.slots.filter(value => value.id !== item.id), layers: design.layers.filter(value => value.id !== item.id) }); setSelected(null); }}><Trash2 size={16} aria-hidden /> Remove selected item</button></div>}
         </section>
-        <section className="panel space-y-4 p-4 sm:p-5"><h2 className={panelTitle}>Frame finish</h2><Dropdown showLabel label="Frame colour" value={design.look.frameId} options={FRAMES.map(frame => ({ value: frame.id, label: frame.name }))} onChange={frameId => edit({ look: { ...design.look, frameId } })} /><Dropdown showLabel label="Frame filter" value={design.look.filterId} options={FILTERS.map(filter => ({ value: filter.id, label: filter.name }))} onChange={filterId => edit({ look: { ...design.look, filterId } })} /><Dropdown showLabel label="Pattern" value={design.look.patternId} options={[{ value: "none", label: "None" }, ...PATTERNS.map(pattern => ({ value: pattern.id, label: pattern.name }))]} onChange={patternId => edit({ look: { ...design.look, patternId } })} /><label className="block text-sm font-bold">Default caption<input className={`${field} mt-1.5`} value={design.defaults.caption} maxLength={500} onChange={event => edit({ defaults: { ...design.defaults, caption: event.target.value } })} /></label><label className="flex min-h-11 cursor-pointer items-center gap-3 text-sm font-bold"><input type="checkbox" checked={design.defaults.showDate} onChange={event => edit({ defaults: { ...design.defaults, showDate: event.target.checked } })} className="size-5" /> Show capture date</label></section>
+        <section className="panel space-y-4 p-4 sm:p-5"><h2 className={panelTitle}>Frame finish</h2><Dropdown showLabel label="Frame colour" value={design.look.frameId} options={FRAMES.map(frame => ({ value: frame.id, label: frame.name }))} onChange={frameId => edit({ look: { ...design.look, frameId } })} /><Dropdown showLabel label="Frame filter" value={design.look.filterId} options={FILTERS.map(filter => ({ value: filter.id, label: filter.name }))} onChange={filterId => edit({ look: { ...design.look, filterId } })} /><Dropdown showLabel label="Pattern" value={design.look.patternId} options={[{ value: "none", label: "None" }, ...PATTERNS.map(pattern => ({ value: pattern.id, label: pattern.name }))]} onChange={patternId => edit({ look: { ...design.look, patternId } })} /><StripStyleControls value={resolveStrip(design.look.strip)} fields={["finish", "sprockets", "band", "footer", "date", "font", "dateFormat"]} onChange={next => edit({ look: withStrip(design.look, next) })} /><label className="block text-sm font-bold">Default caption<input className={`${field} mt-1.5`} value={design.defaults.caption} maxLength={500} onChange={event => edit({ defaults: { ...design.defaults, caption: event.target.value } })} /></label><label className="flex min-h-11 cursor-pointer items-center gap-3 text-sm font-bold"><input type="checkbox" checked={design.defaults.showDate} onChange={event => edit({ defaults: { ...design.defaults, showDate: event.target.checked } })} className="size-5" /> Show capture date</label></section>
         <section className="panel space-y-4 p-4 sm:p-5"><h2 className={panelTitle}>Scenes &amp; textures</h2><VisualPackPicker sceneId={design.look.sceneId} materialId={design.look.materialId} onSceneChange={sceneId => edit({ look: { ...design.look, sceneId } })} onMaterialChange={materialId => edit({ look: { ...design.look, materialId } })} /></section>
         <section className="panel space-y-3 p-4 sm:p-5"><h2 className={panelTitle}>Save or share</h2><p className="text-sm text-muted-foreground">Exported templates never include your photos.</p><label className="flex min-h-11 cursor-pointer items-center gap-3 text-sm font-bold"><input type="checkbox" checked={includeText} onChange={event => setIncludeText(event.target.checked)} className="size-5" /> Include captions and text in the export</label><div className="flex flex-wrap gap-2"><button className={button} onClick={() => void work(async assertCurrent => { const file = await exportTemplateBundle(makeRecipe(true), filesForDesign(), { includeText }); assertCurrent(); downloadProjectBlob(file, projectDownloadName(name, "pbtemplate")); setStatus("Template exported."); })}><Download size={16} aria-hidden /> Export template</button>{recipe && <button className={button} onClick={() => void save(true)}>Save as a copy</button>}</div></section>
       </div>

@@ -3,10 +3,11 @@
 import { useState } from "react";
 import { ArrowLeft, ArrowRight, ChevronDown, FlipHorizontal, RotateCw } from "lucide-react";
 import { FILTERS } from "@/lib/filters";
-import { LAYOUTS, cellShotIndex, getLayout, type Role } from "@/lib/layouts";
+import { LAYOUTS, cellShotIndex, getLayout, layoutCellCount, layoutCells, type Role } from "@/lib/layouts";
 import { defaultCellEdit, type PhotoCellEdit } from "@/lib/projects/transforms";
 import type { PhotoProject, ProjectEditorSettings, ProjectSourceOrder } from "@/lib/projects/model";
 import { Dropdown } from "@/components/Dropdown";
+import { LayoutPicker } from "@/components/LayoutPicker";
 
 interface Props {
   project: PhotoProject;
@@ -20,10 +21,7 @@ export function PhotoEditPanel({ project, editor, change, reorder }: Props) {
   const [moving, setMoving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const layout = getLayout(editor.layoutId);
-  const cells = Array.from({ length: layout.rows * layout.cols }, (_, index) => {
-    const owner = layout.duoPattern?.[index] ?? "A";
-    return (owner === "AB" ? ["A", "B"] : [owner]).map(role => ({ key: `${index}:${role}`, index, role: role as Role }));
-  }).flat();
+  const cells = layoutCells(layout).flatMap(cell => cell.owners.map(role => ({ key: `${cell.index}:${role}`, index: cell.index, role: role as Role })));
   const selected = cells.find(cell => cell.key === selection) ?? cells[0];
   const edit = editor.cellEdits[selected.key] ?? defaultCellEdit(cellShotIndex(layout, selected.index));
   const controlsDisabled = Boolean(editor.sceneId);
@@ -43,10 +41,10 @@ export function PhotoEditPanel({ project, editor, change, reorder }: Props) {
     <summary className="flex min-h-9 cursor-pointer list-none items-center justify-between gap-3 font-display text-lg [&::-webkit-details-marker]:hidden">Photos &amp; crop<ChevronDown size={18} aria-hidden className="shrink-0 text-muted-foreground transition-transform duration-300 group-open:rotate-180 motion-reduce:transition-none" /></summary>
     <div className="mt-4 flex flex-col gap-5">
       <div className="flex flex-col gap-1.5 text-sm"><span className="font-bold">Layout</span>
-        <Dropdown label="Layout" value={editor.layoutId} onChange={value => {
+        <LayoutPicker label="Layout" layouts={LAYOUTS.filter(item => item.mode === project.mode)} value={editor.layoutId} onChange={value => {
           const next = getLayout(value);
-          change({ layoutId: next.id, cellEdits: Object.fromEntries(Object.entries(editor.cellEdits).filter(([key]) => Number(key.split(":")[0]) < next.rows * next.cols)) });
-        }} options={LAYOUTS.filter(item => item.mode === project.mode).map(item => ({ value: item.id, label: item.name }))} />
+          change({ layoutId: next.id, cellEdits: Object.fromEntries(Object.entries(editor.cellEdits).filter(([key]) => Number(key.split(":")[0]) < layoutCellCount(next))) });
+        }} />
       </div>
       {project.participants.map(person => <div key={person.id}>
         <p className="text-sm font-bold">{project.mode === "solo" ? "Photo order" : `Person ${person.role}'s photo order`}</p>
@@ -63,7 +61,7 @@ export function PhotoEditPanel({ project, editor, change, reorder }: Props) {
             <Dropdown label="Photo slot" value={selected.key} disabled={controlsDisabled} onChange={setSelection} options={cells.map(cell => ({ value: cell.key, label: `Slot ${cell.index + 1}${project.mode === "solo" ? "" : ` · ${cell.role}`}` }))} />
           </div>
           <div className="flex min-w-0 flex-col gap-1.5 text-sm"><span className="font-bold">Photo in this slot</span>
-            <Dropdown label="Photo in this slot" value={String(edit.sourceIndex)} disabled={controlsDisabled} onChange={value => update({ sourceIndex: Number(value) })} options={Array.from({ length: 4 }, (_, index) => ({ value: String(index), label: `Photo ${index + 1}${project.sourceOrder[selected.role][index] ? "" : " (empty)"}`, disabled: !project.sourceOrder[selected.role][index] }))} />
+            <Dropdown label="Photo in this slot" value={String(edit.sourceIndex)} disabled={controlsDisabled} onChange={value => update({ sourceIndex: Number(value) })} options={Array.from({ length: Math.max(project.capture.requiredShots, project.sourceOrder[selected.role].length, edit.sourceIndex + 1) }, (_, index) => ({ value: String(index), label: `Photo ${index + 1}${project.sourceOrder[selected.role][index] ? "" : " (empty)"}`, disabled: !project.sourceOrder[selected.role][index] }))} />
           </div>
         </div>
         {([['zoom', 'Zoom', 1, 4], ['offsetX', 'Horizontal crop', -1, 1], ['offsetY', 'Vertical crop', -1, 1]] as const).map(([field, label, min, max]) => <label key={field} className="flex flex-col text-sm font-bold"><span className="flex justify-between">{label}<span className="font-medium tabular-nums text-muted-foreground">{edit[field].toFixed(2)}{field === 'zoom' ? '×' : ''}</span></span><input aria-label={label} className="h-11 w-full accent-accent" type="range" min={min} max={max} step="0.02" value={edit[field]} onChange={event => update({ [field]: Number(event.target.value) })} /></label>)}

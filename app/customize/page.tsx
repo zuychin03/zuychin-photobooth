@@ -58,6 +58,8 @@ import {
   compositionSize,
 } from "@/lib/compose";
 import { ROLES, getLayout } from "@/lib/layouts";
+import { resolveStrip, storedStrip, type StripOptions } from "@/lib/strip-style";
+import { StripStyleControls } from "@/components/StripStyleControls";
 import { useBoothSession } from "@/lib/session";
 import { useAuth } from "@/lib/auth";
 import { TimelineStrip, deleteStrip, getMyCouple, listStrips, saveStrip } from "@/lib/couple";
@@ -153,7 +155,9 @@ function CustomizeWorkspace({ project }: { project: PhotoProject }) {
   const frame = FRAMES.find((f) => f.id === frameId) ?? FRAMES[0];
   const theme = getTheme(themeId);
   const hasShots = ROLES.some((r) => session.shots[r].some(Boolean));
-  const { width: stripW, height: stripH } = compositionSize({ layout, template: editor.template });
+  const strip = resolveStrip(editor.strip);
+  const setStrip = (next: StripOptions) => setField("strip", storedStrip(next));
+  const { width: stripW, height: stripH } = compositionSize({ layout, template: editor.template, strip: editor.strip });
   const curated = useCuratedAssets(sceneId, editor.materialId ?? null);
 
   const input: ComposeInput = useMemo(
@@ -163,6 +167,7 @@ function CustomizeWorkspace({ project }: { project: PhotoProject }) {
       style: {
         frameColor: frame.color,
         inkColor: frame.ink,
+        frameGradient: frame.gradient ?? null,
         patternId,
         filterId: editor.filterId,
         caption,
@@ -180,8 +185,9 @@ function CustomizeWorkspace({ project }: { project: PhotoProject }) {
       materialId: editor.materialId,
       resources: curated.resources,
       decorations: decorationCanvases,
+      strip: editor.strip,
     }),
-    [layout, session.shots, editor.filterId, editor.cellEdits, frame, patternId, caption, showDate, stickers, stickerStyle, cutouts, sceneId, places, theme, project.capturedAt, project.captureTimeZone, editor.template, editor.materialId, curated.resources, decorationCanvases],
+    [layout, session.shots, editor.filterId, editor.cellEdits, frame, patternId, caption, showDate, stickers, stickerStyle, cutouts, sceneId, places, theme, project.capturedAt, project.captureTimeZone, editor.template, editor.materialId, curated.resources, decorationCanvases, editor.strip],
   );
 
   const isShared = session.mode === "duo" || session.mode === "group";
@@ -687,10 +693,15 @@ function CustomizeWorkspace({ project }: { project: PhotoProject }) {
                   className={`h-11 w-11 rounded-full border-2 shadow-[inset_0_0_0_1px_rgb(0_0_0/0.08)] ${
                     frameId === f.id ? "border-accent scale-110" : "border-border"
                   }`}
-                  style={{ background: f.color }}
+                  style={{ background: f.gradient ? `linear-gradient(135deg, ${f.gradient[0]}, ${f.gradient[1]})` : f.color }}
                 />
               ))}
             </div>
+          </section>
+
+          <section>
+            <h3 className={subTitle}>Strip style</h3>
+            <StripStyleControls value={strip} onChange={setStrip} fields={editor.template ? ["finish", "sprockets"] : ["finish", "sprockets", "spacing"]} />
           </section>
 
           <section>
@@ -891,6 +902,7 @@ function CustomizeWorkspace({ project }: { project: PhotoProject }) {
               <Calendar size={18} aria-hidden />
             </button>
           </section>
+          <StripStyleControls value={strip} onChange={setStrip} fields={["band", "footer", "date", "font", "dateFormat"]} />
           </div>
 
           <div className={toolClass("project")}>

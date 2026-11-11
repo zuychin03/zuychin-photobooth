@@ -6,6 +6,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Camera, Check, Copy, LayoutGrid, Loader2, Sparkles, Users } from "lucide-react";
 import { FilterBar } from "@/components/FilterBar";
+import { LayoutPicker } from "@/components/LayoutPicker";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Section } from "@/components/ui/Section";
 import { RelayOriginalRecovery } from "@/components/RelayOriginalRecovery";
@@ -213,19 +214,7 @@ function NewRelayAccountPage() {
       <div className="page-body flex flex-1 flex-col gap-5">
         <div className="grid gap-5 lg:grid-cols-2">
           <Section id="relay-layout-title" title="Layout" icon={LayoutGrid} tone="rose">
-            <div className="flex flex-col gap-2">
-              {DUO_LAYOUTS.map((l) => (
-                <button
-                  key={l.id}
-                  onClick={() => setLayoutId(l.id)}
-                  className={`flex min-h-12 items-center justify-between gap-3 rounded-2xl px-4 text-left text-sm font-bold ${
-                    layoutId === l.id ? "bg-accent/10 text-accent shadow-[inset_0_0_0_2px_var(--accent)]" : "bg-muted"
-                  }`}
-                >
-                  <span>{l.name}</span> <span className={`shrink-0 font-medium ${layoutId === l.id ? "" : "text-muted-foreground"}`}>{l.shots} shots each</span>
-                </button>
-              ))}
-            </div>
+            <LayoutPicker label="Layout" asynchronous layouts={DUO_LAYOUTS} value={layoutId} onChange={setLayoutId} />
           </Section>
 
           <Section id="relay-filter-title" title="Filter" icon={Sparkles} tone="rose">

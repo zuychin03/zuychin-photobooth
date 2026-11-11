@@ -2,7 +2,10 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import type { ComposeInput } from "../lib/compose";
 import { getLayout, stripSize } from "../lib/layouts";
-import { boundedRaster, exportGeometry, fitRect, mmToPixels, mmToPoints, sourceResolution } from "../lib/exports/geometry";
+import { boundedRaster, exportGeometry, fitRect, mmToPixels, mmToPoints, placedWidth, sourceResolution } from "../lib/exports/geometry";
+import { paintExportGeometry } from "../lib/exports/still";
+import { createPhotoLoopFrames } from "../lib/exports/photo-loop";
+import { immutableSource, installCanvasEnvironment, RecordingCanvas } from "./helpers/recording-canvas";
 import { defaultCellEdit } from "../lib/projects/transforms";
 import { templateFixture } from "./helpers/template-fixture";
 
@@ -101,4 +104,54 @@ test("whole-pixel rounding does not claim a resource cap, but oversized cover cr
   current.template = { ...base, canvas: { width: 120, height: 4000 } };
   const cover = sourceResolution(current, exportGeometry(current.template.canvas, "square", { fit: "cover" }));
   assert.ok(cover.warnings.some(warning => warning.includes("4096 pixels")));
+});
+
+test("wide strips turn 90 degrees to run down every print tile, while image profiles keep them level", () => {
+  for (const layout of ["film4", "duo-film", "trio-row"]) {
+    const size = stripSize(getLayout(layout));
+    for (const profile of ["print-strip", "print-two-up", "a4-contact"] as const) {
+      const geometry = exportGeometry(size, profile);
+      for (const placement of geometry.placements) {
+        const { draw, box } = placement;
+        assert.equal(placement.rotated, true, `${layout} ${profile}`);
+        assert.ok(Math.abs(draw.height / draw.width - size.width / size.height) < 1e-9, "rotated aspect");
+        assert.ok(draw.width <= box.width + 1e-9 && draw.height <= box.height + 1e-9);
+        assert.equal(placedWidth(placement), draw.height);
+        assert.ok(draw.height > exportGeometry({ width: size.height, height: size.width }, profile).placements[0].draw.height - 1e-9);
+      }
+    }
+    for (const profile of ["original", "story", "square", "wallpaper"] as const) assert.equal(exportGeometry(size, profile).placements[0].rotated, false);
+  }
+  for (const layout of ["strip4", "cut8", "grid6", "quad-split"]) assert.equal(exportGeometry(stripSize(getLayout(layout)), "print-strip").placements[0].rotated, false, layout);
+  const film = exportGeometry(stripSize(getLayout("film4")), "print-strip");
+  assert.deepEqual(film.raster, boundedRaster({ width: 2030, height: 828 }, film.placements[0].draw.height / 2030 * 300 / 25.4));
+  assert.ok(film.raster.width > 1300, "the raster follows the long printed edge");
+});
+
+test("painting a rotated placement turns the strip clockwise inside its box", (t) => {
+  installCanvasEnvironment(t);
+  const geometry = exportGeometry(stripSize(getLayout("film4")), "print-strip"), page = new RecordingCanvas(), source = new RecordingCanvas();
+  page.width = 600; page.height = 1800;
+  paintExportGeometry(page.element, source.element, geometry);
+  const { draw } = geometry.placements[0];
+  assert.deepEqual(page.context.transforms.slice(1), [{ kind: "translate", values: [draw.x + draw.width / 2, draw.y + draw.height / 2] }, { kind: "rotate", values: [Math.PI / 2] }]);
+  assert.deepEqual(page.context.draws[0].coordinates, [-draw.height / 2, -draw.width / 2, draw.height, draw.width]);
+});
+
+test("feature and eight-photo strips report the resolution of every cell", () => {
+  const eight = { ...input("cut8"), shots: { A: Array.from({ length: 8 }, () => canvas(1600, 1200)) } };
+  const report = sourceResolution(eight, exportGeometry(stripSize(getLayout("cut8")), "print-strip"));
+  assert.equal(report.sources.length, 8);
+  assert.deepEqual(report.sources.map(item => item.sourceIndex), [0, 1, 2, 3, 4, 5, 6, 7]);
+  const feature = sourceResolution(input("feature4"), exportGeometry(stripSize(getLayout("feature4")), "original"));
+  assert.ok(feature.sources[0].pixelsPerOutputPixel! < feature.sources[1].pixelsPerOutputPixel!, "the wide feature cell spends more output pixels per source pixel");
+});
+
+test("photo loops cycle through every photo of an Eight-cut", async (t) => {
+  const { canvases } = installCanvasEnvironment(t);
+  const eight = { ...input("cut8"), shots: { A: Array.from({ length: 8 }, () => immutableSource(1200, 800)) } };
+  const frames = await createPhotoLoopFrames(eight);
+  assert.equal(frames.length, 8);
+  assert.equal(canvases[0].encodes.length, 8);
+  await assert.rejects(createPhotoLoopFrames({ ...eight, shots: { A: [immutableSource(1200, 800)] } }), /two to eight photos/);
 });

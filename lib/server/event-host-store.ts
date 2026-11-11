@@ -97,6 +97,11 @@ export function createEventHostStore(env: Record<string, string | undefined> = p
       let checked: EventSettingsInput;
       try { const b = eventObject(input, ["event", "look"]); checked = { event: eventCreate(b.event), look: validateEventLook(b.look) }; } catch { return invalid(); }
       await ready();
+      // Version 2 looks wait for migration 029, which adds this function alongside the v2 SQL validator.
+      if (checked.look.version === 2) {
+        const look = await rpc("pb_event_look_capabilities").catch(() => null) as Record<string, unknown> | null;
+        if (!look || look.lookVersion !== 2) throw new EventStoreError("unavailable", 503);
+      }
       return cleanEventSettings(await rpc("pb_event_save_settings", { p_actor: actorId, p_event: eventId, p_request: requestId, p_revision: expectedRevision, p_body: checked }), eventId);
     },
   };

@@ -34,7 +34,7 @@ export async function exportPdf(input: ComposeInput, profileId: PdfProfileId, op
   try {
     source = composeExportSource(input, geometry, job);
     const local: ExportGeometry = { ...geometry, width: first.tile.width, height: first.tile.height, cutMarks: false,
-      placements: [{ tile: { ...first.tile, x: 0, y: 0 }, box: { ...first.box, x: first.box.x - first.tile.x, y: first.box.y - first.tile.y }, draw: { ...first.draw, x: first.draw.x - first.tile.x, y: first.draw.y - first.tile.y } }] };
+      placements: [{ tile: { ...first.tile, x: 0, y: 0 }, box: { ...first.box, x: first.box.x - first.tile.x, y: first.box.y - first.tile.y }, draw: { ...first.draw, x: first.draw.x - first.tile.x, y: first.draw.y - first.tile.y }, rotated: first.rotated }] };
     paintExportGeometry(tile, source, local);
     const png = await encodeExportCanvas(tile, "png", 1, job);
     releaseExportCanvas(source); source = undefined;

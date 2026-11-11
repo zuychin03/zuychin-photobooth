@@ -6,7 +6,7 @@ import type { LoadedProject, ProjectRepository } from "../lib/projects/storage";
 import { hashRecipe, initialRecipeCommit, type RecipeCommit } from "../lib/rtc/recipe-v2";
 import type { RoomCapture, RoomState } from "../lib/server/room-contract";
 import { CAPTURE_ID, EPOCH, MEMBER_A, MEMBER_B, ROOM_ID, SESSION_ID } from "./helpers/room-fixture";
-import { LAYOUTS, type Role } from "../lib/layouts";
+import { LAYOUTS, layoutRoles, type Role } from "../lib/layouts";
 
 const binding = { scope: { kind: "device" as const }, roomId: ROOM_ID, sessionId: SESSION_ID, selfId: MEMBER_A };
 const roster = (): RoomState => ({ roomId: ROOM_ID, sessionId: SESSION_ID, code: "ABC234", hostId: MEMBER_A, selfId: MEMBER_A, selfRole: "A", connectionEpoch: EPOCH, status: "open", locked: false, rosterRevision: 1, serverNow: Date.now(), expiresAt: Date.now() + 60000, capture: null, members: [{ id: MEMBER_A, role: "A", displayName: "A", status: "admitted", connectionEpoch: EPOCH }, { id: MEMBER_B, role: "B", displayName: "B", status: "admitted", connectionEpoch: EPOCH }] });
@@ -54,7 +54,7 @@ test("new room drafts show every admitted role, including four people and gaps a
     const draft = await store.loadDraft(state), layout = LAYOUTS.find(item => item.id === fixtureCase.layout)!;
     assert.equal(draft.project.editor.layoutId, fixtureCase.layout); assert.equal(draft.project.mode, layout.mode); assert.equal(draft.project.capture.requiredShots, fixtureCase.shots);
     assert.deepEqual(draft.project.participants, state.members.map(member => ({ id: member.id, role: member.role })));
-    assert(fixtureCase.roles.every(role => layout.mode === "solo" ? role === "A" : layout.duoPattern?.some(owner => owner === role || owner === "AB" && (role === "A" || role === "B"))));
+    assert(fixtureCase.roles.every(role => layout.mode === "solo" ? role === "A" : layoutRoles(layout).has(role)));
     if (fixtureCase.roles.length > 1) {
       const recipe = await initialRecipeCommit({ project: draft.project, hostId: MEMBER_A, members: draft.project.participants, availableMediaIds: new Set() });
       const saved = await store.saveRecipe(recipe); assert.equal(saved.project.capture.requiredShots, fixtureCase.shots);

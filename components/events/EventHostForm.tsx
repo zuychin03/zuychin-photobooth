@@ -2,7 +2,9 @@
 import { useId } from "react";
 import { Dropdown } from "@/components/Dropdown";
 import type { EventCreateInput } from "@/lib/events/contract";
-import { EVENT_FRAME_IDS, EVENT_FILTER_IDS, EVENT_SCENE_IDS, type EventLook } from "@/lib/events/host-contract";
+import { EVENT_FRAME_IDS_V2, EVENT_FILTER_IDS, EVENT_SCENE_IDS, eventLookVersion, type EventLook } from "@/lib/events/host-contract";
+import { StripStyleControls } from "@/components/StripStyleControls";
+import { resolveStrip, withStrip } from "@/lib/strip-style";
 import { getCuratedAsset } from "@/lib/assets/registry";
 import { FRAMES } from "@/lib/decor";
 import { FILTERS } from "@/lib/filters";
@@ -27,19 +29,23 @@ export function EventHostForm({ value, onChange, disabled, scheduleLocked = fals
     {review && <div className="panel-muted p-4 sm:col-span-2"><h3 className="text-sm font-bold">Event times <span className="font-medium text-muted-foreground">({value.timezone})</span></h3><dl className="mt-2 grid gap-1.5 text-sm">{["Uploads open", "Uploads close", "Photos expire"].map((text, index) => <div key={text} className="flex flex-wrap justify-between gap-x-4"><dt className="text-muted-foreground">{text}</dt><dd className="font-bold tabular-nums">{review[index]}</dd></div>)}</dl></div>}
   </fieldset>;
 }
-export function EventHostLook({ value, onChange, disabled }: { value: EventLook; onChange(value: EventLook): void; disabled: boolean }) {
+export function EventHostLook({ value, onChange: save, disabled }: { value: EventLook; onChange(value: EventLook): void; disabled: boolean }) {
   const id = useId(), asset = value.sceneId ? getCuratedAsset(value.sceneId) : null, frame = FRAMES.find(frame => frame.id === value.frameId)!;
+  const onChange = (next: EventLook) => save({ ...next, version: eventLookVersion(next) });
   return <section aria-labelledby={`${id}-look`} className="panel p-4 sm:p-6">
     <EventPanelHead id={`${id}-look`} icon={Palette} tone="rose">Event look</EventPanelHead>
     <div className="mt-4 grid gap-6 md:grid-cols-[minmax(0,1fr)_13rem]">
     <div className="space-y-4"><p className="text-sm text-muted-foreground">You can&apos;t change the look or caption after the first photo comes in.</p>
-      <Dropdown label="Frame" showLabel disabled={disabled} value={value.frameId} options={EVENT_FRAME_IDS.map(id => ({ value: id, label: FRAMES.find(item => item.id === id)!.name }))} onChange={frameId => onChange({ ...value, frameId: frameId as EventLook["frameId"] })} />
+      <Dropdown label="Frame" showLabel disabled={disabled} value={value.frameId} options={EVENT_FRAME_IDS_V2.map(id => ({ value: id, label: FRAMES.find(item => item.id === id)!.name }))} onChange={frameId => onChange({ ...value, frameId: frameId as EventLook["frameId"] })} />
       <Dropdown label="Photo filter" showLabel disabled={disabled} value={value.filterId} options={EVENT_FILTER_IDS.map(id => ({ value: id, label: FILTERS.find(item => item.id === id)!.name }))} onChange={filterId => onChange({ ...value, filterId: filterId as EventLook["filterId"] })} />
       <Dropdown label="Event scene" showLabel disabled={disabled} value={value.sceneId ?? "none"} options={[{ value: "none", label: "No scene" }, ...EVENT_SCENE_IDS.map(id => ({ value: id, label: getCuratedAsset(id)!.name }))]} onChange={sceneId => onChange({ ...value, sceneId: sceneId === "none" ? null : sceneId as EventLook["sceneId"] })} />
       <label htmlFor={`${id}-caption`} className={label}>Default caption<input id={`${id}-caption`} className={input} disabled={disabled} maxLength={320} value={value.caption} onChange={event => onChange({ ...value, caption: [...event.target.value].slice(0, 160).join("") })} /></label>
       <label className="panel-muted flex min-h-12 cursor-pointer items-center gap-3 px-4 py-3 text-sm font-bold"><input type="checkbox" className="size-5 shrink-0 accent-accent" disabled={disabled} checked={value.showDate} onChange={event => onChange({ ...value, showDate: event.target.checked })} />Show event date by default</label>
+      <fieldset className="border-t border-border pt-4"><legend className="float-left mb-3 w-full text-sm font-bold">Strip style</legend>
+        <div className="clear-both"><StripStyleControls value={resolveStrip(value.strip)} disabled={disabled} fields={["finish", "sprockets", "band", "footer", "date", "font", "dateFormat"]} onChange={strip => onChange(withStrip(value, strip))} /></div>
+      </fieldset>
     </div>
-    <figure className="w-[min(100%,13rem,24dvh)] justify-self-center self-start rounded-md p-3 shadow-[0_14px_32px_-16px_rgb(0_0_0/0.45)] md:w-full md:rotate-[-1.5deg]" style={{ background: frame.color, color: frame.ink }}>
+    <figure className="w-[min(100%,13rem,24dvh)] justify-self-center self-start rounded-md p-3 shadow-[0_14px_32px_-16px_rgb(0_0_0/0.45)] md:w-full md:rotate-[-1.5deg]" style={{ background: frame.gradient ? `linear-gradient(135deg, ${frame.gradient[0]}, ${frame.gradient[1]})` : frame.color, color: frame.ink }}>
       <div role="img" aria-label={asset ? `${asset.name} event scene preview` : "Plain event frame preview"} className="aspect-[3/4] rounded-[2px] bg-cover bg-center" style={{ backgroundColor: asset?.fallback.colour ?? "#e7ddd2", backgroundImage: asset ? `url("${asset.thumbnail.path}")` : undefined }} />
       <figcaption className="mt-3 break-words text-center text-sm">{value.caption || "Your celebration"}</figcaption><p className="mt-2 text-center text-xs opacity-75">Filters appear on guest photos.</p>
     </figure>

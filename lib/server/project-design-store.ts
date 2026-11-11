@@ -46,7 +46,8 @@ export async function createProjectDesignStore(token: string, env: Record<string
     },
     async save(projectId, expectedRevision, requestId, snapshot) {
       const checked = validateCloudDesign(snapshot), expected = designRevision(expectedRevision);
-      if (checked.project.schemaVersion === 4 && cap.exportSettingsVersion !== 1) throw new ProjectServerError("unavailable", 503);
+      if (checked.project.schemaVersion >= 4 && cap.exportSettingsVersion !== 1) throw new ProjectServerError("unavailable", 503);
+      if (checked.project.schemaVersion === 5 && cap.stripVersion !== 1) throw new ProjectServerError("unavailable", 503);
       const result = await rpc("pb_project_design_save", { p_actor: actor, p_project: cloudUuid(projectId), p_request: cloudUuid(requestId), p_expected: expected, p_snapshot: checked });
       const receipt = projection(() => parseCloudDesignReceipt(result, projectId, requestId));
       if (receipt.revision !== (expected === null ? 0 : expected + 1)) throw new ProjectServerError("unavailable", 503);

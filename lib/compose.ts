@@ -1,14 +1,14 @@
 import {
-  CELL_GAP,
-  CELL_W,
-  FOOTER_H,
   ROLES,
   Role,
-  STRIP_MARGIN,
   StripLayout,
-  cellShotIndex,
-  stripSize,
+  canvasBand,
+  splitSlice,
+  sprocketHoles,
+  stripGeometry,
+  type Rect,
 } from "./layouts";
+import { SPROCKET_MARGIN, formatStripDate, resolveStrip, type StripOptions } from "./strip-style";
 import { getFilter, supportsCanvasFilter } from "./filters";
 import { STICKER_PACKS, StickerStyle, monochromeGlyph } from "./decor";
 import { getStickerImage } from "./sticker-assets";
@@ -44,6 +44,8 @@ export interface StripStyle {
   caption: string;
   showDate: boolean;
   stickerStyle: StickerStyle;
+  /** painted top-left to bottom-right instead of frameColor */
+  frameGradient?: readonly [string, string] | null;
 }
 
 export type ShotSet = Partial<Record<Role, (HTMLCanvasElement | null)[]>>;
@@ -79,10 +81,58 @@ export interface ComposeInput {
   materialId?: string | null;
   resources?: ReadonlyMap<string, ReadyAsset>;
   decorations?: ReadonlyMap<string, HTMLCanvasElement>;
+  strip?: Partial<StripOptions> | null;
 }
 
-export function compositionSize(input: Pick<ComposeInput, "layout" | "template">) {
-  return input.template?.canvas ?? stripSize(input.layout);
+export function compositionSize(input: Pick<ComposeInput, "layout" | "template" | "strip">) {
+  if (input.template) return input.template.canvas;
+  const { width, height } = stripGeometry(input.layout, input.strip);
+  return { width, height };
+}
+
+const KEYLINE_OFFSET = 4;
+
+/** Clips `draw` to one photo with the strip's finish: rounded corners, an ink keyline or a lifted shadow. */
+function finishedPhoto(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, finish: StripOptions["finish"], ink: string, keyline: number, draw: () => void) {
+  if (finish === "lifted") {
+    ctx.save();
+    ctx.shadowColor = "rgba(28, 25, 23, 0.32)"; ctx.shadowBlur = 18; ctx.shadowOffsetY = 6;
+    ctx.fillStyle = "#d6d3d1"; ctx.fillRect(x, y, w, h);
+    ctx.restore();
+  }
+  ctx.save();
+  ctx.beginPath();
+  if (finish === "rounded" && typeof ctx.roundRect === "function") ctx.roundRect(x, y, w, h, Math.min(w, h) * 0.06);
+  else ctx.rect(x, y, w, h);
+  ctx.clip();
+  try { draw(); } finally { ctx.restore(); }
+  if (finish === "keyline") {
+    ctx.save();
+    ctx.strokeStyle = ink; ctx.lineWidth = 2;
+    ctx.strokeRect(x - keyline - 1, y - keyline - 1, w + keyline * 2 + 2, h + keyline * 2 + 2);
+    ctx.restore();
+  }
+}
+
+function drawSprockets(ctx: CanvasRenderingContext2D, holes: readonly Rect[], ink: string) {
+  if (!holes.length) return;
+  ctx.save();
+  ctx.globalAlpha = 0.85; ctx.fillStyle = ink;
+  for (const hole of holes) {
+    if (typeof ctx.roundRect !== "function") { ctx.fillRect(hole.x, hole.y, hole.width, hole.height); continue; }
+    ctx.beginPath(); ctx.roundRect(hole.x, hole.y, hole.width, hole.height, 3); ctx.fill();
+  }
+  ctx.restore();
+}
+
+function drawDatestamp(ctx: CanvasRenderingContext2D, stamp: string, x: number, y: number, size: number) {
+  ctx.fillStyle = "#ff9d45";
+  ctx.shadowColor = "rgba(255, 157, 69, 0.85)";
+  ctx.shadowBlur = 8;
+  ctx.font = `italic 700 ${size}px ${fontVar("--font-geist-mono", "monospace")}`;
+  ctx.textBaseline = "middle";
+  ctx.fillText(stamp, x, y);
+  ctx.shadowBlur = 0;
 }
 
 function drawAsset(ctx: CanvasRenderingContext2D, asset: ReadyAsset, x: number, y: number, width: number, height: number) {
@@ -97,11 +147,10 @@ function drawScene(ctx: CanvasRenderingContext2D, input: ComposeInput, x: number
   else scene?.draw(ctx, x, y, width, height);
 }
 
-function drawTemplate(ctx: CanvasRenderingContext2D, input: ComposeInput, width: number, height: number, canFilter: boolean) {
+function drawTemplate(ctx: CanvasRenderingContext2D, input: ComposeInput, width: number, height: number, canFilter: boolean, finish: StripOptions["finish"]) {
   for (const slot of input.template!.slots) {
     const x = slot.x * width, y = slot.y * height, w = slot.width * width, h = slot.height * height;
-    ctx.save();
-    ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip();
+    finishedPhoto(ctx, x, y, w, h, finish, input.style.inkColor, KEYLINE_OFFSET, () => {
     ctx.fillStyle = "#d6d3d1"; ctx.fillRect(x, y, w, h);
     const sources = [slot, ...(slot.companions ?? [])].sort((a, b) => ROLES.indexOf(a.role) - ROLES.indexOf(b.role));
     const ready = input.together && sources.every(source => input.shots[source.role]?.[source.sourceIndex] && input.cutouts?.[source.role]?.[source.sourceIndex]);
@@ -128,7 +177,7 @@ function drawTemplate(ctx: CanvasRenderingContext2D, input: ComposeInput, width:
         }
       });
     }
-    ctx.restore();
+    });
   }
 }
 
@@ -242,6 +291,7 @@ export function composeStrip(
 ): void {
   const { layout, shots, style, stickers, cutouts, together, theme, cellEdits } = input;
   const scene = together ? getScene(together.sceneId) : null;
+  const options = resolveStrip(input.strip);
   const { width, height } = compositionSize(input);
   canvas.width = Math.round(width * scale);
   canvas.height = Math.round(height * scale);
@@ -249,7 +299,11 @@ export function composeStrip(
   ctx.save();
   ctx.scale(scale, scale);
 
-  ctx.fillStyle = style.frameColor;
+  if (style.frameGradient) {
+    const gradient = ctx.createLinearGradient(0, 0, width, height);
+    gradient.addColorStop(0, style.frameGradient[0]); gradient.addColorStop(1, style.frameGradient[1]);
+    ctx.fillStyle = gradient;
+  } else ctx.fillStyle = style.frameColor;
   ctx.fillRect(0, 0, width, height);
   const material = input.materialId ? getCuratedAsset(input.materialId) : null;
   if (material) {
@@ -259,23 +313,16 @@ export function composeStrip(
   }
   getPattern(style.patternId)?.draw(ctx, width, height, style.inkColor);
 
-  const cellH = CELL_W / layout.cellAspect;
   const filter = getFilter(style.filterId);
   const canFilter = supportsCanvasFilter();
-  const cellCount = layout.cols * layout.rows;
+  const geometry = input.template ? null : stripGeometry(layout, options);
+  drawSprockets(ctx, geometry ? geometry.sprockets : options.sprockets ? sprocketHoles(width, height, SPROCKET_MARGIN, height >= width) : [], style.inkColor);
 
-  if (input.template) drawTemplate(ctx, input, width, height, canFilter);
-  for (let i = 0; !input.template && i < cellCount; i++) {
-    const col = i % layout.cols;
-    const row = Math.floor(i / layout.cols);
-    const x = STRIP_MARGIN + col * (CELL_W + CELL_GAP);
-    const y = STRIP_MARGIN + row * (cellH + CELL_GAP);
-    const owner = layout.duoPattern?.[i] ?? "A";
-    const shotIdx = cellShotIndex(layout, i);
+  if (input.template) drawTemplate(ctx, input, width, height, canFilter, options.finish);
+  for (const cell of geometry?.cells ?? []) {
+    const { index: i, x, y, width: cellW, height: cellH, owners, shot: shotIdx } = cell;
 
     const editedShot = (role: Role) => shots[role]?.[cellEdits?.[`${i}:${role}`]?.sourceIndex ?? shotIdx] ?? null;
-    const shotA = editedShot("A");
-    const shotB = editedShot("B");
     const drawPhoto = (role: Role, shot: HTMLCanvasElement, left: number, cellWidth: number, slice: [number, number] = [0, 1]) => {
       const edit = cellEdits?.[`${i}:${role}`];
       ctx.save();
@@ -294,72 +341,71 @@ export function composeStrip(
     })).filter((e) => e.cut);
     const togetherCell = !!scene && !!together && intendedRoles.length > 0 && presentCuts.length === intendedRoles.length;
 
-    ctx.save();
-    ctx.beginPath();
-    ctx.rect(x, y, CELL_W, cellH);
-    ctx.clip();
+    let cellFilled = false;
+    finishedPhoto(ctx, x, y, cellW, cellH, options.finish, style.inkColor, Math.min(KEYLINE_OFFSET, geometry!.gap / 4), () => {
     ctx.fillStyle = "#d6d3d1";
-    ctx.fillRect(x, y, CELL_W, cellH);
+    ctx.fillRect(x, y, cellW, cellH);
     if (canFilter && filter.css !== "none") ctx.filter = filter.css;
 
-    let cellFilled = false;
     if (togetherCell) {
-      drawScene(ctx, input, x, y, CELL_W, cellH);
+      drawScene(ctx, input, x, y, cellW, cellH);
       presentCuts.forEach(({ role, cut }, idx) => {
         const place = together.places[role] ?? DEFAULT_PLACEMENT;
         const anchorX = (idx + 1) / (presentCuts.length + 1);
         const ph = cellH * (presentCuts.length > 2 ? 0.8 : 0.92) * place.scale;
         const pw = (cut!.width / cut!.height) * ph;
-        const cx = x + CELL_W * (anchorX + place.dx);
+        const cx = x + cellW * (anchorX + place.dx);
         const bottom = y + cellH + cellH * place.dy;
         ctx.drawImage(cut!, cx - pw / 2, bottom - ph, pw, ph);
       });
       cellFilled = true;
-    } else if (owner === "AB") {
-      if (shotA) drawPhoto("A", shotA, x, CELL_W / 2, [0.25, 0.75]);
-      if (shotB)
-        drawPhoto("B", shotB, x + CELL_W / 2, CELL_W / 2, [0.25, 0.75]);
-      cellFilled = !!(shotA || shotB);
     } else {
-      const shot = editedShot(owner);
-      if (shot) drawPhoto(owner, shot, x, CELL_W);
-      cellFilled = !!shot;
+      const sliceWidth = cellW / owners.length;
+      owners.forEach((role, part) => {
+        const shot = editedShot(role);
+        if (!shot) return;
+        drawPhoto(role, shot, x + part * sliceWidth, sliceWidth, splitSlice(owners.length));
+        cellFilled = true;
+      });
     }
-    ctx.restore();
+    });
 
     if (!cellFilled) {
       ctx.fillStyle = "rgba(120, 113, 108, 0.6)";
       ctx.font = `500 20px ${fontVar("--font-geist-sans", "system-ui, sans-serif")}`;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.fillText("…", x + CELL_W / 2, y + cellH / 2);
+      ctx.fillText("…", x + cellW / 2, y + cellH / 2);
     }
   }
 
-  const footerTop = height - STRIP_MARGIN - FOOTER_H;
-  if (material && (style.caption || style.showDate)) {
+  const band = geometry?.band ?? canvasBand(width, height, options);
+  const stamp = style.showDate && input.capturedAt !== null ? formatStripDate(input.capturedAt ?? new Date().toISOString(), input.captureTimeZone, options.dateFormat) : null;
+  const bandDate = options.date === "band" ? stamp : null;
+  if (material && (style.caption || bandDate)) {
     ctx.fillStyle = style.frameColor;
-    ctx.fillRect(STRIP_MARGIN / 2, footerTop, width - STRIP_MARGIN, FOOTER_H);
+    ctx.fillRect(band.x / 2, band.y, width - band.x, band.height);
   }
-  ctx.textAlign = "center";
+  const family = options.font === "serif" ? fontVar("--font-fraunces", "Georgia, serif") : options.font === "mono" ? fontVar("--font-geist-mono", "monospace") : fontVar("--font-geist-sans", "sans-serif");
+  const inline = options.footer === "inline", middle = band.y + band.height / 2;
+  ctx.textAlign = inline ? "left" : "center";
   if (style.caption) {
     ctx.fillStyle = style.inkColor;
-    ctx.font = `600 34px ${fontVar("--font-fraunces", "Georgia, serif")}`;
+    ctx.font = `600 ${inline ? 30 : 34}px ${family}`;
     ctx.textBaseline = "middle";
-    ctx.fillText(style.caption, width / 2, footerTop + FOOTER_H * 0.42, width - STRIP_MARGIN * 2);
+    if (inline) ctx.fillText(style.caption, band.x, middle, bandDate ? band.width * 0.6 : band.width);
+    else ctx.fillText(style.caption, width / 2, band.y + band.height * 0.42, width - band.x * 2);
   }
-  if (style.showDate && input.capturedAt !== null) {
-    const d = new Date(input.capturedAt ?? Date.now());
-    const parts = new Intl.DateTimeFormat("en-AU", { timeZone: input.captureTimeZone, day: "2-digit", month: "2-digit", year: "numeric" }).formatToParts(d);
-    const part = (name: string) => parts.find(value => value.type === name)?.value;
-    const stamp = `${part("day")}·${part("month")}·${part("year")}`;
-    ctx.fillStyle = "#ff9d45";
-    ctx.shadowColor = "rgba(255, 157, 69, 0.85)";
-    ctx.shadowBlur = 8;
-    ctx.font = `italic 700 26px ${fontVar("--font-geist-mono", "monospace")}`;
-    ctx.textBaseline = "middle";
-    ctx.fillText(stamp, width / 2, footerTop + FOOTER_H * (style.caption ? 0.78 : 0.55));
-    ctx.shadowBlur = 0;
+  if (bandDate) {
+    ctx.textAlign = inline ? "right" : "center";
+    drawDatestamp(ctx, bandDate, inline ? band.x + band.width : width / 2, inline ? middle : band.y + band.height * (style.caption ? 0.78 : 0.55), inline ? 24 : 26);
+  } else if (stamp) {
+    const last = lastPhoto(geometry?.cells, input.template?.slots, width, height);
+    if (last) {
+      const size = Math.max(12, last.height * 0.08);
+      ctx.textAlign = "right";
+      drawDatestamp(ctx, stamp, last.x + last.width - size * 0.6, last.y + last.height - size * 0.9, size);
+    }
   }
 
   if (theme) {
@@ -373,6 +419,12 @@ export function composeStrip(
   drawTemplateLayers(ctx, input, width, height);
 
   ctx.restore();
+}
+
+/** The bottom-right photo, where a datestamp on the photo goes. */
+function lastPhoto(cells: readonly Rect[] | undefined, slots: readonly Rect[] | undefined, width: number, height: number): Rect | null {
+  const rects = cells ?? (slots ?? []).map(slot => ({ x: slot.x * width, y: slot.y * height, width: slot.width * width, height: slot.height * height }));
+  return rects.reduce<Rect | null>((found, rect) => !found || rect.y + rect.height > found.y + found.height + 0.5 || (Math.abs(rect.y + rect.height - found.y - found.height) <= 0.5 && rect.x > found.x) ? rect : found, null);
 }
 
 export function stripToBlob(input: ComposeInput, scale = 2): Promise<Blob> {

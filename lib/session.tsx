@@ -7,6 +7,7 @@ import { appendProjectMedia, applyProjectEdit, applyTemplateToProject, attachPro
 import { validateThenNowPlan, type ThenNowPlan } from "./memories/then-and-now";
 import { openProjectRepository } from "./projects/storage";
 import { inspectImageHeader, projectImageToCanvas, withoutImageTrailer } from "./projects/images";
+import { fitImportedPhoto, importPixelBudget } from "./projects/import-budget";
 import { exportProjectBundle } from "./projects/bundle";
 import { RESOURCE_LIMITS } from "./projects/resource-bounds";
 import type { TemplateDesign } from "./templates/model";
@@ -211,14 +212,16 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const enqueueProject = useCallback(<T,>(work: (token: number) => Promise<T>, expected = identity(current.current)) => enqueue(work, expected), [enqueue]);
 
   const importShot = useCallback((role: Role, index: number, blob: Blob) => enqueueProject(async token => {
-    if (!Number.isInteger(index) || index < 0 || index > 3) throw new Error("Photo position is out of bounds");
+    if (!Number.isInteger(index) || index < 0) throw new Error("Photo position is out of bounds");
     const previous = await requireProject(token);
+    if (index >= (previous.mode === "solo" ? RESOURCE_LIMITS.soloSources : RESOURCE_LIMITS.sourcesPerParticipant)) throw new Error("Photo position is out of bounds");
     const participant = previous.participants.find(person => person.role === role);
     if (!participant) throw new Error("This participant does not belong to the project");
     const source = await withoutImageTrailer(blob);
     if (source.size > RESOURCE_LIMITS.photoBytes) throw new Error("Choose an image under 10 MB.");
-    const info = inspectImageHeader(new Uint8Array(await source.arrayBuffer())), original = source.slice(0, source.size, info.mime);
-    const canvas = await projectImageToCanvas(original, info);
+    const header = inspectImageHeader(new Uint8Array(await source.arrayBuffer())), decoded = await projectImageToCanvas(source.slice(0, source.size, header.mime), header);
+    const fitted = await fitImportedPhoto(decoded, importPixelBudget(previous.capture.requiredShots));
+    const canvas = fitted?.canvas ?? decoded, info = fitted?.info ?? header, original = fitted?.blob ?? source.slice(0, source.size, header.mime);
     const id = crypto.randomUUID(), order = [...previous.sourceOrder[role]];
     while (order.length <= index) order.push(null);
     order[index] = id;

@@ -1,5 +1,5 @@
-import { LAYOUTS, type Role } from "../layouts";
-import { appendProjectMedia, createProject, serializePhotoProject, validatePhotoProject, type PhotoProject, type ProjectParticipant, type ProjectScope } from "../projects/model";
+import { LAYOUTS, type Role, type ShotCount } from "../layouts";
+import { appendProjectMedia, createProject, projectSchemaFor, serializePhotoProject, validatePhotoProject, type PhotoProject, type ProjectParticipant, type ProjectScope } from "../projects/model";
 import { openProjectRepository, type ProjectRepository } from "../projects/storage";
 import { inspectProjectImage, type ProjectImageInfo } from "../projects/images";
 import { projectBlobHash } from "../projects/bundle";
@@ -51,7 +51,7 @@ function bindingKey(value: RoomWorkspaceBinding): string {
   if (![value.roomId, value.sessionId, value.selfId].every(id => UUID_PATTERN.test(id)) || (value.scope.kind !== "device" && (value.scope.kind !== "account" || !/^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/.test(value.scope.ownerId)))) return fail("identity");
   return `${value.scope.kind === "device" ? "device" : `account:${value.scope.ownerId}`}/${value.roomId}/${value.sessionId}/${value.selfId}`;
 }
-const shotCount = (project: PhotoProject, recipe: RecipeCommit) => (recipe.recipe.editor.template ? Math.max(...Object.values(recipe.recipe.editor.template.requiredSources)) : LAYOUTS.find(layout => layout.id === recipe.recipe.editor.layoutId)?.shots ?? project.capture.requiredShots) as 1 | 2 | 3 | 4;
+const shotCount = (project: PhotoProject, recipe: RecipeCommit) => (recipe.recipe.editor.template ? Math.max(...Object.values(recipe.recipe.editor.template.requiredSources)) : LAYOUTS.find(layout => layout.id === recipe.recipe.editor.layoutId)?.shots ?? project.capture.requiredShots) as ShotCount;
 
 /** Core injection is for fault tests; browser callers use openRoomWorkspaceStore. */
 export function createRoomWorkspaceStore(input: RoomWorkspaceBinding, dependencies: WorkspaceDependencies): RoomWorkspaceStore {
@@ -126,7 +126,7 @@ export function createRoomWorkspaceStore(input: RoomWorkspaceBinding, dependenci
   const withRecipe = (previous: PhotoProject, commit: RecipeCommit): PhotoProject => {
     const declarations = commit.recipe.editor.template?.decorations ?? [], existing = new Map(previous.media.map(media => [media.id, media]));
     for (const item of declarations) { const old = existing.get(item.id); if (old && !same({ id: old.id, kind: old.kind, mime: old.mime, bytes: old.bytes, width: old.width, height: old.height }, item)) fail("media", previous.id); if (!old) existing.set(item.id, { ...item, participantId: null }); }
-    return validatePhotoProject({ ...previous, revision: previous.revision + 1, updatedAt: now(), editor: commit.recipe.editor, media: [...existing.values()], capture: previous.capturedAt ? previous.capture : { ...previous.capture, requiredShots: shotCount(previous, commit) }, history: { past: [], future: [] } });
+    return validatePhotoProject({ ...previous, schemaVersion: projectSchemaFor(previous, commit.recipe.editor), revision: previous.revision + 1, updatedAt: now(), editor: commit.recipe.editor, media: [...existing.values()], capture: previous.capturedAt ? previous.capture : { ...previous.capture, requiredShots: shotCount(previous, commit) }, history: { past: [], future: [] } });
   };
   const applyRecipe = async (record: WorkspaceCheckpoint, commit: RecipeCommit, media: ReadonlyMap<string, Blob>, acceptHostSnapshot = false) => {
     if (record.pending) { if (!same(record.pending.recipe, commit)) fail("recovery", record.projectId); return persistPending(record, media); }

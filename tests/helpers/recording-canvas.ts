@@ -13,6 +13,7 @@ interface CanvasState {
   filter: string | undefined;
   fillStyle: unknown;
   clip: Rect | null;
+  paint: Pick<RecordingContext, "shadowColor" | "shadowBlur" | "shadowOffsetY" | "strokeStyle" | "lineWidth" | "globalAlpha">;
 }
 
 interface CanvasOptions {
@@ -31,7 +32,16 @@ export class RecordingContext {
   textBaseline = "alphabetic";
   shadowColor = "transparent";
   shadowBlur = 0;
+  shadowOffsetY = 0;
+  strokeStyle: unknown = "#000000";
+  lineWidth = 1;
+  globalAlpha = 1;
   readonly draws: ImageDraw[] = [];
+  readonly rounded: { rect: Rect; radius: number }[] = [];
+  readonly pathFills: { rect: Rect | null; fillStyle: unknown; alpha: number }[] = [];
+  readonly strokes: { coordinates: number[]; strokeStyle: unknown; lineWidth: number }[] = [];
+  readonly shadowFills: { coordinates: number[]; blur: number }[] = [];
+  readonly textDraws: { text: string; font: string; align: string; x: number; y: number; fillStyle: unknown }[] = [];
   readonly fills: { coordinates: number[]; filter: string | undefined }[] = [];
   readonly texts: { text: string; filter: string | undefined }[] = [];
   readonly transforms: { kind: string; values: number[] }[] = [];
@@ -44,7 +54,8 @@ export class RecordingContext {
   }
 
   save(): void {
-    this.stack.push({ filter: this.filter, fillStyle: this.fillStyle, clip: this.clipRect });
+    const { shadowColor, shadowBlur, shadowOffsetY, strokeStyle, lineWidth, globalAlpha } = this;
+    this.stack.push({ filter: this.filter, fillStyle: this.fillStyle, clip: this.clipRect, paint: { shadowColor, shadowBlur, shadowOffsetY, strokeStyle, lineWidth, globalAlpha } });
   }
 
   restore(): void {
@@ -53,6 +64,7 @@ export class RecordingContext {
     this.filter = state.filter;
     this.fillStyle = state.fillStyle;
     this.clipRect = state.clip;
+    Object.assign(this, state.paint);
   }
 
   get savedStateCount(): number {
@@ -79,8 +91,21 @@ export class RecordingContext {
     this.pathRect = [x, y, width, height];
   }
 
+  roundRect(x: number, y: number, width: number, height: number, radius: number): void {
+    this.pathRect = [x, y, width, height];
+    this.rounded.push({ rect: [x, y, width, height], radius });
+  }
+
   clip(): void {
     this.clipRect = this.pathRect;
+  }
+
+  fill(): void {
+    this.pathFills.push({ rect: this.pathRect, fillStyle: this.fillStyle, alpha: this.globalAlpha });
+  }
+
+  strokeRect(...coordinates: number[]): void {
+    this.strokes.push({ coordinates, strokeStyle: this.strokeStyle, lineWidth: this.lineWidth });
   }
 
   drawImage(source: unknown, ...coordinates: number[]): void {
@@ -90,10 +115,12 @@ export class RecordingContext {
 
   fillRect(...coordinates: number[]): void {
     this.fills.push({ coordinates, filter: this.filter });
+    if (this.shadowBlur > 0) this.shadowFills.push({ coordinates, blur: this.shadowBlur });
   }
 
-  fillText(text: string): void {
+  fillText(text: string, x = 0, y = 0): void {
     this.texts.push({ text, filter: this.filter });
+    this.textDraws.push({ text, font: this.font, align: this.textAlign, x, y, fillStyle: this.fillStyle });
   }
 
   createLinearGradient(): { addColorStop: (offset: number, colour: string) => void } {

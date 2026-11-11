@@ -5,7 +5,7 @@ import { ROOM_LIMITS, type RoomCapture, type RoomState } from "../server/room-co
 import { RoomEngineV2, type RoomEngineV2Options, type RoomV2Status } from "./engine-v2";
 import { registerRoomScopeCloser } from "./scope-lifecycle";
 import { createRoomApi, validateRoomState, type RoomApi } from "./signaling-v2";
-import { acceptRecipeCommit, chooseRecipeReconnect, initialRecipeCommit, RecipeCoordinator, type RecipeCommit, type RecipeContext, type RecipeEdit, type RecipeProposal } from "./recipe-v2";
+import { acceptRecipeCommit, chooseRecipeReconnect, initialRecipeCommit, RecipeCoordinator, recipeSchemaFor, type RecipeCommit, type RecipeContext, type RecipeEdit, type RecipeProposal } from "./recipe-v2";
 import { captureRoomOriginal, roomCaptureProfile, roomIceServers } from "./workspace-capture";
 import { openRoomWorkspaceStore, type RoomWorkspaceBinding, type RoomWorkspaceStore } from "./workspace-store";
 
@@ -330,7 +330,7 @@ export class RoomWorkspaceController {
   async edit(edit: RecipeEdit) {
     const { recipe, room } = this.snapshot;
     if (!recipe || this.snapshot.capturing || this.snapshot.pendingProposal || this.snapshot.recoveryRecipe || this.pendingWrite) throw new Error("not_ready");
-    const proposal: RecipeProposal = { schemaVersion: 1, id: crypto.randomUUID(), baseRevision: recipe.revision, edit };
+    const proposal: RecipeProposal = { schemaVersion: edit.kind === "shared" ? recipeSchemaFor(edit.patch) : 1, id: crypto.randomUUID(), baseRevision: recipe.revision, edit };
     if (room.selfId === room.hostId) await this.commitProposal(proposal, room.selfId);
     else {
       if (!this.engine) throw new Error("not_ready");

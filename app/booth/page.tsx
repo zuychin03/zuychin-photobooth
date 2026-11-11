@@ -18,13 +18,15 @@ import { useCuratedAssets } from "@/hooks/useCuratedAssets";
 import { captureFrame } from "@/lib/capture";
 import { runCaptureSequence } from "@/lib/capture-sequence";
 import { getFilter } from "@/lib/filters";
-import { LAYOUTS, getLayout } from "@/lib/layouts";
+import { LAYOUTS, getLayout, shotAspect } from "@/lib/layouts";
+import { LayoutPicker } from "@/components/LayoutPicker";
 import { playShutter, playTick } from "@/lib/sound";
 import { useBoothSession } from "@/lib/session";
 import type { ProjectCaptureSettings } from "@/lib/projects/model";
 import { templateFromProject } from "@/lib/templates/from-project";
 
 const pause = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms));
+const SOLO_LAYOUTS = LAYOUTS.filter(item => item.mode === "solo");
 const SoloMotionStudio = dynamic(() => import("@/components/SoloMotionStudio"), { ssr: false });
 type PendingShot = ({ index: number; canvas: HTMLCanvasElement } | { index: number; blob: Blob }) & { projectId: string };
 
@@ -71,6 +73,7 @@ export default function BoothPage() {
   const indices = Array.from({ length: requiredShots }, (_, index) => index);
   const missing = indices.filter(index => !session.shots.A[index]);
   const complete = missing.length === 0;
+  const frameAspect = shotAspect(layout, missing[0] ?? 0);
   const retakeTargets = indices.filter(index => retakeSelection?.projectId === project?.id && retakeSelection?.indices.includes(index) && session.shots.A[index]);
   const clearRetake = (index: number) => setRetakeSelection(value => value && value.projectId === project?.id ? { ...value, indices: value.indices.filter(item => item !== index) } : value);
   const focusSavedPhotos = () => requestAnimationFrame(() => savedPhotosHeading.current?.focus({ preventScroll: true }));
@@ -241,7 +244,7 @@ export default function BoothPage() {
     try {
       const editorPatch = { layoutId, ...(getLayout(layoutId).shots !== 4 ? { story: null } : {}) };
       if ((project?.capturedAt || project?.media.some(item => item.kind === "photo"))) await editProject(editorPatch);
-      else await updateCapture({ requiredShots: getLayout(layoutId).shots as 3 | 4 }, editorPatch);
+      else await updateCapture({ requiredShots: getLayout(layoutId).shots as ProjectCaptureSettings["requiredShots"] }, editorPatch);
     } catch (error) { setFailure(explain(error)); }
     finally { operation.current = false; setBusy(false); }
   };
@@ -288,9 +291,9 @@ export default function BoothPage() {
             <button onClick={retry} disabled={busy} className="btn btn-glass mt-2"><RefreshCcw size={18} aria-hidden /> Try camera again</button>
           </div>
         ) : (
-          <div className="relative w-[min(100%,max(24dvh,calc(100dvh_-_23rem))*var(--cell-ar))] overflow-hidden rounded-[1.75rem] bg-black shadow-2xl shadow-black/40 md:w-[min(100%,calc((100dvh_-_var(--app-nav-height,0px)_-_14rem)_*_var(--cell-ar)))]" style={{ aspectRatio: layout.cellAspect, "--cell-ar": layout.cellAspect } as React.CSSProperties}>
+          <div className="relative w-[min(100%,max(24dvh,calc(100dvh_-_23rem))*var(--cell-ar))] overflow-hidden rounded-[1.75rem] bg-black shadow-2xl shadow-black/40 md:w-[min(100%,calc((100dvh_-_var(--app-nav-height,0px)_-_14rem)_*_var(--cell-ar)))]" style={{ aspectRatio: frameAspect, "--cell-ar": frameAspect } as React.CSSProperties}>
             <CameraPreview videoRef={attachVideo} mirror={capture.mirror} filterCss={filter.css} />
-            {referenceCanvas && project?.editor.thenNow && <ThenNowGhost reference={referenceCanvas} plan={project.editor.thenNow} aspect={layout.cellAspect} />}
+            {referenceCanvas && project?.editor.thenNow && <ThenNowGhost reference={referenceCanvas} plan={project.editor.thenNow} aspect={frameAspect} />}
             {!ready && <div className="absolute inset-0 flex items-center justify-center gap-2 text-sm font-bold text-white/80"><LoaderCircle size={18} className="animate-spin motion-reduce:animate-none" aria-hidden />Starting camera…</div>}
             <Countdown value={count} /><CaptureFlash trigger={flash} />
             {activePose && <p aria-live="polite" className="glass absolute inset-x-3 bottom-3 rounded-2xl px-3 py-2 text-center text-sm font-bold text-white md:hidden">{activePose.prompt}</p>}
@@ -338,17 +341,11 @@ export default function BoothPage() {
           {(failure || storageError) && <p role="alert" className="notice border border-destructive/30 bg-destructive/10 font-bold md:hidden">{failure ?? storageError}</p>}
           {project?.editor.template ? <p className="panel p-4 text-sm text-muted-foreground">This template takes {requiredShots} photos.</p> : <section aria-labelledby="booth-layout-title" className="panel p-4 sm:p-5">
             <h3 id="booth-layout-title" className="font-display text-[1.0625rem]">Layout</h3>
-            <div className="mt-3 grid grid-cols-3 gap-2">
-              {LAYOUTS.filter(item => item.mode === "solo").map(item => <button key={item.id} disabled={busy || Boolean(pending) || Boolean((project?.capturedAt || project?.media.some(item => item.kind === "photo")))} onClick={() => void changeLayout(item.id)} className={`flex flex-col items-center gap-2 rounded-2xl px-2 py-3 text-center disabled:opacity-60 ${session.layoutId === item.id ? "bg-accent/15 text-foreground shadow-[inset_0_0_0_2px_var(--accent)]" : "bg-muted text-muted-foreground"}`}>
-                <span aria-hidden className="flex h-12 items-center"><span className="grid gap-[3px]" style={{ gridTemplateColumns: `repeat(${item.cols}, 0.875rem)` }}>{Array.from({ length: item.rows * item.cols }, (_, cell) => <span key={cell} className={`rounded-[3px] ${session.layoutId === item.id ? "bg-accent" : "bg-current opacity-60"}`} style={{ aspectRatio: item.cellAspect }} />)}</span></span>
-                <span className="text-xs leading-tight font-bold">{item.name}</span>
-                <span className="text-[0.6875rem] tabular-nums">{item.shots} photos</span>
-              </button>)}
-            </div>
+            <div className="mt-3"><LayoutPicker label="Layout" layouts={SOLO_LAYOUTS} value={session.layoutId} disabled={busy || Boolean(pending) || Boolean((project?.capturedAt || project?.media.some(item => item.kind === "photo")))} onChange={id => void changeLayout(id)} /></div>
           </section>}
           {curated.loading && <p role="status" className="notice text-muted-foreground">Loading artwork…</p>}
           {curated.fallback.length > 0 && <p role="status" className="notice text-muted-foreground">Couldn&apos;t load {curated.fallback.join(", ")}. Using a built-in background.</p>}
-          {project && <div id="photo-story" ref={storyAnchor} tabIndex={-1} aria-label="Photo story" className="scroll-mt-4 rounded-[1.5rem] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"><StoryGuide className="panel p-4 sm:p-5" plan={project.editor.story ?? null} members={project.participants.map(person => ({ id: person.id, name: "You" }))} activeStep={busy ? storyIndex : undefined} disabled={busy || Boolean(pending) || Boolean((project.capturedAt !== null || project.media.some(item => item.kind === "photo"))) || Boolean(project.editor.template && requiredShots !== 4)} onChange={story => void changeStory(story)} /></div>}
+          {project && requiredShots === 4 && <div id="photo-story" ref={storyAnchor} tabIndex={-1} aria-label="Photo story" className="scroll-mt-4 rounded-[1.5rem] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"><StoryGuide className="panel p-4 sm:p-5" plan={project.editor.story ?? null} members={project.participants.map(person => ({ id: person.id, name: "You" }))} activeStep={busy ? storyIndex : undefined} disabled={busy || Boolean(pending) || Boolean((project.capturedAt !== null || project.media.some(item => item.kind === "photo")))} onChange={story => void changeStory(story)} /></div>}
           <CaptureSettings value={capture} cameras={cameras} disabled={busy || Boolean(pending)} onChange={patch => void changeCapture(patch)} />
           <section aria-labelledby="booth-filter-title" className="panel p-4 sm:p-5">
             <h3 id="booth-filter-title" className="font-display text-[1.0625rem]">Filter</h3>

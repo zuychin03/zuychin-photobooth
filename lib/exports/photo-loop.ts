@@ -1,11 +1,12 @@
 import { composeStrip, compositionSize, type ComposeInput } from "../compose";
+import { RESOURCE_LIMITS } from "../projects/resource-bounds";
 import { ExportJob, createExportCanvas, encodeExportCanvas, releaseExportCanvas } from "./still";
 
 export async function createPhotoLoopFrames(input: ComposeInput, signal?: AbortSignal): Promise<Blob[]> {
   if (["B", "C", "D"].some(role => input.shots[role as "B" | "C" | "D"]?.some(Boolean))) throw new Error("Photo loops only work in solo projects for now.");
   const originals = input.shots.A ?? [];
   const sources = originals.map((photo, index) => ({ photo, index, cutout: input.cutouts?.A?.[index] ?? null })).filter(item => item.photo && item.photo.width > 0 && item.photo.height > 0);
-  if (sources.length < 2 || sources.length > 4) throw new Error("Add two to four photos to make a photo loop.");
+  if (sources.length < 2 || sources.length > RESOURCE_LIMITS.soloSources) throw new Error("Add two to eight photos to make a photo loop.");
   const job = new ExportJob({ signal }), canvas = createExportCanvas(), frames: Blob[] = [];
   const size = compositionSize(input), scale = Math.min(1, 640 / Math.max(size.width, size.height));
   let bytes = 0;

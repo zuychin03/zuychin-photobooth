@@ -2,6 +2,7 @@ export const RESOURCE_LIMITS = Object.freeze({
   manifestBytes: 64 * 1024,
   participants: 4,
   sourcesPerParticipant: 4,
+  soloSources: 8,
   photoSlots: 16,
   textLayers: 16,
   textCodePoints: 500,
@@ -94,9 +95,9 @@ function unique(id: string, seen: Set<string>, path: string): string {
   return id;
 }
 
-function sourceIds(value: unknown, path: string): readonly string[] {
+function sourceIds(value: unknown, path: string, max: number = RESOURCE_LIMITS.sourcesPerParticipant): readonly string[] {
   const seen = new Set<string>();
-  return Object.freeze(list(value, 1, RESOURCE_LIMITS.sourcesPerParticipant, path)
+  return Object.freeze(list(value, 1, max, path)
     .map((id, index) => unique(identifier(id, `${path}[${index}]`), seen, path)));
 }
 
@@ -154,7 +155,7 @@ export function validateResourceManifest(value: unknown, builtinStickerIds: Read
       const path = `resources.participants[${index}]`;
       const item = record(value, ["id", "sourceIds"], path);
       const id = unique(identifier(item.id, `${path}.id`), participantIds, `${path}.id`);
-      const sources = sourceIds(item.sourceIds, `${path}.sourceIds`);
+      const sources = sourceIds(item.sourceIds, `${path}.sourceIds`, input.mode === "solo" ? RESOURCE_LIMITS.soloSources : RESOURCE_LIMITS.sourcesPerParticipant);
       for (const sourceId of sources) {
         if (byId.get(sourceId)?.kind !== "photo") fail(`${path}.sourceIds`, "Source must reference a declared photo");
         unique(sourceId, ownedSources, `${path}.sourceIds`);
