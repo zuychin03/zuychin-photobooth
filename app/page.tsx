@@ -28,7 +28,7 @@ export default function Home() {
 
   return (
     <main className="relative flex min-h-dvh flex-1 flex-col">
-      <div className="mx-auto grid w-full max-w-6xl flex-1 content-center items-center gap-8 px-4 pt-4 pb-10 sm:px-8 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)] lg:gap-12 lg:pt-8">
+      <div className="mx-auto grid w-full max-w-6xl flex-1 content-center items-center gap-8 px-4 pt-10 pb-10 sm:px-8 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)] lg:gap-12 lg:pt-8">
         <div className="@container flex w-full min-w-0 max-w-xl flex-col justify-self-center lg:max-w-2xl lg:justify-self-start">
           {/* "your photo stories" is ~9.4em wide in Mochiy, so this keeps each clause on one line. */}
           <h1 className="hero-animate hero-animate-delay-1 font-display text-[min(4.5rem,calc(100cqi/9.6))] leading-[1.1]">
@@ -47,7 +47,7 @@ export default function Home() {
               <ArrowRight size={20} aria-hidden className="transition-transform group-hover:translate-x-1" />
             </button>
 
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <button type="button" onClick={createRoom} className="btn btn-glass min-h-14 justify-start px-5">
                 <Heart size={20} strokeWidth={2.25} aria-hidden className="text-accent" /> Create a room
               </button>
@@ -67,7 +67,7 @@ export default function Home() {
                   autoComplete="off"
                   spellCheck={false}
                   autoCapitalize="characters"
-                  className={`min-h-11 min-w-0 flex-1 rounded-md bg-transparent text-lg font-black tracking-[0.24em] uppercase outline-none placeholder-shown:text-base placeholder:font-bold placeholder:tracking-normal placeholder:normal-case placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring ${joinError ? "text-destructive" : ""}`}
+                  className={`min-h-11 w-0 min-w-0 flex-1 rounded-md bg-transparent text-lg font-black tracking-[0.24em] uppercase outline-none placeholder-shown:text-base placeholder:font-bold placeholder:tracking-normal placeholder:normal-case placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring ${joinError ? "text-destructive" : ""}`}
                 />
                 <button type="button" onClick={joinRoom} className="btn btn-partner min-h-11 px-4">
                   Join
