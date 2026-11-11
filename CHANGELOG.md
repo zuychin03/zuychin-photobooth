@@ -63,7 +63,7 @@
 
 ## 2.0.0 (25/09/2026, friends release)
 
-Limited release of V2's local creation tools. The full V2 implementation covers Create, Together and Events; online features stay behind Feature incoming until their separate activation and acceptance. Physical-device and full hosted-release checks remain pending.
+Limited release of V2's local creation tools. The full V2 implementation covers Create, Together and Events; online features stay behind Feature incoming until their separate activation and acceptance.
 
 - Production defaults to `PB_RELEASE_MODE=local`: solo capture, editing, exports, device projects and templates remain available without database setup. Shared incoming views and server checks block new online work while preserving existing private receipts, authenticated maintenance and locked-kiosk recovery. Previously stored cloud media still requires compatible schema and retention services.
 - Shared navigation uses the app's two-colour wordmark, a sticky desktop pill and a floating mobile bar with icons and labels. Account controls stay hidden in the friends release.
