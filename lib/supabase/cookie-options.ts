@@ -8,5 +8,6 @@ import type { CookieOptionsWithName } from "@supabase/ssr";
 // correct there, and a mismatched domain would be rejected by the browser.
 export function authCookieOptions(): CookieOptionsWithName | undefined {
   const domain = process.env.NEXT_PUBLIC_COOKIE_DOMAIN;
-  return domain ? { domain } : undefined;
+  // Every subdomain receives a parent-domain cookie, so never send it over plain HTTP.
+  return domain ? { domain, secure: true } : undefined;
 }
