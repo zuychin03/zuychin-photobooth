@@ -6,7 +6,7 @@ import { loadRelayOriginals, relayFrameOriginal, saveRelayOriginals } from "@/li
 import { openProjectRepository } from "@/lib/projects/storage";
 import { projectBlobHash } from "@/lib/projects/bundle";
 
-const button = "min-h-11 rounded-xl border px-4 disabled:opacity-40";
+const button = "min-h-11 rounded-full border px-4 disabled:opacity-40";
 export default function RelayRecoveryRehearsal() {
   const [files, setFiles] = useState<File[] | null>(null), [originals, setOriginals] = useState<Blob[]>([]), [initial, setInitial] = useState<Blob[]>([]), [mount, setMount] = useState(0);
   const [failSave, setFailSave] = useState(true), [failSecond, setFailSecond] = useState(false), [busy, setBusy] = useState(false), [status, setStatus] = useState("Not started.");

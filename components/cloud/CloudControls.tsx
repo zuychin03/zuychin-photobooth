@@ -1,6 +1,6 @@
 import { ArrowLeft } from "lucide-react";
 
-export const cloudControl = "inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 text-sm font-medium transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-50";
+export const cloudControl = "inline-flex min-h-11 items-center justify-center gap-2 rounded-full px-4 text-sm font-medium transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-50";
 export const cloudInput = "min-h-11 w-full rounded-xl border border-border bg-card px-3 text-base outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring";
 export const cloudSize = (bytes: number) => bytes < 1024 * 1024 ? `${(bytes / 1024).toLocaleString("en-AU", { maximumFractionDigits: 1 })} KiB` : `${(bytes / 1024 / 1024).toLocaleString("en-AU", { maximumFractionDigits: 1 })} MiB`;
 export function cloudError(error: unknown): string {

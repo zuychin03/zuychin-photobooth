@@ -33,7 +33,7 @@ export function SyntheticTogether() {
     void apply().catch(reason => { if (live) setError(reason instanceof Error ? reason.message : "Synthetic playback failed."); });
     return () => { live = false; };
   }, [ready, together, paused, missing]);
-  const button = "min-h-11 rounded-lg border border-border px-4 text-sm disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent";
+  const button = "min-h-11 rounded-full border border-border px-4 text-sm disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent";
   return <section aria-labelledby="together-fixture-heading" className="space-y-4 border-b border-border py-7">
     <h2 id="together-fixture-heading" className="text-lg font-semibold">P5 shared preview interface</h2>
     <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">Coloured silhouettes exercise two- and four-person placement without a camera. Start the sources, then explicitly try Together to load the local segmentation model. This fixture does not prove real human edges or phone performance.</p>

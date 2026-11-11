@@ -10,7 +10,7 @@ const choices = [
   ...Array.from({ length: 16 }, (_, index) => ({ value: `camera-${index}`, label: `Camera ${index + 1}` })),
   { value: "zulu", label: "Zulu camera" },
 ];
-const button = "min-h-11 rounded-xl border border-border px-4 py-2 text-sm focus-visible:outline-2 focus-visible:outline-ring";
+const button = "min-h-11 rounded-full border border-border px-4 py-2 text-sm focus-visible:outline-2 focus-visible:outline-ring";
 
 function RehearsalDialog({ close }: { close(): void }) {
   const dialog = useRef<HTMLDialogElement>(null);

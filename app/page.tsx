@@ -67,7 +67,7 @@ export default function Home() {
                   autoComplete="off"
                   spellCheck={false}
                   autoCapitalize="characters"
-                  className={`min-h-11 min-w-0 flex-1 rounded-md bg-transparent text-lg font-black tracking-[0.24em] uppercase outline-none placeholder:text-base placeholder:font-bold placeholder:tracking-normal placeholder:normal-case placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring ${joinError ? "text-destructive" : ""}`}
+                  className={`min-h-11 min-w-0 flex-1 rounded-md bg-transparent text-lg font-black tracking-[0.24em] uppercase outline-none placeholder-shown:text-base placeholder:font-bold placeholder:tracking-normal placeholder:normal-case placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring ${joinError ? "text-destructive" : ""}`}
                 />
                 <button type="button" onClick={joinRoom} className="btn btn-partner min-h-11 px-4">
                   Join

@@ -550,7 +550,7 @@ function CustomizeWorkspace({ project }: { project: PhotoProject }) {
   </>;
 
   return (
-    <main className="strip-editor flex h-[calc(100dvh-var(--app-nav-height,0px)-var(--app-bottom-nav-height,0px))] flex-col overflow-hidden md:flex-row md:items-stretch md:justify-center" aria-busy={restoring || saving || saveState === "saving"} inert={restoring || saving || saveState === "saving"} onKeyDown={event => {
+    <main className="strip-editor relative flex h-[calc(100dvh-var(--app-nav-height,0px)-var(--app-bottom-nav-height,0px))] flex-col overflow-hidden md:flex-row md:items-stretch md:justify-center" aria-busy={restoring || saving || saveState === "saving"} inert={restoring || saving || saveState === "saving"} onKeyDown={event => {
       if (!(event.ctrlKey || event.metaKey) || event.altKey || restoring || exportOpen || saving) return;
       const target = event.target as HTMLElement;
       if (target.matches("input, textarea, select, [contenteditable='true']")) return;
@@ -844,7 +844,7 @@ function CustomizeWorkspace({ project }: { project: PhotoProject }) {
                   key={def.slug}
                   onClick={() => addSticker(def)}
                   aria-label={def.slug.replaceAll("_", " ")}
-                  className="flex h-11 items-center justify-center rounded-xl hover:bg-card"
+                  className="flex h-11 items-center justify-center rounded-full hover:bg-card"
                 >
                   {stickerStyle === "noto" ? (
                     <span

@@ -467,7 +467,7 @@ function TimelineContent() {
                         value={joinInput}
                         onChange={(e) => setJoinInput(normalizeRoomCode(e.target.value))}
                         placeholder="Enter code"
-                        className="field min-h-12 min-w-0 flex-1 text-lg font-black tracking-[0.24em] uppercase placeholder:text-base placeholder:font-bold placeholder:tracking-normal placeholder:normal-case placeholder:text-muted-foreground"
+                        className="field min-h-12 min-w-0 flex-1 text-lg font-black tracking-[0.24em] uppercase placeholder-shown:text-base placeholder:font-bold placeholder:tracking-normal placeholder:normal-case placeholder:text-muted-foreground"
                       />
                       <button
                         onClick={handleJoin}
@@ -523,7 +523,7 @@ function TimelineContent() {
                         <button
                           key={r.id}
                           onClick={() => router.push(`/relay/${r.id}`)}
-                          className={`flex min-h-12 w-full items-center justify-between gap-3 rounded-2xl px-4 py-3 text-left text-sm transition-colors ${
+                          className={`flex min-h-12 w-full items-center justify-between gap-3 rounded-full px-4 py-3 text-left text-sm transition-colors ${
                             myTurn ? "bg-accent/12 shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--accent)_35%,transparent)]" : "bg-muted/70 hover:bg-muted"
                           }`}
                         >

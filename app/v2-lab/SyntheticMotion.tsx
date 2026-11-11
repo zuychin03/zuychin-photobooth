@@ -27,7 +27,7 @@ export function SyntheticMotion() {
     <canvas ref={canvas} width={640} height={360} className="hidden" />
     <video ref={video} muted playsInline aria-label="Synthetic camera feed" className={running ? "max-h-48 rounded-xl" : "hidden"} />
     {error && <p role="alert">{error}</p>}
-    <div className="flex flex-wrap gap-3"><button type="button" onClick={() => { setOpen(false); setReady(false); setError(null); setRunning(value => !value); }} className="min-h-11 rounded-lg border border-border px-4 text-sm">{running ? "Stop synthetic camera" : "Start synthetic camera"}</button>{running && <button type="button" disabled={!ready} onClick={() => setOpen(true)} className="min-h-11 rounded-lg bg-accent px-4 text-sm text-accent-foreground disabled:opacity-50">Open synthetic motion studio</button>}</div>
+    <div className="flex flex-wrap gap-3"><button type="button" onClick={() => { setOpen(false); setReady(false); setError(null); setRunning(value => !value); }} className="min-h-11 rounded-full border border-border px-4 text-sm">{running ? "Stop synthetic camera" : "Start synthetic camera"}</button>{running && <button type="button" disabled={!ready} onClick={() => setOpen(true)} className="min-h-11 rounded-full bg-accent px-4 text-sm text-accent-foreground disabled:opacity-50">Open synthetic motion studio</button>}</div>
     {open && <SoloMotionStudio getVideo={getVideo} mirror={false} filterId="none" name="synthetic-solo-motion" close={() => setOpen(false)} />}
   </section>;
 }

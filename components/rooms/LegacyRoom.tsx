@@ -667,7 +667,7 @@ function RoomInner({ rehearsal }: { rehearsal?: LegacyRoomRehearsal }) {
                   </span>
                   <button
                     onClick={() => applyScene(null, true)}
-                    className={`min-h-11 shrink-0 rounded-2xl border-2 px-3 text-xs font-bold ${
+                    className={`min-h-11 shrink-0 rounded-full border-2 px-4 text-xs font-bold ${
                       roomScene === null ? "border-accent" : "border-border"
                     }`}
                   >
@@ -679,7 +679,7 @@ function RoomInner({ rehearsal }: { rehearsal?: LegacyRoomRehearsal }) {
                       onClick={() => applyScene(s.id, true)}
                       title={s.name}
                       aria-label={s.name}
-                      className={`h-11 w-16 shrink-0 overflow-hidden rounded-2xl border-2 ${
+                      className={`h-11 w-16 shrink-0 overflow-hidden rounded-full border-2 ${
                         roomScene === s.id ? "border-accent" : "border-border"
                       }`}
                       style={{ background: s.previewCss }}

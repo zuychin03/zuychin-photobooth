@@ -60,7 +60,7 @@ export default function FeasibilityLab() {
     setBusy(false);
     running.current = false;
   }
-  const button = "rounded-lg border border-border bg-card px-4 py-3 text-sm font-medium disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent";
+  const button = "rounded-full border border-border bg-card px-4 py-3 text-sm font-medium disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent";
   return (
     <main className="mx-auto w-full max-w-5xl px-6 py-10 sm:py-16">
       <div className="flex flex-wrap gap-4">

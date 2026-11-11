@@ -315,7 +315,7 @@ export default function BoothPage() {
           {complete && retakeTargets.length === 0 && <button disabled={busy || Boolean(pending)} onClick={() => void nextRound()} className="btn glass-strong min-h-10 text-sm">Go again with the same settings</button>}
         </div>}
       </div>
-      <div className="z-40 flex shrink-0 flex-col gap-4 px-4 pb-6 md:w-96 md:overflow-y-auto md:overscroll-contain md:py-6 md:pr-6 md:pl-0">
+      <div className="relative z-40 flex shrink-0 flex-col gap-4 px-4 pb-6 md:w-96 md:overflow-y-auto md:overscroll-contain md:py-6 md:pr-6 md:pl-0">
         {(failure || storageError) && <div role="alert" className="notice border border-destructive/30 bg-destructive/10"><p className="font-bold break-words">{failure ?? storageError}</p>{pending && <><p className="mt-1 text-muted-foreground">This shot hasn&apos;t saved yet.</p><div className="mt-3 flex flex-wrap gap-2"><button disabled={busy || downloadingPending} onClick={() => void retryPending()} className="btn btn-primary min-h-10 text-sm">Try saving again</button><button disabled={busy || downloadingPending} onClick={() => void downloadUnsavedPhoto()} className="btn btn-quiet min-h-10 text-sm">{downloadingPending ? "Preparing download…" : "Download this photo"}</button><button disabled={busy || downloadingPending} onClick={() => { setPending(null); setFailure(null); }} className="btn btn-plain min-h-10 text-sm text-destructive">Discard it</button></div></>}</div>}
         {capture && <>
           <div className="panel p-3 sm:p-4">
