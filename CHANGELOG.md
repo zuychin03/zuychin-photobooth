@@ -1,5 +1,12 @@
 # Changelog
 
+## Security fixes (unreleased)
+
+- Partner push notifications only go to the push services the subscribe path already accepts, and give up after 10 seconds.
+- `/api/push/notify` refuses requests from other origins, like the V2 routes. It needs `PB_PUBLIC_ORIGIN`, which the deploy env already sets.
+- The shared session cookie is `Secure` whenever `NEXT_PUBLIC_COOKIE_DOMAIN` is set.
+- `deploy/` is gitignored.
+
 ## 3.0.0 (unreleased, V3 strip variations)
 
 - Layouts are rows of cells with one shared geometry (`stripGeometry`) used by compose, templates, exports and rooms. The nine V2 layouts render pixel-identical.
