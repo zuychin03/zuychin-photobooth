@@ -2,6 +2,15 @@
   "name": "zuychin-photobooth",
   "version": "3.0.0",
   "private": true,
+  "description": "A browser photobooth for solo strips, live rooms and events.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zuychin03/zuychin-photobooth.git"
+  },
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",

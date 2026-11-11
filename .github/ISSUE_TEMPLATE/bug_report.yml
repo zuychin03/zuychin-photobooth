@@ -1,0 +1,74 @@
+name: Bug report
+description: Something doesn't work as it should.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug. For a security problem, use the private report on the Security tab instead.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What you saw, including any error message.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open the booth
+        2. Import two photos
+        3. ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect?
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Solo booth
+        - Strip editor or export
+        - Projects or templates
+        - Live room or relay
+        - Accounts, Shared Vault or memories
+        - Events
+        - Install, offline or notifications
+        - Self-hosting or database
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: device
+    attributes:
+      label: Device and browser
+      placeholder: e.g. Pixel 8, Chrome 141, or Windows 11, Edge 141
+    validations:
+      required: true
+  - type: dropdown
+    id: mode
+    attributes:
+      label: Release mode
+      description: The `PB_RELEASE_MODE` of the deployment, if you know it.
+      options:
+        - local
+        - full
+        - recovery
+        - Not sure
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit
+      placeholder: e.g. 3.0.0 or a commit hash
+  - type: textarea
+    id: extra
+    attributes:
+      label: Screenshots or logs
+      description: Remove any personal photos, tokens or links before posting.

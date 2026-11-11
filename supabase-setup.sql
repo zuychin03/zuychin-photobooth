@@ -2,10 +2,10 @@
 -- ZUYCHIN-PHOTOBOOTH: legacy baseline plus P1 lifecycle setup
 -- Operator-reviewed SQL; this file does not install the full V2 schema.
 --
--- Fresh installations apply this baseline, then numbered migrations 002-028
+-- Fresh installations apply this baseline, then numbered migrations 002-029
 -- in order. Existing installations apply only their reviewed missing steps.
 -- Do not replay this baseline over later V2 replacements independently.
--- See README "V2 database and activation sequence" before hosted application.
+-- See docs/SELF_HOSTING.md before hosted application.
 --
 -- Includes identity, pairing, vault, relays, photo dates and migration 001.
 -- Tables are pb_-prefixed; an existing profiles identity table is preserved.
