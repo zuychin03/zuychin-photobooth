@@ -1,5 +1,6 @@
 import webpush from "web-push";
 import { createAdminClient } from "./supabase/admin";
+import { validPushEndpoint } from "./push-endpoint";
 
 // Server-side web push. Sends run as the service role so they work from cron
 // routes and on behalf of whichever partner triggered the event.
@@ -30,11 +31,41 @@ function ensureConfigured(): void {
   configured = true;
 }
 
-interface SubscriptionRow {
+export interface SubscriptionRow {
   id: string;
   endpoint: string;
   p256dh: string;
   auth: string;
+}
+
+export type SendPush = (subscription: SubscriptionRow, body: string) => Promise<unknown>;
+
+const sendWebPush: SendPush = (sub, body) => webpush.sendNotification(
+  { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
+  body,
+  { timeout: 10_000 },
+);
+
+/** Subscription rows are written by browsers, so only allow-listed push services are contacted. */
+export async function deliverPush(
+  rows: SubscriptionRow[],
+  payload: PushPayload,
+  send: SendPush = sendWebPush,
+): Promise<{ sent: number; stale: string[] }> {
+  const body = JSON.stringify(payload);
+  let sent = 0;
+  const stale: string[] = [];
+  for (const sub of rows) {
+    if (!validPushEndpoint(sub.endpoint)) continue;
+    try {
+      await send(sub, body);
+      sent++;
+    } catch (err) {
+      const status = (err as { statusCode?: number }).statusCode;
+      if (status === 404 || status === 410) stale.push(sub.id);
+    }
+  }
+  return { sent, stale };
 }
 
 /** Send a notification to every subscribed browser of the given users.
@@ -54,20 +85,7 @@ export async function sendPushToUsers(
     .select("id, endpoint, p256dh, auth")
     .in("owner", targets);
 
-  let sent = 0;
-  const stale: string[] = [];
-  for (const sub of (data as SubscriptionRow[]) ?? []) {
-    try {
-      await webpush.sendNotification(
-        { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
-        JSON.stringify(payload),
-      );
-      sent++;
-    } catch (err) {
-      const status = (err as { statusCode?: number }).statusCode;
-      if (status === 404 || status === 410) stale.push(sub.id);
-    }
-  }
+  const { sent, stale } = await deliverPush((data as SubscriptionRow[]) ?? [], payload);
   if (stale.length > 0) {
     await supabase.from("pb_push_subscriptions").delete().in("id", stale);
   }

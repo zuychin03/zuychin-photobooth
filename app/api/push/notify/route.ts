@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { hasPush, sendPushToUsers, type PushPayload } from "@/lib/push";
+import { RequestValidationError, requireSameOrigin } from "@/lib/server/request-security";
 
 // Notify the partner about an event the signed-in user just caused. The
 // session client's RLS proves the caller can see the object, and the caller
@@ -10,6 +11,12 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
+  try {
+    requireSameOrigin(request);
+  } catch (error) {
+    const status = error instanceof RequestValidationError ? error.status : 503;
+    return NextResponse.json({ error: status === 403 ? "origin_denied" : "unavailable" }, { status });
+  }
   const { type, id } = await request.json().catch(() => ({}));
   if ((type !== "relay" && type !== "strip") || typeof id !== "string") {
     return NextResponse.json({ error: "bad request" }, { status: 400 });
