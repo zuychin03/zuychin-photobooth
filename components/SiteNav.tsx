@@ -33,7 +33,8 @@ export function SiteNav() {
     const anchor = pillAnchor.current;
     if (!anchor || !(fits.current ?? matchMedia("(min-width: 768px)").matches)) { setFloatingPill(null); return; }
     const rect = anchor.getBoundingClientRect();
-    const next = rect.top < 16 ? { left: rect.left, width: rect.width, height: rect.height } : null;
+    const safeTop = Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--safe-top")) || 0;
+    const next = rect.top < 16 + safeTop ? { left: rect.left, width: rect.width, height: rect.height } : null;
     setFloatingPill(previous => previous?.left === next?.left && previous?.width === next?.width && previous?.height === next?.height ? previous : next);
   }, []);
   useLayoutEffect(() => {
@@ -128,13 +129,13 @@ export function SiteNav() {
     return locked ? <span aria-disabled="true" aria-label={accountLabel} className={`${className} opacity-40`}>{content}</span> : <Link href={accountHref} aria-label={accountLabel} title={iconOnly ? accountLabel : undefined} onNavigate={event => guard(accountHref, event)} aria-current={!user && pathname === "/login" ? "page" : undefined} className={className}>{content}</Link>;
   };
 
-  return <><div aria-hidden className="scroll-edge scroll-edge-top" data-on={floatingPill ? "" : undefined} /><header ref={header} className="site-header relative z-[45] shrink-0">
-    <div ref={row} className="flex w-full items-center justify-between gap-x-6 px-4 pt-4 pb-2 sm:px-8 md:pt-5 md:pb-4">
+  return <><div aria-hidden className="scroll-edge scroll-edge-top" data-on={floatingPill ? "" : undefined} /><div aria-hidden className="scroll-edge scroll-edge-status" data-on="" /><header ref={header} className="site-header relative z-[45] shrink-0">
+    <div ref={row} className="flex w-full items-center justify-between gap-x-6 px-4 pt-[calc(1rem+var(--safe-top))] pb-2 sm:px-8 md:pt-[calc(1.25rem+var(--safe-top))] md:pb-4">
       <div ref={brandBox} className="flex shrink-0 items-center">
         {locked ? <span className="flex min-h-11 items-center gap-2.5">{brand}</span> : <Link href="/" aria-label="Zuychin Photobooth home" onNavigate={event => guard("/", event)} className="flex min-h-11 items-center gap-2.5 rounded-lg focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring">{brand}</Link>}
       </div>
       <div ref={pillAnchor} className={`min-w-0 max-w-full ${topFits === null ? pillMeasuredBelowMd : topFits ? "" : pillMeasuredOnly}`} style={floatingPill ? { width: floatingPill.width, height: floatingPill.height } : undefined}>
-      <nav ref={pill} aria-label="Main navigation" style={floatingPill ? { position: "fixed", top: 16, left: floatingPill.left, width: floatingPill.width } : undefined} className="glass flex w-full min-w-0 max-w-full items-center rounded-full px-1.5 text-sm">
+      <nav ref={pill} aria-label="Main navigation" style={floatingPill ? { position: "fixed", top: "calc(1rem + var(--safe-top))", left: floatingPill.left, width: floatingPill.width } : undefined} className="glass flex w-full min-w-0 max-w-full items-center rounded-full px-1.5 text-sm">
         {scrollState.overflow && <button type="button" aria-label="Scroll menu to start" aria-controls={scrollId} title="First options" disabled={scrollState.atStart} onClick={() => scrollToEdge(false)} className={scrollButtonStyle}><ChevronLeft size={18} aria-hidden /></button>}
         <div ref={scroller} id={scrollId} onScroll={measureScroll} onFocusCapture={revealFocusedOption} className="scrollbar-hide min-w-0 flex-1 overflow-x-auto overscroll-x-contain rounded-full py-1.5">
           <div ref={options} className="relative flex w-max items-center gap-0.5">
