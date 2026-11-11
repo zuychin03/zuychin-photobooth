@@ -56,7 +56,6 @@ desktop.ini
 
 # local notes and external documents
 *.local.md
-CHANGELOG.md
 ROADMAP.md
 DESIGN.md
 /notes/
