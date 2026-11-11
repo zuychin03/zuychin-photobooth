@@ -14,6 +14,8 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     // bundled third-party runtimes are not lintable source
     "public/mediapipe/**",
+    // gitignored local scratch scripts, not part of the app
+    ".tmp-*",
   ]),
 ]);
 
