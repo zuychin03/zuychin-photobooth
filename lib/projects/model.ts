@@ -12,7 +12,7 @@ import { validateCellEdit, type PhotoCellEdit } from "./transforms";
 import { RESOURCE_LIMITS, validateMediaResource, type MediaResource } from "./resource-bounds";
 import { getCuratedAsset } from "../assets/registry";
 import { templateSchemaFor, validateTemplateDesign, type TemplateDesign } from "../templates/model";
-import { isDefaultStrip, storedStrip, validateStripOptions, withStrip, type StripOptions } from "../strip-style";
+import { isDefaultStrip, isStripDay, storedStrip, validateStripOptions, withStrip, type StripOptions } from "../strip-style";
 
 export const PROJECT_SCHEMA_VERSION = 5;
 export const PROJECT_HISTORY_LIMIT = 20;
@@ -48,6 +48,8 @@ export interface ProjectEditorSettings {
   readonly exportSettings?: ProjectExportSettings;
   /** stored only when it differs from the default look */
   readonly strip?: StripOptions;
+  /** day printed instead of the capture date, as YYYY-MM-DD; stored only when chosen */
+  readonly stripDate?: string;
 }
 export interface ProjectEditSnapshot {
   readonly sourceOrder: ProjectSourceOrder;
@@ -121,7 +123,7 @@ function bytes(value: unknown): number { return new TextEncoder().encode(JSON.st
 /** V3 strip features older clients can't parse; projects that use any of them save as schema 5. */
 export function editorNeedsV5(editor: Partial<ProjectEditorSettings>): boolean {
   return (editor.layoutId !== undefined && !LAYOUTS.some(layout => layout.id === editor.layoutId && layout.legacy))
-    || storedStrip(editor.strip) !== undefined || Boolean(FRAMES.find(frame => frame.id === editor.frameId)?.v3)
+    || storedStrip(editor.strip) !== undefined || editor.stripDate !== undefined || Boolean(FRAMES.find(frame => frame.id === editor.frameId)?.v3)
     || (editor.template ? templateSchemaFor(editor.template) === 2 : false)
     || Object.values(editor.cellEdits ?? {}).some(edit => edit.sourceIndex >= RESOURCE_LIMITS.sourcesPerParticipant);
 }
@@ -137,14 +139,16 @@ const filters = FILTERS.map(item => item.id);
 
 function editor(value: unknown, mode: PhotoProject["mode"], path: string, sourceVersion: number): ProjectEditorSettings {
   const item = object(value, null, path);
-  const allowed = sourceVersion === 1 ? editorKeys : [...editorKeys, "template", "materialId", ...(sourceVersion >= 3 ? ["story", "thenNow"] : []), ...(sourceVersion >= 4 ? ["exportSettings"] : []), ...(sourceVersion >= 5 ? ["strip"] : [])];
-  if (Object.keys(item).some(key => !allowed.includes(key) && !(key === "strip" && (item.strip === undefined || isDefaultStrip(item.strip as StripOptions)))) || editorKeys.some(key => !Object.hasOwn(item, key))) fail(path, "Unexpected or missing editor fields");
+  const allowed = sourceVersion === 1 ? editorKeys : [...editorKeys, "template", "materialId", ...(sourceVersion >= 3 ? ["story", "thenNow"] : []), ...(sourceVersion >= 4 ? ["exportSettings"] : []), ...(sourceVersion >= 5 ? ["strip", "stripDate"] : [])];
+  if (Object.keys(item).some(key => !allowed.includes(key) && !(key === "strip" && (item.strip === undefined || isDefaultStrip(item.strip as StripOptions))) && !(key === "stripDate" && item.stripDate === undefined)) || editorKeys.some(key => !Object.hasOwn(item, key))) fail(path, "Unexpected or missing editor fields");
   const story = item.story == null ? null : validateStoryPlan(item.story);
   const thenNow = item.thenNow == null ? null : validateThenNowPlan(item.thenNow);
   const exportSettings = Object.hasOwn(item, "exportSettings") ? validateExportSettings(item.exportSettings) : undefined;
   // A cleared or default strip is stored by omission.
   let strip: StripOptions | undefined;
   if (item.strip !== undefined) try { strip = storedStrip(validateStripOptions(item.strip, `${path}.strip`)); } catch { fail(`${path}.strip`, "Unsupported strip style"); }
+  if (item.stripDate !== undefined && !isStripDay(item.stripDate)) fail(`${path}.stripDate`, "Expected a calendar date");
+  const stripDate = item.stripDate as string | undefined;
   const template = item.template == null ? null : validateTemplateDesign(item.template);
   const materialId = item.materialId == null ? null : id(item.materialId, `${path}.materialId`);
   if (materialId && getCuratedAsset(materialId)?.kind !== "material") fail(path, "Unknown frame material");
@@ -177,7 +181,7 @@ function editor(value: unknown, mode: PhotoProject["mode"], path: string, source
   }
   const sceneId = item.sceneId === null ? null : id(item.sceneId, `${path}.sceneId`);
   if (sceneId && !SCENES.some(scene => scene.id === sceneId) && getCuratedAsset(sceneId)?.kind !== "scene") fail(path, "Unknown scene");
-  return { frameId: choice(item.frameId, FRAMES.filter(frame => !frame.v3 || sourceVersion >= 5).map(frame => frame.id), path), layoutId, filterId: choice(item.filterId, filters, path), caption: text(item.caption, RESOURCE_LIMITS.textCodePoints, path), showDate: bool(item.showDate, path), patternId: choice(item.patternId, ["none", ...PATTERNS.map(pattern => pattern.id)], path), themeId: item.themeId === null ? null : choice(item.themeId, THEMES.map(theme => theme.id), path), sceneId, stickerStyle: choice(item.stickerStyle, STICKER_STYLES.map(style => style.id), path), places, stickers, cellEdits, ...(template ? { template } : {}), ...(materialId ? { materialId } : {}), ...(story ? { story } : {}), ...(thenNow ? { thenNow } : {}), ...(exportSettings ? { exportSettings } : {}), ...(strip ? { strip } : {}) };
+  return { frameId: choice(item.frameId, FRAMES.filter(frame => !frame.v3 || sourceVersion >= 5).map(frame => frame.id), path), layoutId, filterId: choice(item.filterId, filters, path), caption: text(item.caption, RESOURCE_LIMITS.textCodePoints, path), showDate: bool(item.showDate, path), patternId: choice(item.patternId, ["none", ...PATTERNS.map(pattern => pattern.id)], path), themeId: item.themeId === null ? null : choice(item.themeId, THEMES.map(theme => theme.id), path), sceneId, stickerStyle: choice(item.stickerStyle, STICKER_STYLES.map(style => style.id), path), places, stickers, cellEdits, ...(template ? { template } : {}), ...(materialId ? { materialId } : {}), ...(story ? { story } : {}), ...(thenNow ? { thenNow } : {}), ...(exportSettings ? { exportSettings } : {}), ...(strip ? { strip } : {}), ...(stripDate ? { stripDate } : {}) };
 }
 
 function validate(value: unknown, enforceBudget: boolean, sourceVersion?: number): PhotoProject {

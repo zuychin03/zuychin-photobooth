@@ -5,7 +5,7 @@ import { FRAMES } from "../lib/decor";
 import { getLayout, stripGeometry, type Role } from "../lib/layouts";
 import { applyProjectEdit, applyTemplateToProject, createProject, editorNeedsV5, validatePhotoProject } from "../lib/projects/model";
 import { recipeSchemaFor, validateRecipeProposal, type RecipeEdit } from "../lib/rtc/recipe-v2";
-import { DEFAULT_STRIP, formatStripDate, storedStrip, validateStripOptions, withStrip, type StripOptions } from "../lib/strip-style";
+import { DEFAULT_STRIP, formatStripDate, isStripDay, storedStrip, stripDateSource, stripDay, validateStripOptions, withStrip, type StripOptions } from "../lib/strip-style";
 import { templateFromProject } from "../lib/templates/from-project";
 import { templateSchemaFor, validateTemplateDesign, validateTemplateRecipe } from "../lib/templates/model";
 import { immutableSource, installCanvasEnvironment, RecordingCanvas } from "./helpers/recording-canvas";
@@ -164,4 +164,25 @@ test("strip styles and V3 frames need project schema 5, template v2 and recipe v
   assert.equal(validateRecipeProposal(proposal).schemaVersion, 2);
   assert.throws(() => validateRecipeProposal({ ...proposal, schemaVersion: 1 }));
   assert.equal(validateRecipeProposal(createRecipeProposal({ kind: "shared", patch: { strip: DEFAULT_STRIP } }, 0, 1)).schemaVersion, 1);
+});
+
+test("a chosen strip date prints instead of the capture date and needs project schema 5", (t) => {
+  assert(isStripDay("2024-02-29") && !isStripDay("2023-02-29") && !isStripDay("2026-1-01") && !isStripDay("1899-12-31") && !isStripDay(20240229));
+  assert.equal(stripDay("2026-11-11T15:00:00.000Z", "Australia/Sydney"), "2026-11-12");
+  assert.equal(stripDay("2026-11-11T15:00:00.000Z", "UTC"), "2026-11-11");
+  assert.deepEqual(stripDateSource(undefined, "2026-11-11T15:00:00.000Z", "Australia/Sydney"), { capturedAt: "2026-11-11T15:00:00.000Z", captureTimeZone: "Australia/Sydney" });
+  const date = (target: RecordingCanvas) => target.context.textDraws.find(item => item.text !== "Hello")!;
+  const chosen = stripDateSource("2024-02-29", "2026-11-11T15:00:00.000Z", "Pacific/Kiritimati");
+  assert.equal(date(render(t, inputFor("strip4", { ...chosen, strip: strip({ dateFormat: "long" }) }))).text, "29 Feb 2024");
+  assert.equal(date(render(t, inputFor("strip4", stripDateSource("2024-02-29", null, "UTC")))).text, "29·02·2024");
+
+  const legacy = createProject({ createdAt, captureTimeZone: "UTC" });
+  const dated = applyProjectEdit(legacy, { sourceOrder: legacy.sourceOrder, editor: { ...legacy.editor, stripDate: "2024-02-29" } }, later);
+  assert.equal(dated.schemaVersion, 5); assert.equal(dated.editor.stripDate, "2024-02-29");
+  assert.throws(() => validatePhotoProject({ ...dated, schemaVersion: 4 }), /editor/);
+  assert.throws(() => applyProjectEdit(dated, { sourceOrder: dated.sourceOrder, editor: { ...dated.editor, stripDate: "2024-02-30" } }, later), /stripDate/);
+  const cleared = applyProjectEdit(dated, { sourceOrder: dated.sourceOrder, editor: { ...dated.editor, stripDate: undefined } }, later);
+  assert(!("stripDate" in cleared.editor));
+  assert.equal(applyProjectEdit(legacy, { sourceOrder: legacy.sourceOrder, editor: { ...legacy.editor, stripDate: undefined } }, later).schemaVersion, 4);
+  assert(editorNeedsV5({ stripDate: "2024-02-29" }) && !editorNeedsV5({ stripDate: undefined }));
 });

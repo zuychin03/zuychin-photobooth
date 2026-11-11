@@ -58,7 +58,7 @@ import {
   compositionSize,
 } from "@/lib/compose";
 import { ROLES, getLayout } from "@/lib/layouts";
-import { resolveStrip, storedStrip, type StripOptions } from "@/lib/strip-style";
+import { STRIP_DAY_RANGE, isStripDay, resolveStrip, storedStrip, stripDateSource, stripDay, type StripOptions } from "@/lib/strip-style";
 import { StripStyleControls } from "@/components/StripStyleControls";
 import { useBoothSession } from "@/lib/session";
 import { useAuth } from "@/lib/auth";
@@ -157,6 +157,9 @@ function CustomizeWorkspace({ project }: { project: PhotoProject }) {
   const hasShots = ROLES.some((r) => session.shots[r].some(Boolean));
   const strip = resolveStrip(editor.strip);
   const setStrip = (next: StripOptions) => setField("strip", storedStrip(next));
+  const [openedAt] = useState(() => new Date().toISOString());
+  const originalDay = stripDay(project.capturedAt ?? openedAt, project.captureTimeZone);
+  const setStripDate = (day: string) => { if (isStripDay(day)) setField("stripDate", day === originalDay ? undefined : day); };
   const { width: stripW, height: stripH } = compositionSize({ layout, template: editor.template, strip: editor.strip });
   const curated = useCuratedAssets(sceneId, editor.materialId ?? null);
 
@@ -179,15 +182,14 @@ function CustomizeWorkspace({ project }: { project: PhotoProject }) {
       together: sceneId ? { sceneId, places } : null,
       theme,
       cellEdits: { ...editor.cellEdits },
-      capturedAt: project.capturedAt,
-      captureTimeZone: project.captureTimeZone,
+      ...stripDateSource(editor.stripDate, project.capturedAt, project.captureTimeZone),
       template: editor.template,
       materialId: editor.materialId,
       resources: curated.resources,
       decorations: decorationCanvases,
       strip: editor.strip,
     }),
-    [layout, session.shots, editor.filterId, editor.cellEdits, frame, patternId, caption, showDate, stickers, stickerStyle, cutouts, sceneId, places, theme, project.capturedAt, project.captureTimeZone, editor.template, editor.materialId, curated.resources, decorationCanvases, editor.strip],
+    [layout, session.shots, editor.filterId, editor.cellEdits, frame, patternId, caption, showDate, stickers, stickerStyle, cutouts, sceneId, places, theme, project.capturedAt, project.captureTimeZone, editor.stripDate, editor.template, editor.materialId, curated.resources, decorationCanvases, editor.strip],
   );
 
   const isShared = session.mode === "duo" || session.mode === "group";
@@ -902,6 +904,13 @@ function CustomizeWorkspace({ project }: { project: PhotoProject }) {
               <Calendar size={18} aria-hidden />
             </button>
           </section>
+          {showDate && <div className="flex items-end gap-2">
+            <label className="flex min-w-0 flex-1 flex-col gap-1.5 text-sm font-bold">
+              Date shown
+              <input type="date" required value={editor.stripDate ?? originalDay} min={STRIP_DAY_RANGE.min} max={STRIP_DAY_RANGE.max} onChange={(e) => setStripDate(e.target.value)} className="field w-full text-base font-medium" />
+            </label>
+            {editor.stripDate && <button type="button" onClick={() => setField("stripDate", undefined)} className="btn btn-quiet min-h-[2.875rem] shrink-0 px-4 text-sm"><RotateCcw size={16} aria-hidden />Reset</button>}
+          </div>}
           <StripStyleControls value={strip} onChange={setStrip} fields={["band", "footer", "date", "font", "dateFormat"]} />
           </div>
 

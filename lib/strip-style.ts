@@ -78,3 +78,23 @@ export function formatStripDate(iso: string, timeZone: string | undefined, forma
   if (format === "long") return `${Number(part("day"))} ${part("month").replace(".", "")} ${part("year")}`;
   return `${part("day")}·${part("month")}·${part("year")}`;
 }
+
+export const STRIP_DAY_RANGE = Object.freeze({ min: "1900-01-01", max: "2100-12-31" });
+
+/** A chosen strip date: a real calendar day stored as YYYY-MM-DD, kept within what a date picker offers. */
+export function isStripDay(value: unknown): value is string {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value) || value < STRIP_DAY_RANGE.min || value > STRIP_DAY_RANGE.max) return false;
+  return new Date(`${value}T00:00:00.000Z`).toISOString().startsWith(value);
+}
+
+/** Calendar day an instant falls on in `timeZone`, as YYYY-MM-DD. */
+export function stripDay(iso: string, timeZone: string | undefined): string {
+  const parts = new Intl.DateTimeFormat("en-AU", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date(iso));
+  const part = (name: string) => parts.find(value => value.type === name)?.value ?? "";
+  return `${part("year")}-${part("month")}-${part("day")}`;
+}
+
+/** Time and zone a strip prints its date from: the chosen day when there is one, otherwise the capture time. */
+export function stripDateSource(day: string | undefined, capturedAt: string | null, captureTimeZone: string): { capturedAt: string | null; captureTimeZone: string } {
+  return day ? { capturedAt: `${day}T12:00:00.000Z`, captureTimeZone: "UTC" } : { capturedAt, captureTimeZone };
+}
