@@ -8,7 +8,7 @@ web
 
 ## Users and purpose
 
-The approved V2 plan serves solo photo creators, distant couples and small friendship groups, and hosts/guests at small events. People capture or import photos, finish a keepsake, and retain or share it intentionally. All three tracks are included; implementation status remains in `docs/development/V2_STATUS.md`.
+Zuychin Photobooth serves solo photo creators, distant couples and small friendship groups, and hosts/guests at small events. People capture or import photos, finish a keepsake, and retain or share it intentionally. All three tracks are included.
 
 ## Capabilities and constraints
 
@@ -20,8 +20,8 @@ Retain the Zuychin name and approved logo. Keep the rose accent, blush neutrals,
 
 ## Evidence and decisions
 
-`V2_PLAN.md` is the approved scope and architecture. The market report, code audit and 24 generated scene/material sources are in `docs/`. Generated concepts do not prove customer demand. Device, physical print, hosted-provider and release checks have separate recorded status. Danny deferred Android checks while local development continues.
+The 24 generated scene and material sources are in `docs/assets/v2/`. Generated concepts do not prove customer demand. Device, physical print, hosted-provider and release checks are tracked separately.
 
 ## Accessibility and inclusion
 
-Provide labelled touch/keyboard controls, alternatives to dragging, reduced motion/no-flash controls, legible countdowns, honest loading/error/retry states and English interface and authored prompts, with local date formatting reviewed in P9. Preserve user-written captions without forced translation.
+Provide labelled touch/keyboard controls, alternatives to dragging, reduced motion/no-flash controls, legible countdowns, honest loading/error/retry states and English interface and authored prompts, with local date formatting. Preserve user-written captions without forced translation.

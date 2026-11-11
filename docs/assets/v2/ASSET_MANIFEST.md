@@ -1,6 +1,6 @@
 # V2 generated asset library
 
-Created 22/09/2026 with the built-in imagegen tool. **24 selected assets: 18 scene backdrops and 6 material textures.** All 24 are integrated into V2 through the curated picker and versioned WebP delivery files. This document preserves generation-time inspection; implementation and rendered evidence are recorded in [P3 evidence](../../development/P3_EVIDENCE.md).
+Created 22/09/2026 with the built-in imagegen tool. **24 selected assets: 18 scene backdrops and 6 material textures.** All 24 are integrated into V2 through the curated picker and versioned WebP delivery files. This document preserves generation-time inspection.
 
 [Open the visual catalogue](catalogue.html) to filter categories, compare landscape/portrait/square crops and inspect individual images. [Machine-readable file index](asset-index.json) includes actual dimensions, sizes, SHA-256 hashes, focal points and provenance links. The catalogue opens as a local HTML file without a server.
 

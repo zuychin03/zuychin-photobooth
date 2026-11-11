@@ -60,7 +60,7 @@ SUPABASE_SERVICE_ROLE_KEY=...   # server-only, never sent to the browser
 
 **Baseline database.** [`supabase-setup.sql`](../supabase-setup.sql) has the legacy schema plus the marked `PB_LIFECYCLE_V1` block, identical to [migration 001](../database/migrations/001_v2_lifecycle.sql). It is not the full schema. A fresh installation starts here. An existing legacy installation can apply 001 alone.
 
-Before enabling cloud writes or maintenance, choose the timezone your ISO weeks follow and call the service-only `pb_configure_lifecycle(p_timezone)` with that IANA timezone. There's no default. `pb_lifecycle_capabilities()` must report `version: 1` and `ready: true`. See the [P1 database contract](development/P1_DATABASE_CONTRACT.md) for details.
+Before enabling cloud writes or maintenance, choose the timezone your ISO weeks follow and call the service-only `pb_configure_lifecycle(p_timezone)` with that IANA timezone. There's no default. `pb_lifecycle_capabilities()` must report `version: 1` and `ready: true`.
 
 **Storage bucket.** Create a private bucket named `photobooth-strips`. Its policies are in the setup script, and strips are stored at `<owner-uid>/<strip-id>.png`.
 
@@ -155,9 +155,41 @@ Any other scheduler works if it sends the bearer header, waits for each response
 
 ### Event workers
 
-The [event worker runbook](development/P7_EVENT_WORKER_RUNBOOK.md) covers the bounded runner, admission ceiling, throughput gate and admission pause. `scripts/run-event-worker.ts` and `scripts/control-event-admission.ts` default to a dry run with no network calls. Turning off the whole event switch also stops its worker, so it isn't a cleanup strategy.
+`/api/events/maintenance` needs a scheduler that starts it at least every 60 seconds and lets runs overlap. Handler guards and database leases stop two runs claiming the same job. A scheduler that skips a start while a long run is still going doesn't meet this, so keep `PB_EVENTS_ENABLED` off until yours does. Each pass claims one job with a 90-second deadline, and finalising comes before cleanup.
 
-For retained historical memories, see the [activity backfill runbook](development/P6_ACTIVITY_BACKFILL.md). Its CLI also defaults to a dry run.
+New guest uploads need a worker heartbeat less than 150 seconds old and room in the admission limit, which allows two pending submissions across the whole deployment. When either is missing, new reservations return `not_ready`, while receipts, exports, withdrawal and cleanup keep working. Only a good pass renews the heartbeat, so restore the worker rather than forcing it.
+
+To run passes yourself, put `PB_PUBLIC_ORIGIN`, `CRON_SECRET` and `PB_EVENTS_ENABLED=true` in the process environment. These scripts never read `.env` files, and without `--apply` they make no network calls.
+
+```sh
+node --import tsx scripts/run-event-worker.ts
+node --import tsx scripts/run-event-worker.ts --apply --max-passes=3 --deadline-ms=300000
+```
+
+The runner exits 0 after a dry run, an idle worker or the pass limit, 2 after `retry`, `refused`, `deadline` or `cancelled`, and 1 for invalid configuration.
+
+Migration 027 adds a deployment-wide admission pause. Put `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` in the process environment, read the current revision, then pass it to pause or resume:
+
+```sh
+node --import tsx scripts/control-event-admission.ts --action=status --apply
+node --import tsx scripts/control-event-admission.ts --action=pause --expected-revision=REVISION --apply
+node --import tsx scripts/control-event-admission.ts --action=resume --expected-revision=REVISION --apply
+```
+
+A pause stops new reservations and upload links, but uploads already accepted can still finish. Keep the scheduler and `PB_EVENTS_ENABLED=true` running so the queue drains. Turning off the whole event switch also stops its worker, so it isn't a cleanup strategy.
+
+Before you open events to guests, run one worker pass to create the first heartbeat, and rehearse a reserve, upload and finalise within the ten-minute deadline. Then stop the scheduler and check that new reservations fail after 150 seconds while receipts still load, and that queued work resumes once it restarts.
+
+### Memory backfill
+
+After applying the memory migrations and before turning on `PB_MEMORIES_ENABLED`, record activity for existing strips and photos. Put `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` in the process environment:
+
+```sh
+node --import tsx scripts/backfill-memory-activity.ts
+node --import tsx scripts/backfill-memory-activity.ts --apply --batch-size=25 --max-batches=10 --deadline-ms=60000
+```
+
+The first command is a dry run. Repeat the applied run until it reports `no_unlocked_work`. After `uncertain`, wait for the database to settle, then rerun the same command. Reruns skip anything already recorded.
 
 ## 6. Before you turn on a hosted feature
 
@@ -166,7 +198,11 @@ For retained historical memories, see the [activity backfill runbook](developmen
 3. Schedule each worker and check its real cadence, run time and retry behaviour.
 4. Turn on only the feature switches whose checks have passed. Keep a compatible recovery build ready, watch for failed jobs, and never reset accounting to free up capacity.
 
-The [project](development/P6_PROJECT_HTTP.md), [ritual delivery](development/P6_RITUAL_DELIVERY.md), [voice](development/P6_VOICE_BACKEND.md) and [event reminder](development/P7_EVENT_REMINDERS.md) notes give the exact limits for each track.
+Limits to plan hosting around:
+
+- **Cloud projects** (`PB_CLOUD_PROJECTS_ENABLED`). Each `/api/projects/maintenance` call sweeps up to 25 expired reservations and runs one finalisation and one cleanup. The route can take up to 120 seconds and needs enough memory to decode one image.
+- **Voice captions** (migration 014, `PB_MEMORIES_ENABLED` and `PB_VOICE_CAPTIONS_ENABLED`). Recordings are mono WAV of up to 30 seconds, and each person can hold up to 20. `/api/media/maintenance` cleans them up.
+- **Reminders.** Each `/api/reminders` run handles at most five reminders within 45 seconds, shared by legacy dates, rituals (migration 010, `PB_MEMORIES_ENABLED`) and event expiry reminders (migration 021, `PB_EVENT_REMINDERS_ENABLED`). Event owners who opt in are reminded 24 hours before expiry. An email is retried only with the same content within 23 hours, using Resend's idempotency key.
 
 ## Rolling back
 

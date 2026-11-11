@@ -2,7 +2,7 @@
 
 A photobooth that runs in the browser. Take a photo strip on your own, make one with friends on other devices, or collect photos at an event. The booth, editor, projects and exports work on your device with no account and no server setup. Cloud features are optional and run on your own Supabase project.
 
-**Version 3.0.0.** V3 brings a Liquid Glass redesign, 14 new layouts, strip styles and a light/dark theme toggle. The [V3 strip plan](V3_STRIPS_PLAN.md) and the [V2 plan](V2_PLAN.md) explain how each feature was scoped.
+**Version 3.0.0.** V3 brings a Liquid Glass redesign, 14 new layouts, strip styles and a light/dark theme toggle. The [changelog](CHANGELOG.md) lists what changed in each release.
 
 ## Features
 
@@ -89,9 +89,7 @@ In development, `/v2-lab` has rehearsal pages for storage, canvas, media, print 
 
 - [Contributing](CONTRIBUTING.md): setup, checks, and code, design and copy conventions.
 - [Self-hosting](docs/SELF_HOSTING.md): running your own copy, Supabase, migrations and maintenance workers.
-- [V3 strip plan](V3_STRIPS_PLAN.md) and [V2 plan](V2_PLAN.md): what each version set out to build.
-- [Development status](docs/development/V2_STATUS.md): which checks have and haven't passed on real hosting and devices.
-- [`docs/development/`](docs/development/): the contract and evidence notes for each part of V2.
+- [Changelog](CHANGELOG.md): what changed in each release.
 - [Product brief](PRODUCT.md): who the app is for and its design principles.
 - [Security policy](SECURITY.md): how to report a vulnerability.
 
@@ -152,7 +150,7 @@ supabase-setup.sql      legacy baseline plus migration 001
 
 ## Status
 
-V3 is built on the V2 foundation. The local tools are complete and covered by tests. Hosted checks still need sign-off before the cloud features go live: providers and capacity, schedulers, physical phones, forced-TURN rooms and physical prints. The [development status](docs/development/V2_STATUS.md) tracks each one.
+V3 is built on the V2 foundation. The local tools are complete and covered by tests. Hosted checks still need sign-off before the cloud features go live: providers and capacity, schedulers, physical phones, forced-TURN rooms and physical prints.
 
 ## Credits
 

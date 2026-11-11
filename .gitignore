@@ -56,6 +56,11 @@ desktop.ini
 
 # local notes and external documents
 *.local.md
+V*_PLAN.md
+/docs/research/
+/docs/development/
+/docs/P[0-9]_*.md
+/docs/VOICE_CAPTION_INTEGRATION.md
 ROADMAP.md
 DESIGN.md
 /notes/
