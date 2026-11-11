@@ -1,1 +1,0 @@
-Defines ink-tinted procedural Canvas patterns (dots, stripes, checkerboard, grid, confetti, sparkles, hearts) and a lookup helper that render at low alpha over strip frames so captions stay readable.

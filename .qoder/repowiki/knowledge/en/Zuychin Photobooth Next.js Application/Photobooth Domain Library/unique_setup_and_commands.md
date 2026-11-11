@@ -1,1 +1,0 @@
-No unified build or setup command at this level - each module is imported directly by the React application code that consumes it.

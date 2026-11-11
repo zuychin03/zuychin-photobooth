@@ -1,1 +1,0 @@
-Server-side Cloudinary image upload for photobooth strips and browser/server web push notification plumbing backed by Supabase subscriptions.

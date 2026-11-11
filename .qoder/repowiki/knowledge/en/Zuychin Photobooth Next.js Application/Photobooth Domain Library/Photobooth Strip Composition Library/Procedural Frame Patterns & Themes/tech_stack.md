@@ -1,1 +1,0 @@
-Vanilla TypeScript with the Canvas 2D API (`CanvasRenderingContext2D`); deterministic pseudo-random via a mulberry32-style PRNG for reproducible scatter patterns.

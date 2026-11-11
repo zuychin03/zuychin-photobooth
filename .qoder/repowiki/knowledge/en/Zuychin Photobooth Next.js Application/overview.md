@@ -1,1 +1,0 @@
-Next.js 16 App Router photobooth application that wires client pages, shared React components, a client-side domain library, and static assets into a Supabase-backed experience with Cloudinary media upload and web-push notifications.

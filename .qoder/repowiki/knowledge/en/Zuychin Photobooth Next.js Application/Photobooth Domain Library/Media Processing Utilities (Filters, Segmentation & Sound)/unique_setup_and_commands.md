@@ -1,1 +1,0 @@
-Requires static assets at `/mediapipe/wasm` and `/models/selfie_segmenter.tflite` to be served alongside the app so `FilesetResolver` can locate them; call `preloadSegmenter("IMAGE"|"VIDEO")` ahead of first use to warm the wasm runtime.

@@ -1,1 +1,0 @@
-PWA registration differs between environments: production registers `/sw.js` with `updateViaCache: "none"`, while development unregisters any existing service workers to prevent stale caching during live edits.

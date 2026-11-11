@@ -1,1 +1,0 @@
-Client-side domain library for the photobooth app, grouping camera capture, media processing, cloud storage, push notifications, and shared session/auth utilities into a flat set of focused modules.

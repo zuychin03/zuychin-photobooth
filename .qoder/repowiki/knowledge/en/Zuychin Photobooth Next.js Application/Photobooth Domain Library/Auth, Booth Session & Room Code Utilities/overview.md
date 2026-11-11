@@ -1,1 +1,0 @@
-React client-side providers for Supabase authentication state and per-device photobooth session state, plus helpers for generating and validating unambiguous room codes used to join shared sessions.

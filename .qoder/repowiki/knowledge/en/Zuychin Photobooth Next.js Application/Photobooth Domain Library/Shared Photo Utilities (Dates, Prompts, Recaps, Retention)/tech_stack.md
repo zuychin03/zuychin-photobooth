@@ -1,1 +1,0 @@
-TypeScript with Supabase client for DB access; browser Canvas API (`HTMLCanvasElement`, `toBlob`) for recap image generation; mulberry32 PRNG for deterministic prompt selection; Next.js font variables resolved via `getComputedStyle` on `:root`.

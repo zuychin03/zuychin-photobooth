@@ -1,1 +1,0 @@
-Browser Web APIs only: `MediaDevices.getUserMedia`, `enumerateDevices`, Canvas 2D API (`drawImage`, `toBlob`, `createImageBitmap`), and `performance.now()` for timestamp ordering. No external libraries are imported inside these three files.

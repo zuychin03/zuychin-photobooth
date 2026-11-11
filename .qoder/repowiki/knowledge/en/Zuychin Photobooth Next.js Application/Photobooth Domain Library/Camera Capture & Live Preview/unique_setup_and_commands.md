@@ -1,1 +1,0 @@
-No build or setup script is required; the module relies on HTTPS-enabled browsers to grant camera permissions. Calling `startCamera` will prompt the user for permission and return a typed error if denied, unavailable, or already in use.

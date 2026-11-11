@@ -1,1 +1,0 @@
-Next.js App Router with React Server Components and client components (`'use client'`), Supabase for auth/storage/database (via `@supabase/ssr` and admin SDK), Cloudinary for persistent strip storage, Resend for reminder emails, WebRTC-based `RoomEngine` for real-time photo capture, and a PWA manifest for standalone installation.

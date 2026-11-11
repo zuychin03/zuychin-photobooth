@@ -1,1 +1,0 @@
-Serves the Next.js app's static assets - icons, logos, stickers, ML models, and MediaPipe WebAssembly bundles - plus a service worker that enables offline-first caching and push notifications.

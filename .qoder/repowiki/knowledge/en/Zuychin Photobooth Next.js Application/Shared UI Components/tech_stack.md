@@ -1,1 +1,0 @@
-React Server Components with `"use client"` directive, Tailwind CSS for styling, lucide-react for icons, and native browser APIs (Service Worker, Push API, MediaDevices, beforeinstallprompt). Uses Supabase SSR cookie conventions (`sb-` prefixed cookies) and Next.js environment variables (`NEXT_PUBLIC_COOKIE_DOMAIN`, `NODE_ENV`).
