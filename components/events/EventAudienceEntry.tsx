@@ -5,7 +5,9 @@ import { eventAudienceError, takeEventAudienceFragment } from "@/lib/events/audi
 import type { EventAudienceClientOptions } from "@/lib/events/audience-client";
 import type { EventAudienceSession, EventDestination } from "@/lib/events/publication-contract";
 import { EventAudienceWorkspace } from "./EventAudienceWorkspace";
-import { eventControl } from "./EventHostControls";
+import { Eye, Images, LoaderCircle, Presentation, Unlink } from "lucide-react";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { EventGlyph } from "./EventHostControls";
 
 export type EventAudienceEntryOptions = Omit<EventAudienceClientOptions, "eventId" | "destination" | "appOrigin" | "storageOrigin"> & { appOrigin?: string; storageOrigin?: string; initialToken?: string };
 export function EventAudienceEntry({ eventId, destination, available, options }: { eventId: string; destination: EventDestination; available: boolean; options?: EventAudienceEntryOptions }) {
@@ -24,10 +26,13 @@ export function EventAudienceEntry({ eventId, destination, available, options }:
     finally { running.current = false; if (alive.current) setBusy(false); }
   };
   if (opened) return <EventAudienceWorkspace client={opened.client} session={opened.session} onExit={() => { active.current?.abort(); runtime.current?.close(); setOpened(null); setExisting(null); setStatus("checking"); setAttempt(value => value + 1); }} />;
-  return <main className="mx-auto min-h-dvh max-w-3xl px-5 py-7 sm:px-8 sm:py-10"><section className="max-w-xl py-10"><h1 className="font-display text-4xl font-semibold sm:text-5xl">{destination === "gallery" ? "The event gallery" : "The event wall"}</h1><p className="mt-5 leading-relaxed text-foreground/75">{destination === "gallery" ? "Photos the guests and host have approved for the gallery." : "Photos approved for the event wall, three at a time."} This link is for viewing only.</p>
-    {error && <p role="alert" className="mt-6 rounded-xl bg-muted p-4 text-sm leading-relaxed">{error}</p>}
-    {status === "checking" && <p role="status" className="mt-7">Checking your link…</p>}
-    {status === "unavailable" && <div className="mt-7 border-t border-border pt-6"><h2 className="font-display text-2xl">Can&apos;t open this link</h2><p className="mt-3 text-sm leading-relaxed">Check your connection and try again, or ask the host.</p><button className={`${eventControl} mt-4 border border-border`} disabled={!available || busy} onClick={() => { setStatus("checking"); setError(null); setAttempt(value => value + 1); }}>Try again</button></div>}
-    {status === "ready" && <div className="mt-7 space-y-4 border-t border-border pt-6">{existing && <><p className="text-sm leading-relaxed">This browser already has {destination === "wall" ? "wall" : "gallery"} access to {existing.eventTitle}.</p><button className={`${eventControl} border border-border`} disabled={busy} onClick={() => void enter(false)}>{busy ? "Opening…" : "Continue"}</button></>}{hasToken && <><p className="text-sm leading-relaxed">This browser will remember the link. Anyone you forward it to can see the photos too.</p><button className={`${eventControl} bg-accent text-accent-foreground`} disabled={busy} onClick={() => void enter(true)}>{busy ? "Opening…" : existing ? "Use this new link" : "View photos"}</button></>}{!existing && !hasToken && <p className="text-sm leading-relaxed">Open the {destination === "wall" ? "wall" : "gallery"} link from the host to view photos.</p>}</div>}
-  </section></main>;
+  const icon = destination === "wall" ? Presentation : Images;
+  return <main className="mx-auto flex min-h-dvh w-full max-w-3xl flex-1 flex-col gap-6 px-4 pt-4 pb-10 sm:px-8 sm:pt-6"><PageHeader title={destination === "gallery" ? "The event gallery" : "The event wall"} meta={<span className="flex items-center gap-2"><Eye size={15} className="shrink-0" aria-hidden />This link is for viewing only.</span>} />
+    <div className="page-body flex max-w-xl flex-col gap-5">
+    {error && <p role="alert" className="notice border border-destructive/25 bg-destructive/8">{error}</p>}
+    {status === "checking" && <p role="status" className="panel flex min-h-40 items-center justify-center gap-2 text-sm text-muted-foreground"><LoaderCircle size={18} className="animate-spin motion-reduce:animate-none" aria-hidden /> Checking your link…</p>}
+    {status === "unavailable" && <section className="panel flex flex-col items-start gap-3 p-5 sm:p-7"><EventGlyph icon={Unlink} tone="slate" /><h2 className="font-display text-2xl">Can&apos;t open this link</h2><p className="text-sm text-muted-foreground">Check your connection and try again, or ask the host.</p><button className="btn btn-quiet mt-1" disabled={!available || busy} onClick={() => { setStatus("checking"); setError(null); setAttempt(value => value + 1); }}>Try again</button></section>}
+    {status === "ready" && <section className="panel flex flex-col items-start gap-4 p-5 sm:p-7"><EventGlyph icon={icon} tone="green" />{existing && <div className="flex flex-col items-start gap-3"><p className="text-sm">This browser already has {destination === "wall" ? "wall" : "gallery"} access to <strong>{existing.eventTitle}</strong>.</p><button className={`btn ${hasToken ? "btn-quiet" : "btn-primary"}`} disabled={busy} onClick={() => void enter(false)}>{busy ? "Opening…" : "Continue"}</button></div>}{hasToken && <div className="flex flex-col items-start gap-3"><p className="text-sm">This browser will remember the link. Anyone you forward it to can see the photos too.</p><button className="btn btn-primary" disabled={busy} onClick={() => void enter(true)}>{busy ? "Opening…" : existing ? "Use this new link" : "View photos"}</button></div>}{!existing && !hasToken && <p className="text-sm">Open the {destination === "wall" ? "wall" : "gallery"} link from the host to view photos.</p>}</section>}
+    </div>
+  </main>;
 }

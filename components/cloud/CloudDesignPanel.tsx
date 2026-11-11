@@ -8,7 +8,7 @@ import type { CloudDesignRecord } from "@/lib/projects/cloud-design";
 import type { PhotoProject } from "@/lib/projects/model";
 import { openCloudDesignCopy, type CloudDesignOpenResult } from "@/lib/projects/cloud-design-open";
 import { downloadProjectBlob } from "@/lib/projects/download";
-import { cloudControl, cloudError } from "./CloudControls";
+import { cloudError } from "./CloudControls";
 import type { openProjectRepository } from "@/lib/projects/storage";
 
 interface Props {
@@ -80,20 +80,19 @@ export function CloudDesignPanel({ client, projectId, disabled, onBusy, onOpened
     if (!fresh?.unsupported || fresh.requestId !== record.requestId || fresh.contentHash !== record.contentHash) throw { code: "conflict" };
     downloadProjectBlob(new Blob([fresh.rawSnapshot], { type: "application/json" }), `cloud-design-${fresh.revision + 1}.json`);
   });
-  return <section className="border-b border-border py-6" aria-labelledby={`${id}-title`} aria-busy={busy}>
-    <div className="flex flex-wrap items-start justify-between gap-5">
-      <div className="max-w-xl"><h3 ref={heading} id={`${id}-title`} tabIndex={-1} className="font-display text-2xl outline-none">Open a saved design</h3><p className="mt-2 text-sm leading-relaxed text-foreground/70">Open it as a new project on this device.</p></div>
-      <div className="w-full sm:w-60"><Dropdown label="Version" showLabel value={checkpoint} disabled={disabled || busy} options={[{ value: "current", label: "Latest" }, { value: "previous", label: "Previous" }]} onChange={value => { setCheckpoint(value as typeof checkpoint); setRecord(null); setChecked(false); setSavedCopy(null); setError(null); }} /></div>
+  return <section className="panel p-4 sm:p-6" aria-labelledby={`${id}-title`} aria-busy={busy}>
+    <div className="flex min-w-0 items-center gap-3"><span className="glyph bg-[#0ea5e9]"><FolderOpen size={18} strokeWidth={2.25} aria-hidden /></span><h3 ref={heading} id={`${id}-title`} tabIndex={-1} className="font-display text-xl leading-tight outline-none">Open a saved design</h3></div>
+    <p className="mt-3 text-sm text-muted-foreground">Open it as a new project on this device.</p>
+    <div className="mt-4 sm:max-w-60"><Dropdown label="Version" showLabel value={checkpoint} disabled={disabled || busy} options={[{ value: "current", label: "Latest" }, { value: "previous", label: "Previous" }]} onChange={value => { setCheckpoint(value as typeof checkpoint); setRecord(null); setChecked(false); setSavedCopy(null); setError(null); }} /></div>
+    {error && <p role="alert" className="notice mt-4 border border-destructive/25 bg-destructive/8 font-bold text-destructive">{error}</p>}
+    {checked && !record && <p role="status" className="mt-4 text-sm text-muted-foreground">{checkpoint === "current" ? "No design has been saved to this project yet." : "There's no previous version."}</p>}
+    {record && <div className="panel-muted mt-4 space-y-1 p-4 text-sm"><p className="font-bold">{record.unsupported ? "A design from a newer app" : record.snapshot.project.name}</p><p className="text-muted-foreground">Version {record.revision + 1} · Saved {new Date(record.savedAt).toLocaleString("en-AU")}{!record.unsupported && ` · ${record.snapshot.bindings.length} ${record.snapshot.bindings.length === 1 ? "photo" : "photos"}`}</p>{record.unsupported && <p className="pt-1 text-muted-foreground">This design needs a newer version of the app. You can back it up as a JSON file, without photos.</p>}</div>}
+    {savedCopy && <p role="status" className="mt-4 text-sm font-bold text-success">A copy was saved to My projects.</p>}
+    <div className="mt-4 flex flex-wrap gap-2">
+      <button className="btn btn-quiet min-h-10 text-sm" disabled={disabled || busy} onClick={() => void inspect()}>{checked ? "Check again" : "Check saved design"}</button>
+      {record && (record.unsupported ? <button className="btn btn-quiet min-h-10 text-sm" disabled={disabled || busy} onClick={() => void backup()}><ArrowDownToLine size={17} aria-hidden /> Back up design JSON</button> : <button className="btn btn-primary min-h-10 text-sm" disabled={disabled || busy} onClick={() => void open()}><FolderOpen size={17} aria-hidden /> Open a copy</button>)}
+      {busy && <button className="btn btn-plain min-h-10 text-sm" onClick={() => controller.current?.abort()}>Stop</button>}
     </div>
-    {error && <p role="alert" className="mt-4 max-w-2xl rounded-xl bg-muted p-4 text-sm leading-relaxed">{error}</p>}
-    {checked && !record && <p role="status" className="mt-4 text-sm text-foreground/70">{checkpoint === "current" ? "No design has been saved to this project yet." : "There's no previous version."}</p>}
-    {record && <div className="mt-4 space-y-2 text-sm"><p className="font-medium">{record.unsupported ? "A design from a newer app" : record.snapshot.project.name}</p><p className="text-foreground/70">Version {record.revision + 1} · Saved {new Date(record.savedAt).toLocaleString("en-AU")}{!record.unsupported && ` · ${record.snapshot.bindings.length} ${record.snapshot.bindings.length === 1 ? "photo" : "photos"}`}</p>{record.unsupported && <p className="max-w-2xl leading-relaxed text-foreground/70">This design needs a newer version of the app. You can back it up as a JSON file, without photos.</p>}</div>}
-    {savedCopy && <p role="status" className="mt-4 text-sm">A copy was saved to My projects.</p>}
-    <div className="mt-5 flex flex-wrap gap-3">
-      <button className={`${cloudControl} border border-border`} disabled={disabled || busy} onClick={() => void inspect()}>{checked ? "Check again" : "Check saved design"}</button>
-      {record && (record.unsupported ? <button className={`${cloudControl} border border-border`} disabled={disabled || busy} onClick={() => void backup()}><ArrowDownToLine size={17} aria-hidden /> Back up design JSON</button> : <button className={`${cloudControl} bg-accent text-accent-foreground`} disabled={disabled || busy} onClick={() => void open()}><FolderOpen size={17} aria-hidden /> Open a copy</button>)}
-      {busy && <button className={cloudControl} onClick={() => controller.current?.abort()}>Stop</button>}
-    </div>
-    {busy && <p role="status" className="mt-3 flex items-center gap-2 text-sm"><LoaderCircle size={16} aria-hidden className="animate-spin motion-reduce:animate-none" /> Preparing your copy…</p>}
+    {busy && <p role="status" className="mt-3 flex items-center gap-2 text-sm font-bold"><LoaderCircle size={16} aria-hidden className="animate-spin text-accent motion-reduce:animate-none" /> Preparing your copy…</p>}
   </section>;
 }

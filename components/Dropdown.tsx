@@ -16,7 +16,7 @@ interface Props {
   className?: string;
   developmentFallback?: boolean;
 }
-const themeVariables = ["--background", "--foreground", "--card", "--muted", "--muted-foreground", "--accent", "--accent-foreground", "--border", "--ring", "--font-sans"];
+const themeVariables = ["--background", "--foreground", "--card", "--muted", "--muted-foreground", "--accent", "--accent-foreground", "--border", "--ring", "--font-sans", "--glass-fill-strong", "--glass-edge", "--glass-stroke", "--glass-shadow"];
 const unavailable = (button: HTMLButtonElement | null) => Boolean(button?.matches(":disabled") || button?.closest("[inert]"));
 
 export function Dropdown({ label, value, options, onChange, disabled = false, showLabel = false, className = "", developmentFallback = false }: Props) {
@@ -159,25 +159,25 @@ export function Dropdown({ label, value, options, onChange, disabled = false, sh
   };
 
   const popup = <div ref={menu} id={menuId} role="listbox" aria-label={label} popover={nativePopover ? "manual" : undefined}
-    className="m-0 overflow-y-auto overscroll-contain rounded-xl border-0 bg-card p-1.5 text-foreground shadow-lg shadow-black/15 outline-none"
+    className="glass-strong m-0 overflow-y-auto overscroll-contain rounded-2xl border-0 p-1.5 text-foreground outline-none"
     style={{ ...(!nativePopover ? fallbackTheme : {}), position: "fixed", inset: "auto", zIndex: 1000, boxSizing: "border-box", display: expanded ? "block" : "none", visibility: "hidden", maxHeight: 320 }}
     onMouseDown={event => event.preventDefault()}>
     {options.length ? options.map((option, index) => <div key={option.value} id={`${id}-option-${index}`} role="option" aria-selected={option.value === value} aria-disabled={option.disabled || undefined}
       onPointerMove={event => { if (event.pointerType === "mouse" && !option.disabled) setActive(index); }}
       onClick={() => choose(index)}
-      className={`flex min-h-11 cursor-pointer items-center gap-3 rounded-lg px-3 py-2 text-sm leading-5 select-none ${option.disabled ? "cursor-not-allowed opacity-45" : highlighted === index ? "bg-accent/12 text-foreground" : "hover:bg-muted"}`}>
+      className={`flex min-h-11 cursor-pointer items-center gap-3 rounded-xl px-3 py-2 text-sm leading-5 font-bold select-none ${option.disabled ? "cursor-not-allowed opacity-45" : highlighted === index ? "bg-accent/14 text-foreground" : "hover:bg-foreground/6"}`}>
       <span className="min-w-0 flex-1 break-words [overflow-wrap:anywhere]">{option.label}</span>
       {option.value === value && <Check size={16} className="shrink-0 text-accent" aria-hidden />}
     </div>) : <div className="px-3 py-3 text-sm text-muted-foreground">No options available</div>}
   </div>;
 
   return <div className={`min-w-0 ${className}`}>
-    {showLabel && <label htmlFor={triggerId} className="mb-1 block text-sm font-medium">{label}</label>}
+    {showLabel && <label htmlFor={triggerId} className="mb-1.5 block text-sm font-bold">{label}</label>}
     <button ref={trigger} id={triggerId} type="button" role="combobox" aria-label={label} aria-haspopup="listbox" aria-expanded={expanded} aria-controls={menuId}
       aria-activedescendant={expanded && highlighted >= 0 ? `${id}-option-${highlighted}` : undefined} disabled={disabled} onKeyDown={keyboard} onClick={() => expanded ? close() : show()}
-      className="flex min-h-11 w-full items-center justify-between gap-3 rounded-xl border border-border bg-card px-3 py-2 text-left text-base leading-5 transition hover:border-accent/50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-50">
+      className="flex min-h-11 w-full items-center justify-between gap-3 rounded-[0.875rem] bg-[color-mix(in_srgb,var(--muted)_70%,var(--card))] px-3.5 py-2 text-left text-base leading-5 font-bold shadow-[inset_0_0_0_1px_var(--border)] transition hover:shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--accent)_45%,transparent)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-50">
       <span className="min-w-0 flex-1 break-words [overflow-wrap:anywhere]">{options[selected]?.label ?? "Choose an option"}</span>
-      <ChevronDown size={16} aria-hidden className={`shrink-0 text-foreground/60 transition-transform motion-reduce:transition-none ${expanded ? "rotate-180" : ""}`} />
+      <ChevronDown size={17} strokeWidth={2.4} aria-hidden className={`shrink-0 text-muted-foreground transition-transform duration-300 ease-[var(--spring-soft)] motion-reduce:transition-none ${expanded ? "rotate-180" : ""}`} />
     </button>
     {nativePopover ? popup : expanded && portalRoot ? createPortal(popup, portalRoot) : null}
   </div>;

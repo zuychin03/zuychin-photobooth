@@ -2,9 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Camera, Heart, Users, ArrowRight } from "lucide-react";
+import { Camera, Heart, ArrowRight } from "lucide-react";
 import { StripMockup } from "@/components/StripMockup";
-import { HelpTooltip } from "@/components/HelpTooltip";
 import { InstallPrompt } from "@/components/InstallPrompt";
 import { RecentProjects } from "@/components/RecentProjects";
 import { isValidRoomCode, newRoomCode, normalizeRoomCode } from "@/lib/room-code";
@@ -29,81 +28,61 @@ export default function Home() {
 
   return (
     <main className="relative flex min-h-dvh flex-1 flex-col">
-      <div aria-hidden className="pointer-events-none absolute inset-x-0 top-[calc(-1*var(--app-nav-height,0px))] bottom-0 -z-10 overflow-hidden">
-        <div className="fluid-orb absolute -top-24 -left-24 h-96 w-96 rounded-full bg-accent/20 blur-3xl" />
-        <div className="fluid-orb--slow fluid-orb absolute top-1/3 -right-32 h-[28rem] w-[28rem] rounded-full bg-partner/20 blur-3xl" />
-        <div className="fluid-orb absolute bottom-0 left-1/4 h-80 w-80 rounded-full bg-warning/10 blur-3xl" />
-      </div>
-
-      <div className="mx-auto grid w-full max-w-5xl flex-1 items-center justify-items-center gap-10 px-6 pt-5 pb-12 sm:pt-8 lg:grid-cols-[1.25fr_1fr] lg:gap-16 lg:pt-12">
-        <div className="flex w-full min-w-0 max-w-lg flex-col items-center text-center lg:items-start lg:text-left">
-          <h1
-            className="hero-animate hero-animate-delay-2 text-4xl leading-tight font-semibold sm:text-6xl"
-            style={{ fontFamily: "var(--font-fraunces)" }}
-          >
-            Your memories,
-            <br />
-            your photo stories
+      <div className="mx-auto grid w-full max-w-6xl flex-1 content-center items-center gap-8 px-4 pt-4 pb-10 sm:px-8 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)] lg:gap-12 lg:pt-8">
+        <div className="@container flex w-full min-w-0 max-w-xl flex-col justify-self-center lg:max-w-2xl lg:justify-self-start">
+          {/* "your photo stories" is ~9.4em wide in Mochiy, so this keeps each clause on one line. */}
+          <h1 className="hero-animate hero-animate-delay-1 font-display text-[min(4.5rem,calc(100cqi/9.6))] leading-[1.1]">
+            Your memories,<br /> your photo stories
           </h1>
-          <p className="hero-animate hero-animate-delay-3 mt-4 text-muted-foreground">
-            Make photo strips solo or with your group of friends{" "}
-            <span className="inline-block whitespace-nowrap">from anywhere.<HelpTooltip label="About getting started">Solo photos need no account. Share a live booth with up to four people, or collect photos at an event when online features are available.</HelpTooltip></span>
-          </p>
 
-          <div className="hero-animate hero-animate-delay-4 mt-8 flex w-full flex-col gap-3">
+          <div className="hero-animate hero-animate-delay-2 mt-8 flex w-full flex-col gap-3 lg:mt-10">
             <button
+              type="button"
               onClick={() => router.push("/booth")}
-              className="group flex min-h-14 items-center justify-between rounded-2xl bg-accent px-5 text-accent-foreground shadow-lg shadow-accent/25 transition hover:brightness-105 active:scale-[0.99]"
+              className="btn btn-primary group min-h-16 justify-between px-6 text-lg"
             >
-              <span className="flex items-center gap-3 font-semibold">
-                <Camera size={20} /> Solo booth
+              <span className="flex items-center gap-3">
+                <Camera size={22} strokeWidth={2.25} aria-hidden /> Solo booth
               </span>
-              <ArrowRight size={18} className="transition group-hover:translate-x-0.5" />
+              <ArrowRight size={20} aria-hidden className="transition-transform group-hover:translate-x-1" />
             </button>
 
-            <button
-              onClick={createRoom}
-              className="group glass-card flex min-h-14 items-center justify-between rounded-2xl px-5 transition hover:border-accent/40 active:scale-[0.99]"
-            >
-              <span className="flex items-center gap-3 font-semibold">
-                <Heart size={20} className="text-accent" /> Create a room
-              </span>
-              <ArrowRight size={18} className="transition group-hover:translate-x-0.5" />
-            </button>
-
-            <div className="glass-card flex min-h-14 items-center gap-2 rounded-2xl px-4">
-              <Users size={20} className="shrink-0 text-partner" />
-              <input
-                value={joinCode}
-                onChange={(e) => {
-                  setJoinCode(normalizeRoomCode(e.target.value));
-                  setJoinError(false);
-                }}
-                onKeyDown={(e) => e.key === "Enter" && joinRoom()}
-                placeholder="Room code"
-                aria-label="Room code"
-                aria-invalid={joinError}
-                aria-describedby={joinError ? "room-code-error" : undefined}
-                className={`min-h-11 min-w-0 flex-1 rounded-md bg-transparent font-mono text-lg tracking-[0.3em] uppercase outline-none focus-visible:ring-2 focus-visible:ring-ring placeholder:font-sans placeholder:text-base placeholder:tracking-normal placeholder:text-muted-foreground ${
-                  joinError ? "text-destructive" : ""
-                }`}
-              />
-              <button
-                onClick={joinRoom}
-                className="min-h-11 rounded-xl bg-partner/15 px-4 font-semibold text-partner transition hover:bg-partner/25 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-              >
-                Join
+            <div className="grid gap-3 sm:grid-cols-2">
+              <button type="button" onClick={createRoom} className="btn btn-glass min-h-14 justify-start px-5">
+                <Heart size={20} strokeWidth={2.25} aria-hidden className="text-accent" /> Create a room
               </button>
+
+              <div className={`glass flex min-h-14 items-center gap-2 rounded-full py-1.5 pr-1.5 pl-5 ${joinError ? "ring-2 ring-destructive" : ""}`}>
+                <input
+                  value={joinCode}
+                  onChange={(e) => {
+                    setJoinCode(normalizeRoomCode(e.target.value));
+                    setJoinError(false);
+                  }}
+                  onKeyDown={(e) => e.key === "Enter" && joinRoom()}
+                  placeholder="Room code"
+                  aria-label="Room code"
+                  aria-invalid={joinError}
+                  aria-describedby={joinError ? "room-code-error" : undefined}
+                  autoComplete="off"
+                  spellCheck={false}
+                  autoCapitalize="characters"
+                  className={`min-h-11 min-w-0 flex-1 rounded-md bg-transparent text-lg font-black tracking-[0.24em] uppercase outline-none placeholder:text-base placeholder:font-bold placeholder:tracking-normal placeholder:normal-case placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring ${joinError ? "text-destructive" : ""}`}
+                />
+                <button type="button" onClick={joinRoom} className="btn btn-partner min-h-11 px-4">
+                  Join
+                </button>
+              </div>
             </div>
             {joinError && (
-              <p id="room-code-error" role="alert" className="text-sm text-destructive">
+              <p id="room-code-error" role="alert" className="pl-5 text-sm font-bold text-destructive">
                 Room codes are 6 letters or numbers. Check with your host.
               </p>
             )}
           </div>
         </div>
 
-          <div className="hero-animate hero-animate-delay-3 relative flex items-center justify-center">
+        <div aria-hidden className="hero-animate hero-animate-delay-3 relative flex items-center justify-center">
           <StripMockup tilt={-8} className="translate-x-6 translate-y-4" />
           <StripMockup tilt={4} className="-translate-x-2 -translate-y-2" />
           <StripMockup tilt={12} className="-translate-x-10 translate-y-6 hidden sm:block" />
@@ -111,7 +90,7 @@ export default function Home() {
       </div>
 
       <RecentProjects />
-      <footer className="relative z-10 flex w-full flex-col items-center gap-3 px-6 pb-4 text-center text-xs text-muted-foreground">
+      <footer className="relative z-10 flex w-full flex-col items-center gap-3 px-6 pb-6 text-center text-xs text-muted-foreground">
         <InstallPrompt />
         Part of the Zuychin ecosystem
       </footer>

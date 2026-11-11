@@ -14,12 +14,19 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronUp,
+  CircleAlert,
+  Crop,
   Download,
   Heart,
+  LoaderCircle,
+  Mountain,
+  Palette,
   RotateCcw,
   RotateCw,
   Share2,
+  Sticker,
   Trash2,
+  Type,
   X,
   ZoomIn,
   ZoomOut,
@@ -65,7 +72,6 @@ import { projectDownloadName } from "@/lib/projects/download";
 import { useCuratedAssets } from "@/hooks/useCuratedAssets";
 import { VisualPackPicker } from "@/components/VisualPackPicker";
 import { TemplateSourcePanel } from "@/components/TemplateSourcePanel";
-import { Dropdown } from "@/components/Dropdown";
 import { EditorFinishMenu } from "@/components/EditorFinishMenu";
 import { StripPreview } from "@/components/StripPreview";
 import dynamic from "next/dynamic";
@@ -74,19 +80,22 @@ const ExportStudio = dynamic(() => import("@/components/ExportStudio"), { ssr: f
 
 const STICKER_HIT_RADIUS = 60;
 const EDITOR_TOOLS = [
-  { value: "photos", label: "Photos & crop" },
-  { value: "look", label: "Frame & look" },
-  { value: "scene", label: "Scenes & textures" },
-  { value: "stickers", label: "Stickers" },
-  { value: "caption", label: "Caption & date" },
-  { value: "project", label: "Project & templates" },
+  { value: "photos", label: "Photos & crop", short: "Photos", icon: Crop },
+  { value: "look", label: "Frame & look", short: "Look", icon: Palette },
+  { value: "scene", label: "Scenes & textures", short: "Scenes", icon: Mountain },
+  { value: "stickers", label: "Stickers", short: "Stickers", icon: Sticker },
+  { value: "caption", label: "Caption & date", short: "Caption", icon: Type },
+  { value: "project", label: "Project & templates", short: "Project", icon: FolderOpen },
 ] as const;
 type EditorTool = typeof EDITOR_TOOLS[number]["value"];
+const toolTitle = "font-display text-lg";
+const subTitle = "mb-2 text-sm font-bold text-muted-foreground";
+const roundControl = "btn btn-quiet w-11 shrink-0 px-0";
 
 export default function CustomizePage() {
   const { project, hydrating, storageError } = useBoothSession();
-  if (hydrating) return <main className="m-auto p-8" role="status">Opening your project…</main>;
-  if (!project) return <main className="m-auto max-w-lg p-8"><h1 className="font-display text-3xl">Choose a project to edit</h1>{storageError && <p role="alert" className="mt-4">{storageError}</p>}<Link href="/projects" className="mt-6 inline-flex min-h-11 items-center text-accent underline">Open My projects</Link></main>;
+  if (hydrating) return <main className="m-auto flex items-center gap-2 p-8 text-sm font-bold text-muted-foreground" role="status"><LoaderCircle size={17} className="animate-spin motion-reduce:animate-none" aria-hidden />Opening your project…</main>;
+  if (!project) return <main className="m-auto w-full max-w-lg px-4 py-8"><div className="panel flex flex-col items-center gap-4 px-6 py-10 text-center"><span className="glyph size-14 rounded-2xl bg-[#f43f5e]"><FolderOpen size={26} aria-hidden /></span><h1 className="font-display text-2xl sm:text-3xl">Choose a project to edit</h1>{storageError && <p role="alert" className="notice text-left">{storageError}</p>}<Link href="/projects" className="btn btn-primary">Open My projects</Link></div></main>;
   return <CustomizeWorkspace key={`${project.scope.kind}:${project.scope.kind === "account" ? project.scope.ownerId : "device"}:${project.id}`} project={project} />;
 }
 
@@ -110,7 +119,7 @@ function CustomizeWorkspace({ project }: { project: PhotoProject }) {
   const [selected, setSelected] = useState<number | null>(null);
   const [activeTool, setActiveTool] = useState<EditorTool>("photos");
   const toolScroll = useRef<HTMLDivElement>(null);
-  const toolClass = (tool: EditorTool) => `${activeTool === tool ? "block" : "hidden"} space-y-5 md:block`;
+  const toolClass = (tool: EditorTool) => `${activeTool === tool ? "flex" : "hidden"} panel flex-col gap-5 p-4 sm:p-5 md:flex`;
   const [pack, setPack] = useState(STICKER_PACKS[0].id);
   const [assetsTick, setAssetsTick] = useState(0);
   const [saving, setSaving] = useState(false);
@@ -519,23 +528,23 @@ function CustomizeWorkspace({ project }: { project: PhotoProject }) {
   const activePack = STICKER_PACKS.find((p) => p.id === pack) ?? STICKER_PACKS[0];
 
   const finishingActions = (compact: boolean) => <>
-    <div className={compact ? "contents" : "flex gap-3"}>
+    <div className={compact ? "contents" : "flex gap-2"}>
       <button type="button" onClick={event => {
         exportTrigger.current = compact ? mobileFinishTrigger.current : event.currentTarget;
         void openExportStudio();
       }} disabled={saving}
-        className={`flex items-center justify-center gap-2 bg-accent font-semibold text-accent-foreground disabled:opacity-50 ${compact ? "min-h-11 rounded-xl text-sm" : "min-h-13 flex-1 rounded-2xl shadow-lg shadow-accent/25"}`}>
-        <Download size={18} /> {saving ? "Preparing…" : "Export"}
+        className={`btn btn-primary ${compact ? "w-full text-sm" : "min-h-12 flex-1 text-base"}`}>
+        {saving ? <LoaderCircle size={18} className="animate-spin motion-reduce:animate-none" aria-hidden /> : <Download size={18} aria-hidden />} {saving ? "Preparing…" : "Export"}
       </button>
       <button type="button" onClick={share} disabled={saving} aria-label="Share"
-        className={`glass-card flex items-center justify-center gap-2 disabled:opacity-50 ${compact ? "min-h-11 rounded-xl text-sm" : "min-h-13 w-16 rounded-2xl"}`}>
-        <Share2 size={18} /> {compact && "Share"}
+        className={`btn btn-quiet ${compact ? "w-full text-sm" : "min-h-12 w-12 shrink-0 px-0"}`}>
+        <Share2 size={18} aria-hidden /> {compact && "Share"}
       </button>
     </div>
     {authEnabled && <button type="button" onClick={saveToTimeline} disabled={saveState === "saving"}
       aria-label={saveState === "saved" ? "Saved to Shared Vault" : user ? "Save to our Shared Vault" : "Sign in to save"}
-      className={`flex items-center justify-center gap-2 border border-border font-semibold disabled:opacity-50 ${compact ? "min-h-11 rounded-xl text-sm" : "min-h-12 rounded-2xl"}`}>
-      {saveState === "saved" ? <Check size={18} className="text-success" /> : <Heart size={18} className="text-accent" />}
+      className={`btn btn-quiet ${compact ? "w-full text-sm" : "w-full"}`}>
+      {saveState === "saved" ? <Check size={18} className="text-success" aria-hidden /> : <Heart size={18} className="text-accent" aria-hidden />}
       {saveState === "saving" ? "Saving…" : saveState === "saved" ? compact ? "Saved" : "Saved to Shared Vault" : user ? compact ? "Save to vault" : "Save to our Shared Vault" : "Sign in to save"}
     </button>}
   </>;
@@ -548,7 +557,7 @@ function CustomizeWorkspace({ project }: { project: PhotoProject }) {
       if (event.key.toLowerCase() === "z") { event.preventDefault(); void applyHistory(event.shiftKey ? "redo" : "undo"); }
       else if (event.key.toLowerCase() === "y") { event.preventDefault(); void applyHistory("redo"); }
     }}>
-      <div className="strip-editor-preview relative flex shrink-0 items-center justify-center bg-muted/40 p-3 sm:p-4 md:max-w-4xl md:flex-1 md:p-6">
+      <div className="strip-editor-preview relative flex shrink-0 items-center justify-center bg-muted/50 p-3 sm:p-4 md:my-3 md:ml-3 md:max-w-4xl md:flex-1 md:rounded-[2rem] md:p-6 md:shadow-[inset_0_0_0_1px_var(--panel-stroke)]">
         <EditorFinishMenu triggerRef={mobileFinishTrigger}>{finishingActions(true)}</EditorFinishMenu>
         <StripPreview input={input} assetsVersion={assetsTick} gesturesEnabled={activeTool !== "stickers"} className="contents">
         <div
@@ -578,64 +587,58 @@ function CustomizeWorkspace({ project }: { project: PhotoProject }) {
             onPointerUp={onPointerUp}
             onPointerCancel={onPointerUp}
             onLostPointerCapture={onPointerUp}
-            className={`h-full w-full rounded-md shadow-2xl shadow-black/25 md:touch-none ${activeTool === "stickers" ? "touch-none" : "touch-pan-y cursor-zoom-in md:cursor-auto"}`}
+            className={`h-full w-full rounded-md shadow-[0_2px_4px_rgb(0_0_0/0.08),0_24px_48px_-16px_rgb(0_0_0/0.35)] md:touch-none ${activeTool === "stickers" ? "touch-none" : "touch-pan-y cursor-zoom-in md:cursor-auto"}`}
           />
         </div>
         </StripPreview>
       </div>
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden md:max-w-md xl:max-w-lg">
-        <div className="shrink-0 space-y-2 border-b border-border px-4 py-3 md:px-5">
-          <div className="flex items-center justify-between">
+        <div className="shrink-0 space-y-2 px-4 pt-3 pb-2 md:space-y-3 md:px-5 md:pt-5">
+          <div className="flex items-center justify-between gap-2">
             <button
               onClick={() => void navigate(isShared ? session.roomCode ? `/room/${session.roomCode}` : "/projects" : "/booth")}
-              className="flex min-h-11 items-center gap-2 rounded-full bg-muted px-4 text-sm font-medium"
+              className="btn btn-quiet min-h-10 pl-3 text-sm"
             >
-              <ArrowLeft size={16} /> {isShared ? session.roomCode ? "Back to room" : "Back" : hasShots ? "Retake photos" : "Add photos"}
+              <ArrowLeft size={16} aria-hidden /> {isShared ? session.roomCode ? "Back to room" : "Back" : hasShots ? "Retake photos" : "Add photos"}
             </button>
-            <h1 className="text-lg font-semibold" style={{ fontFamily: "var(--font-fraunces)" }}>
+            <div className="flex gap-1.5">
+              <button type="button" aria-label="Undo edit" disabled={!project.history.past.length || draft.pending} onClick={() => void applyHistory("undo")} className="btn btn-quiet min-h-10 w-10 shrink-0 px-0"><Undo2 size={18} aria-hidden /></button>
+              <button type="button" aria-label="Redo edit" disabled={!project.history.future.length || draft.pending} onClick={() => void applyHistory("redo")} className="btn btn-quiet min-h-10 w-10 shrink-0 px-0"><Redo2 size={18} aria-hidden /></button>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+            <h1 className="font-display text-2xl max-md:sr-only">
               Edit your strip
             </h1>
+            <p role="status" className="flex items-center gap-1.5 text-xs font-bold text-muted-foreground">{draft.error || storageError ? <CircleAlert size={14} className="text-destructive" aria-hidden /> : draft.pending || storageStatus === "saving" ? <LoaderCircle size={14} className="animate-spin motion-reduce:animate-none" aria-hidden /> : <Check size={14} className="text-success" aria-hidden />}{draft.error || storageError ? "Some changes didn't save" : draft.pending || storageStatus === "saving" ? "Saving on this device…" : "Saved on this device"}</p>
           </div>
-          <div className="flex items-center gap-2">
-            <Dropdown label="Editing tool" value={activeTool} className="min-w-0 flex-1 md:hidden" options={EDITOR_TOOLS} onChange={value => { setActiveTool(value as EditorTool); toolScroll.current?.scrollTo({ top: 0 }); }} />
-            <button type="button" aria-label="Undo edit" disabled={!project.history.past.length || draft.pending} onClick={() => void applyHistory("undo")} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-border disabled:opacity-30"><Undo2 size={18} /></button>
-            <button type="button" aria-label="Redo edit" disabled={!project.history.future.length || draft.pending} onClick={() => void applyHistory("redo")} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-border disabled:opacity-30"><Redo2 size={18} /></button>
+          {saveError && <p role="alert" className="notice max-h-24 overflow-y-auto border border-destructive/30 bg-destructive/10 font-bold">{saveError}</p>}
+          <div className="-mx-4 overflow-x-auto px-4 pt-1 scrollbar-hide md:hidden">
+            <div className="segmented" role="group" aria-label="Editing tool">
+              {EDITOR_TOOLS.map(tool => <button key={tool.value} type="button" aria-pressed={activeTool === tool.value} onClick={() => { if (activeTool !== tool.value) { setActiveTool(tool.value); toolScroll.current?.scrollTo({ top: 0 }); } }} className="shrink-0"><tool.icon size={15} aria-hidden />{tool.short}</button>)}
+            </div>
           </div>
-          <p role="status" className="text-sm text-muted-foreground">{draft.error || storageError ? "Some changes didn't save" : draft.pending || storageStatus === "saving" ? "Saving on this device…" : "Saved on this device"}</p>
-          {saveError && <p role="alert" className="max-h-20 overflow-y-auto text-sm text-destructive">{saveError}</p>}
         </div>
-        <div ref={toolScroll} className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto overscroll-contain p-4 md:p-5" aria-label="Editing tools">
-          <div className={toolClass("project")}>
-          <div className="flex flex-wrap items-center gap-2">
-            <button type="button" onClick={() => void navigate("/projects")} className="flex min-h-11 items-center gap-2 rounded-lg border border-border px-3 text-sm"><FolderOpen size={16} /> My projects</button>
-            <button type="button" onClick={() => void navigate("/templates")} className="min-h-11 rounded-lg border border-border px-3 text-sm">Templates</button>
-            <button type="button" onClick={() => void navigate("/templates/design")} className="min-h-11 rounded-lg border border-border px-3 text-sm">Frame designer</button>
-            {!isShared && <button type="button" onClick={() => void navigate("/booth#then-now")} className="min-h-11 rounded-lg border border-border px-3 text-sm">Then &amp; now</button>}
-            <button onClick={() => void downloadProject()} disabled={saving} className="min-h-11 text-sm text-muted-foreground underline underline-offset-4 disabled:opacity-50">Back up this project</button>
-          </div>
-          </div>
-          {!hasShots && <p className="text-sm">This version has no photos. Press Redo to bring them back, or choose Add photos.</p>}
-          {(draft.error || storageError) && <div role="alert" className="text-sm"><p>{draft.error ?? storageError}</p><div className="flex flex-wrap gap-4"><button className="mt-2 min-h-11 text-accent underline" onClick={() => void draft.flush().catch(error => setSaveError(error.message))}>Try saving again</button>{draft.error && <button className="mt-2 min-h-11 underline" onClick={() => setDiscardingEdits(true)}>Discard unsaved edits</button>}</div></div>}
-          {discardingEdits && <div className="border-y border-border py-3 text-sm"><p>Go back to your last saved edits? Unsaved changes will be lost.</p><div className="mt-2 flex gap-4"><button className="min-h-11 text-destructive underline" onClick={() => void discardEdits()}>Go back to saved edits</button><button className="min-h-11 underline" onClick={() => setDiscardingEdits(false)}>Keep editing</button></div></div>}
+        <div ref={toolScroll} className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto overscroll-contain px-4 pt-2 pb-4 md:px-5 md:pb-5" aria-label="Editing tools">
+          {!hasShots && <p className="notice">This version has no photos. Press Redo to bring them back, or choose Add photos.</p>}
+          {(draft.error || storageError) && <div role="alert" className="notice border border-destructive/30 bg-destructive/10"><p className="font-bold break-words">{draft.error ?? storageError}</p><div className="mt-3 flex flex-wrap gap-2"><button className="btn btn-tinted min-h-10 text-sm" onClick={() => void draft.flush().catch(error => setSaveError(error.message))}>Try saving again</button>{draft.error && <button className="btn btn-plain min-h-10 text-sm" onClick={() => setDiscardingEdits(true)}>Discard unsaved edits</button>}</div></div>}
+          {discardingEdits && <div className="notice"><p>Go back to your last saved edits? Unsaved changes will be lost.</p><div className="mt-3 flex flex-wrap gap-2"><button className="btn btn-danger min-h-10 text-sm" onClick={() => void discardEdits()}>Go back to saved edits</button><button className="btn btn-quiet min-h-10 text-sm" onClick={() => setDiscardingEdits(false)}>Keep editing</button></div></div>}
+          {curated.loading && <p role="status" className="notice flex items-center gap-2 text-muted-foreground"><LoaderCircle size={15} className="animate-spin motion-reduce:animate-none" aria-hidden />Loading artwork…</p>}
+          {curated.fallback.length > 0 && <p role="status" className="notice">Couldn&apos;t load {curated.fallback.join(", ")}. Using a built-in background.</p>}
           <div className={toolClass("photos")}>
-            {editor.template ? <><TemplateSourcePanel project={project} onImport={async (role, index, file) => { await draft.flush(); await importShot(role, index, file); }} /><button className="min-h-11 text-left text-sm underline" onClick={() => setField("template", null)}>Use the standard layout</button></> : <PhotoEditPanel project={project} editor={editor} change={draft.patch} reorder={async order => { await draft.flush(); await editProject({}, order); }} />}
+            {editor.template ? <><TemplateSourcePanel project={project} onImport={async (role, index, file) => { await draft.flush(); await importShot(role, index, file); }} /><button className="btn btn-tinted min-h-10 self-start text-sm" onClick={() => setField("template", null)}>Use the standard layout</button></> : <PhotoEditPanel project={project} editor={editor} change={draft.patch} reorder={async order => { await draft.flush(); await editProject({}, order); }} />}
           </div>
-
-          <div className={toolClass("scene")}>
-          <VisualPackPicker sceneId={sceneId} materialId={editor.materialId ?? null} onSceneChange={setSceneId} onMaterialChange={id => setField("materialId", id)} />
-          </div>
-          {curated.loading && <p role="status" className="text-sm text-muted-foreground">Loading artwork…</p>}
-          {curated.fallback.length > 0 && <p role="status" className="text-sm">Couldn&apos;t load {curated.fallback.join(", ")}. Using a built-in background.</p>}
 
           <div className={toolClass("look")}>
+          <h2 className={toolTitle}>Frame &amp; look</h2>
           <section>
-            <h2 className="mb-2 text-sm font-medium text-muted-foreground">Theme</h2>
+            <h3 className={subTitle}>Theme</h3>
             <div className="flex flex-wrap gap-2">
               <button
                 onClick={() => applyTheme(null)}
-                className={`flex h-[5.5rem] w-14 flex-col items-center justify-center rounded-xl border-2 text-[10px] font-medium transition ${
-                  themeId === null ? "border-accent" : "border-border"
+                className={`flex h-[5.5rem] w-14 flex-col items-center justify-center rounded-2xl border-2 bg-muted text-[0.6875rem] font-bold ${
+                  themeId === null ? "border-accent text-foreground" : "border-transparent text-muted-foreground"
                 }`}
               >
                 None
@@ -648,7 +651,7 @@ function CustomizeWorkspace({ project }: { project: PhotoProject }) {
                     onClick={() => applyTheme(t.id)}
                     title={t.name}
                     aria-label={t.name}
-                    className={`w-14 overflow-hidden rounded-xl border-2 transition ${
+                    className={`w-14 overflow-hidden rounded-2xl border-2 ${
                       themeId === t.id ? "border-accent scale-105" : "border-border"
                     }`}
                   >
@@ -663,7 +666,7 @@ function CustomizeWorkspace({ project }: { project: PhotoProject }) {
                         {t.decor[0].emoji}
                       </span>
                     </span>
-                    <span className="block truncate bg-card px-1 py-1 text-center text-[10px] font-medium">
+                    <span className="block truncate bg-card px-1 py-1 text-center text-[0.6875rem] font-bold">
                       {t.name}
                     </span>
                   </button>
@@ -673,7 +676,7 @@ function CustomizeWorkspace({ project }: { project: PhotoProject }) {
           </section>
 
           <section>
-            <h2 className="mb-2 text-sm font-medium text-muted-foreground">Frame</h2>
+            <h3 className={subTitle}>Frame</h3>
             <div className="flex flex-wrap gap-2">
               {FRAMES.map((f) => (
                 <button
@@ -681,7 +684,7 @@ function CustomizeWorkspace({ project }: { project: PhotoProject }) {
                   onClick={() => setFrameId(f.id)}
                   aria-label={f.name}
                   title={f.name}
-                  className={`h-11 w-11 rounded-full border-2 transition ${
+                  className={`h-11 w-11 rounded-full border-2 shadow-[inset_0_0_0_1px_rgb(0_0_0/0.08)] ${
                     frameId === f.id ? "border-accent scale-110" : "border-border"
                   }`}
                   style={{ background: f.color }}
@@ -691,12 +694,12 @@ function CustomizeWorkspace({ project }: { project: PhotoProject }) {
           </section>
 
           <section>
-            <h2 className="mb-2 text-sm font-medium text-muted-foreground">Pattern</h2>
+            <h3 className={subTitle}>Pattern</h3>
             <div className="flex flex-wrap gap-2">
               <button
                 onClick={() => setPatternId("none")}
-                className={`flex h-16 w-12 items-center justify-center rounded-lg border-2 text-[10px] font-medium transition ${
-                  patternId === "none" ? "border-accent" : "border-border"
+                className={`flex h-16 w-12 items-center justify-center rounded-xl border-2 bg-muted text-[0.6875rem] font-bold ${
+                  patternId === "none" ? "border-accent text-foreground" : "border-transparent text-muted-foreground"
                 }`}
               >
                 None
@@ -707,7 +710,7 @@ function CustomizeWorkspace({ project }: { project: PhotoProject }) {
                   onClick={() => setPatternId(p.id)}
                   title={p.name}
                   aria-label={p.name}
-                  className={`h-16 w-12 overflow-hidden rounded-lg border-2 transition ${
+                  className={`h-16 w-12 overflow-hidden rounded-xl border-2 ${
                     patternId === p.id ? "border-accent scale-105" : "border-border"
                   }`}
                 >
@@ -723,33 +726,37 @@ function CustomizeWorkspace({ project }: { project: PhotoProject }) {
           </section>
 
           <section>
-            <h2 className="mb-2 text-sm font-medium text-muted-foreground">Filter</h2>
-            <FilterBar
-              value={editor.filterId}
-              onChange={(id) => setField("filterId", id)}
-              layoutClass="flex-wrap"
-            />
+            <h3 className={subTitle}>Filter</h3>
+            <div className="-mx-1">
+              <FilterBar
+                value={editor.filterId}
+                onChange={(id) => setField("filterId", id)}
+                layoutClass="flex-wrap"
+              />
+            </div>
           </section>
 
           </div>
           <div className={toolClass("scene")}>
+          <h2 className={toolTitle}>Scenes &amp; textures</h2>
+          <VisualPackPicker sceneId={sceneId} materialId={editor.materialId ?? null} onSceneChange={setSceneId} onMaterialChange={id => setField("materialId", id)} />
           {(sceneId || segFailed) && (
-            <section>
-              <h2 className="mb-2 text-sm font-medium text-muted-foreground">
+            <section className="border-t border-border pt-4">
+              <h3 className={subTitle}>
                 Scene placement
-              </h2>
+              </h3>
               {segmenting && (
-                <p className="mt-1 text-xs text-muted-foreground">
+                <p className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground"><LoaderCircle size={13} className="animate-spin motion-reduce:animate-none" aria-hidden />
                   Cutting out the background…
                 </p>
               )}
               {segFailed && (
-                <p className="mt-1 text-xs text-destructive">
+                <p className="mt-1 text-xs font-bold text-destructive">
                   Couldn&apos;t cut out the background on this device.
                 </p>
               )}
               {sceneId && cutouts && !editor.template && (
-                <div className="mt-2 flex flex-wrap gap-4">
+                <div className="mt-2 flex flex-col gap-3">
                   {session.members.map((side) => {
                     const mine = side === session.role;
                     const place = places[side] ?? DEFAULT_PLACEMENT;
@@ -768,20 +775,20 @@ function CustomizeWorkspace({ project }: { project: PhotoProject }) {
                         ? `Friend ${side}`
                         : "Partner";
                     return (
-                      <div key={side} className="flex flex-wrap items-center gap-1">
+                      <div key={side} className="flex flex-wrap items-center gap-1.5">
                         <span
-                          className={`mr-1 text-xs font-semibold ${
+                          className={`w-14 text-xs font-bold ${
                             mine ? "text-accent" : "text-partner"
                           }`}
                         >
                           {label}
                         </span>
-                        <button aria-label={`${side} left`} onClick={() => nudge(-0.04, 0, 0)} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-muted"><ChevronLeft size={16} /></button>
-                        <button aria-label={`${side} right`} onClick={() => nudge(0.04, 0, 0)} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-muted"><ChevronRight size={16} /></button>
-                        <button aria-label={`${side} up`} onClick={() => nudge(0, -0.03, 0)} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-muted"><ChevronUp size={16} /></button>
-                        <button aria-label={`${side} down`} onClick={() => nudge(0, 0.03, 0)} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-muted"><ChevronDown size={16} /></button>
-                        <button aria-label={`${side} smaller`} onClick={() => nudge(0, 0, -0.08)} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-muted"><ZoomOut size={16} /></button>
-                        <button aria-label={`${side} bigger`} onClick={() => nudge(0, 0, 0.08)} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-muted"><ZoomIn size={16} /></button>
+                        <button aria-label={`${side} left`} onClick={() => nudge(-0.04, 0, 0)} className={roundControl}><ChevronLeft size={16} aria-hidden /></button>
+                        <button aria-label={`${side} right`} onClick={() => nudge(0.04, 0, 0)} className={roundControl}><ChevronRight size={16} aria-hidden /></button>
+                        <button aria-label={`${side} up`} onClick={() => nudge(0, -0.03, 0)} className={roundControl}><ChevronUp size={16} aria-hidden /></button>
+                        <button aria-label={`${side} down`} onClick={() => nudge(0, 0.03, 0)} className={roundControl}><ChevronDown size={16} aria-hidden /></button>
+                        <button aria-label={`${side} smaller`} onClick={() => nudge(0, 0, -0.08)} className={roundControl}><ZoomOut size={16} aria-hidden /></button>
+                        <button aria-label={`${side} bigger`} onClick={() => nudge(0, 0, 0.08)} className={roundControl}><ZoomIn size={16} aria-hidden /></button>
                       </div>
                     );
                   })}
@@ -792,26 +799,26 @@ function CustomizeWorkspace({ project }: { project: PhotoProject }) {
           </div>
 
           <div className={toolClass("stickers")}>
-          <section>
-            <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-              <div className="flex items-center gap-2"><h2 className="text-sm font-medium text-muted-foreground">Stickers</h2><HelpTooltip label="About placing stickers">Select a sticker on the strip, then drag or use the arrow keys to move it.</HelpTooltip></div>
+          <section className="flex flex-col gap-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-1.5"><h2 className={toolTitle}>Stickers</h2><HelpTooltip label="About placing stickers">Select a sticker on the strip, then drag or use the arrow keys to move it.</HelpTooltip></div>
               {selected !== null && (
                 <div className="flex gap-1">
-                  <button aria-label="Smaller" onClick={() => editSelected((s) => ({ ...s, scale: Math.max(0.4, s.scale - 0.15) }))} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-muted"><ZoomOut size={16} /></button>
-                  <button aria-label="Bigger" onClick={() => editSelected((s) => ({ ...s, scale: Math.min(3, s.scale + 0.15) }))} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-muted"><ZoomIn size={16} /></button>
-                  <button aria-label="Rotate left" onClick={() => editSelected((s) => ({ ...s, rotation: s.rotation - Math.PI / 12 }))} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-muted"><RotateCcw size={16} /></button>
-                  <button aria-label="Rotate right" onClick={() => editSelected((s) => ({ ...s, rotation: s.rotation + Math.PI / 12 }))} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-muted"><RotateCw size={16} /></button>
-                  <button aria-label="Delete sticker" onClick={deleteSelected} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-destructive/15 text-destructive"><Trash2 size={16} /></button>
+                  <button aria-label="Smaller" onClick={() => editSelected((s) => ({ ...s, scale: Math.max(0.4, s.scale - 0.15) }))} className={roundControl}><ZoomOut size={16} aria-hidden /></button>
+                  <button aria-label="Bigger" onClick={() => editSelected((s) => ({ ...s, scale: Math.min(3, s.scale + 0.15) }))} className={roundControl}><ZoomIn size={16} aria-hidden /></button>
+                  <button aria-label="Rotate left" onClick={() => editSelected((s) => ({ ...s, rotation: s.rotation - Math.PI / 12 }))} className={roundControl}><RotateCcw size={16} aria-hidden /></button>
+                  <button aria-label="Rotate right" onClick={() => editSelected((s) => ({ ...s, rotation: s.rotation + Math.PI / 12 }))} className={roundControl}><RotateCw size={16} aria-hidden /></button>
+                  <button aria-label="Delete sticker" onClick={deleteSelected} className="btn btn-danger w-11 shrink-0 px-0"><Trash2 size={16} aria-hidden /></button>
                 </div>
               )}
             </div>
-            <div className="mb-2 flex flex-wrap items-start gap-2">
-              <div className="flex min-w-0 flex-1 flex-wrap gap-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex min-w-0 flex-wrap gap-1.5">
                 {STICKER_PACKS.map((p) => (
                   <button
                     key={p.id}
                     onClick={() => setPack(p.id)}
-                    className={`min-h-11 shrink-0 rounded-full px-3 text-xs font-medium ${
+                    className={`min-h-11 shrink-0 rounded-full px-3.5 text-[0.8125rem] font-bold ${
                       pack === p.id ? "bg-foreground text-background" : "bg-muted text-muted-foreground"
                     }`}
                   >
@@ -819,29 +826,25 @@ function CustomizeWorkspace({ project }: { project: PhotoProject }) {
                   </button>
                 ))}
               </div>
-              <div className="flex shrink-0 rounded-full bg-muted p-0.5">
+              <div className="segmented shrink-0">
                 {STICKER_STYLES.map((s) => (
                   <button
                     key={s.id}
                     onClick={() => setStickerStyle(s.id)}
-                    className={`min-h-11 rounded-full px-3 text-xs font-medium transition ${
-                      stickerStyle === s.id
-                        ? "bg-card text-foreground shadow-sm"
-                        : "text-muted-foreground"
-                    }`}
+                    aria-pressed={stickerStyle === s.id}
                   >
                     {s.name}
                   </button>
                 ))}
               </div>
             </div>
-            <div className="flex flex-wrap gap-1">
+            <div className="panel-muted grid grid-cols-[repeat(auto-fill,minmax(2.75rem,1fr))] gap-1 p-2">
               {activePack.stickers.map((def) => (
                 <button
                   key={def.slug}
                   onClick={() => addSticker(def)}
                   aria-label={def.slug.replaceAll("_", " ")}
-                  className="flex h-11 w-11 items-center justify-center rounded-xl transition hover:bg-muted"
+                  className="flex h-11 items-center justify-center rounded-xl hover:bg-card"
                 >
                   {stickerStyle === "noto" ? (
                     <span
@@ -866,44 +869,56 @@ function CustomizeWorkspace({ project }: { project: PhotoProject }) {
           </div>
 
           <div className={toolClass("caption")}>
-          <section className="flex items-center gap-3">
+          <h2 className={toolTitle}>Caption &amp; date</h2>
+          <section className="flex items-center gap-2">
             <input
               value={caption}
               aria-label="Strip caption"
               onChange={(e) => setCaption(e.target.value.slice(0, 30))}
               placeholder="Add a caption…"
-              className="min-h-11 min-w-0 flex-1 rounded-xl border border-border bg-card px-4 text-base outline-none focus:border-accent"
+              className="field min-w-0 flex-1 text-base"
             />
             <button
               onClick={() => setShowDate((d) => !d)}
               aria-pressed={showDate}
               aria-label="Show date stamp"
-              className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border transition ${
+              className={`flex size-[2.875rem] shrink-0 items-center justify-center rounded-full ${
                 showDate
-                  ? "border-datestamp bg-datestamp/15 text-datestamp"
-                  : "border-border bg-card text-muted-foreground"
+                  ? "bg-datestamp/15 text-datestamp shadow-[inset_0_0_0_2px_var(--datestamp)]"
+                  : "bg-muted text-muted-foreground"
               }`}
             >
-              <Calendar size={18} />
+              <Calendar size={18} aria-hidden />
             </button>
           </section>
           </div>
+
+          <div className={toolClass("project")}>
+          <h2 className={toolTitle}>Project &amp; templates</h2>
+          <div className="flex flex-wrap items-center gap-2">
+            <button type="button" onClick={() => void navigate("/projects")} className="btn btn-quiet min-h-10 text-sm"><FolderOpen size={16} aria-hidden /> My projects</button>
+            <button type="button" onClick={() => void navigate("/templates")} className="btn btn-quiet min-h-10 text-sm">Templates</button>
+            <button type="button" onClick={() => void navigate("/templates/design")} className="btn btn-quiet min-h-10 text-sm">Frame designer</button>
+            {!isShared && <button type="button" onClick={() => void navigate("/booth#then-now")} className="btn btn-quiet min-h-10 text-sm">Then &amp; now</button>}
+          </div>
+          <button onClick={() => void downloadProject()} disabled={saving} className="btn btn-tinted min-h-10 self-start text-sm"><Download size={16} aria-hidden /> Back up this project</button>
+          </div>
         </div>
 
-        <div className="hidden max-h-[35dvh] shrink-0 flex-col gap-3 overflow-y-auto border-t border-border bg-background px-5 py-3 md:flex">
+        <div className="mx-4 mb-4 hidden max-h-[35dvh] shrink-0 flex-col gap-2 overflow-y-auto rounded-[1.75rem] p-2 glass md:mx-5 md:mb-5 md:flex">
           {finishingActions(false)}
         </div>
       </div>
 
       {capChoices !== null && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div className="glass-card flex max-h-[85dvh] w-full max-w-md flex-col gap-4 overflow-hidden rounded-2xl p-5">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[rgb(16_10_13/0.32)] p-4 backdrop-blur-[6px] motion-safe:animate-[surface-enter_220ms_ease-out]">
+          <div className="glass-strong flex max-h-[85dvh] w-full max-w-md flex-col gap-4 overflow-hidden rounded-[1.75rem] p-5 sm:p-6">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <h2 className="text-lg font-semibold" style={{ fontFamily: "var(--font-fraunces)" }}>
+                <h2 className="font-display text-xl">
                   This week&apos;s vault is full
                 </h2>
-                <p className="mt-1 text-sm text-muted-foreground">
+                <p className="mt-1.5 text-sm text-muted-foreground">
                   You&apos;ve saved {WEEKLY_STRIP_CAP} strips this week. Discard one
                   to make room, or keep them all and save this next week.
                 </p>
@@ -911,35 +926,35 @@ function CustomizeWorkspace({ project }: { project: PhotoProject }) {
               <button
                 onClick={() => setCapChoices(null)}
                 aria-label="Cancel"
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted"
+                className={roundControl}
               >
-                <X size={18} />
+                <X size={18} aria-hidden />
               </button>
             </div>
 
             {capChoices.some((s) => s.mine) ? (
-              <div className="grid grid-cols-3 gap-3 overflow-y-auto">
+              <div className="grid grid-cols-3 gap-3 overflow-y-auto p-0.5">
                 {capChoices
                   .filter((s) => s.mine)
                   .map((s) => (
                     <button
                       key={s.id}
                       onClick={() => discardAndSave(s)}
-                      className="group relative overflow-hidden rounded-lg border border-border"
+                      className="group relative overflow-hidden rounded-xl shadow-[inset_0_0_0_1px_var(--panel-stroke)]"
                       aria-label="Discard this strip and save the new one"
                     >
                       {s.url && (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img src={s.url} alt={s.caption ?? "Photo strip"} className="aspect-[3/4] w-full object-cover" />
                       )}
-                      <span className="absolute inset-0 flex items-center justify-center bg-destructive/0 opacity-0 transition group-hover:bg-destructive/70 group-hover:opacity-100">
-                        <Trash2 size={20} className="text-white" />
+                      <span className="absolute inset-0 flex items-center justify-center bg-destructive/0 opacity-0 transition group-hover:bg-destructive/70 group-hover:opacity-100 group-focus-visible:bg-destructive/70 group-focus-visible:opacity-100">
+                        <Trash2 size={20} className="text-white" aria-hidden />
                       </span>
                     </button>
                   ))}
               </div>
             ) : (
-              <p className="rounded-xl bg-muted/60 px-3 py-2 text-sm text-muted-foreground">
+              <p className="notice text-muted-foreground">
                 None of your strips from this week can be removed. Download this one
                 instead, or wait for the weekly reset.
               </p>

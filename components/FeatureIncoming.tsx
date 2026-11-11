@@ -1,19 +1,16 @@
 import Link from "next/link";
-import { Camera } from "lucide-react";
+import { Camera, CirclePause, Sparkles } from "lucide-react";
 
 export function FeatureIncoming({ feature, recovery = false }: { feature?: string; recovery?: boolean }) {
-  const control = "inline-flex min-h-12 items-center justify-center rounded-2xl px-5 py-3 text-sm font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring";
-
-  return <main className="mx-auto w-full max-w-5xl px-5 py-12 sm:px-8 sm:py-20">
-    <div className="max-w-xl">
-      <Camera size={32} strokeWidth={1.5} className="mb-6 text-accent" aria-hidden="true" />
-      <h1 className="font-display text-4xl font-semibold sm:text-5xl">{recovery ? "Temporarily paused" : "Feature incoming"}</h1>
-      {feature && <p className="mt-3 text-lg font-medium">{feature}</p>}
-      <p className="mt-4 max-w-md leading-relaxed text-foreground/70">{recovery ? "You can still make a strip, open saved projects and download existing photos." : "We're getting this ready. In the meantime, make a photo strip."}</p>
-      <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-        <Link href="/booth" className={`${control} bg-accent text-accent-foreground hover:bg-accent/90`}>Open solo booth</Link>
-        <Link href="/projects" className={`${control} border border-border hover:bg-muted`}>Your projects</Link>
+  return <main className="mx-auto flex min-h-[70dvh] w-full max-w-xl flex-1 flex-col items-center justify-center px-4 py-12">
+    <section className="page-head panel flex w-full flex-col items-center gap-5 px-6 py-10 text-center sm:px-10 sm:py-12">
+      <span className={`glyph size-16 rounded-[1.25rem] ${recovery ? "bg-[#64748b]" : "bg-[#f59e0b]"}`}>{recovery ? <CirclePause size={30} strokeWidth={2.25} aria-hidden /> : <Sparkles size={30} strokeWidth={2.25} aria-hidden />}</span>
+      <div>
+        <h1 className="font-display text-3xl leading-tight sm:text-4xl">{recovery ? "Temporarily paused" : "Feature incoming"}</h1>
+        {feature && <p className="mt-2 text-lg font-bold">{feature}</p>}
+        {recovery && <p className="mx-auto mt-3 max-w-sm text-sm text-muted-foreground">You can still make a strip, open saved projects and download existing photos.</p>}
       </div>
-    </div>
+      <Link href="/booth" className="btn btn-primary"><Camera size={18} aria-hidden /> Open solo booth</Link>
+    </section>
   </main>;
 }

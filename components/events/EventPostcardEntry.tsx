@@ -1,5 +1,7 @@
 "use client";
 import { useEffect, useRef } from "react";
+import { LoaderCircle } from "lucide-react";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { useAuth } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/client";
 import { EventClientError } from "@/lib/events/client";
@@ -8,7 +10,7 @@ import { EventPostcardComposer } from "./EventPostcardComposer";
 
 export function EventPostcardEntry(props: { eventId: string; postcardId: string; source: PostcardSource; available: boolean }) {
   const { user, loading } = useAuth();
-  return <main className="mx-auto min-h-dvh max-w-3xl px-5 py-7 sm:px-8 sm:py-10"><h1 className="mt-8 font-display text-4xl font-semibold sm:text-5xl">A postcard from everyone.</h1><p className="mb-8 mt-4 max-w-2xl leading-relaxed text-foreground/75">Check, approve or withdraw your group photo.</p>{!props.available ? <p role="status" className="rounded-xl bg-muted p-5">Event postcards aren&apos;t available here. Ask the host for help.</p> : loading ? <p role="status">Checking your account…</p> : <Entry key={user?.id ?? "anonymous"} {...props} ownerId={user?.id ?? null} />}</main>;
+  return <main className="mx-auto flex min-h-dvh w-full max-w-3xl flex-1 flex-col gap-6 px-4 pt-4 pb-10 sm:px-8 sm:pt-6"><PageHeader title="A postcard from everyone." /><div className="page-body">{!props.available ? <p role="status" className="notice">Event postcards aren&apos;t available here. Ask the host for help.</p> : loading ? <p role="status" className="panel flex min-h-40 items-center justify-center gap-2 text-sm text-muted-foreground"><LoaderCircle size={18} className="animate-spin motion-reduce:animate-none" aria-hidden /> Checking your account…</p> : <div className="panel p-4 sm:p-6"><Entry key={user?.id ?? "anonymous"} {...props} ownerId={user?.id ?? null} /></div>}</div></main>;
 }
 function Entry({ eventId, postcardId, source, ownerId }: { eventId: string; postcardId: string; source: PostcardSource; ownerId: string | null }) {
   const alive = useRef(false);

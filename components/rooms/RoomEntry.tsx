@@ -3,12 +3,12 @@
 import { useEffect, useRef, useState, type ComponentType, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Camera, LoaderCircle, RefreshCw } from "lucide-react";
+import { ArrowRight, Camera, CameraOff, LoaderCircle, RefreshCw } from "lucide-react";
 import { createRoomEntryApi, forgetRememberedRoom, rememberedRoomId, rememberRoom, roomDisplayName, roomEntryError, roomV2Url, type V2RoomTarget } from "@/lib/rtc/entry-v2";
 import { createRoomApi, RoomApiError } from "@/lib/rtc/signaling-v2";
 import type { RoomState } from "@/lib/server/room-contract";
 
-const control = "inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-wait disabled:opacity-50";
+const codeChip = "rounded-full bg-muted px-3 py-0.5 font-black tracking-[0.24em] text-foreground uppercase";
 
 export default function RoomEntry({ target, ownerScope, Workspace }: { target: V2RoomTarget; ownerScope: string; Workspace: ComponentType<{ initial: RoomState }> }) {
   const router = useRouter(), controller = useRef<AbortController | null>(null), submitting = useRef(false);
@@ -88,35 +88,35 @@ export default function RoomEntry({ target, ownerScope, Workspace }: { target: V
   const invalid = kind === "invalid", checking = !invalid && phase === "loading", busy = phase === "joining";
   const title = invalid ? "Check the room link" : phase === "unavailable" ? "Live rooms aren't available" : roomId || phase === "resume-offer" ? "Back to your room" : kind === "create" ? "Start a room together" : "Join your friends";
   return (
-    <main className="mx-auto flex w-full max-w-xl flex-1 flex-col px-5 py-6 sm:px-6 sm:py-10">
-      <section aria-labelledby="room-entry-title" className="my-auto py-12">
-        <h1 id="room-entry-title" className="text-balance font-display text-3xl font-semibold sm:text-4xl">{title}</h1>
-        {!invalid && phase !== "unavailable" && <p className="mt-4 leading-relaxed text-muted-foreground">{roomId ? "One moment while we reopen your room." : phase === "resume-offer" ? <>You&apos;re already in room <strong className="font-mono text-foreground">{code}</strong> on this browser.</> : kind === "create" ? "Pick a name your friends will recognise. You'll choose who gets in." : <>You’re asking to join room <strong className="font-mono text-foreground">{code}</strong>. The host will let you in.</>}</p>}
-        {invalid && <p role="alert" className="mt-4 leading-relaxed">This room link doesn&apos;t look right. Ask the host for a new one, or enter the room code on the home page.</p>}
-        {checking && <p role="status" className="mt-8 flex items-center gap-3 text-sm"><LoaderCircle size={18} className="motion-safe:animate-spin" aria-hidden /> {roomId ? "Checking room access…" : "Checking if live rooms are up…"}</p>}
-        {phase === "resume-offer" && remembered && <div className="mt-8 space-y-5">
-          <Link href={roomV2Url(remembered.code, remembered.roomId)} replace className={`${control} w-full bg-accent text-accent-foreground`}>Continue as {remembered.members.find(member => member.id === remembered.selfId)?.displayName ?? "yourself"}<ArrowRight size={18} aria-hidden /></Link>
-          <p className="text-sm leading-relaxed text-muted-foreground">Rejoining with a different name gives up your current spot{remembered.hostId === remembered.selfId ? ", including host controls" : ""}. Other tabs with this room open might disconnect.</p>
-          <button onClick={() => setPhase("form")} className={`${control} w-full bg-muted`}>Use a different name</button>
+    <main className="mx-auto flex w-full max-w-xl flex-1 flex-col px-4 pt-4 pb-10 sm:px-6 sm:pt-10">
+      <section aria-labelledby="room-entry-title" className="panel page-body my-auto p-5 sm:p-8">
+        <h1 id="room-entry-title" className="font-display text-[2rem] leading-[1.12] sm:text-4xl">{title}</h1>
+        {!invalid && phase !== "unavailable" && !roomId && <p className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-muted-foreground">{phase === "resume-offer" ? <>You&apos;re already in room <strong className={codeChip}>{code}</strong> on this browser.</> : kind === "create" ? "You'll choose who gets in." : <><strong className={codeChip}>{code}</strong> The host will let you in.</>}</p>}
+        {invalid && <p role="alert" className="mt-3 text-muted-foreground">This room link doesn&apos;t look right. Ask the host for a new one, or enter the room code on the home page.</p>}
+        {checking && <p role="status" className="mt-6 flex items-center gap-3 text-sm font-bold text-muted-foreground"><LoaderCircle size={18} className="motion-safe:animate-spin" aria-hidden /> {roomId ? "Checking room access…" : "Checking if live rooms are up…"}</p>}
+        {phase === "resume-offer" && remembered && <div className="mt-6 flex flex-col gap-3">
+          <Link href={roomV2Url(remembered.code, remembered.roomId)} replace className="btn btn-primary min-h-12 w-full">Continue as {remembered.members.find(member => member.id === remembered.selfId)?.displayName ?? "yourself"}<ArrowRight size={18} aria-hidden /></Link>
+          <p className="notice">Rejoining with a different name gives up your current spot{remembered.hostId === remembered.selfId ? ", including host controls" : ""}. Other tabs with this room open might disconnect.</p>
+          <button onClick={() => setPhase("form")} className="btn btn-quiet w-full">Use a different name</button>
         </div>}
-        {(phase === "form" || busy) && !invalid && <form onSubmit={event => void submit(event)} className="mt-8 space-y-5" aria-busy={busy} noValidate>
+        {(phase === "form" || busy) && !invalid && <form onSubmit={event => void submit(event)} className="mt-6 flex flex-col gap-4" aria-busy={busy} noValidate>
           <div>
-            <label htmlFor="room-display-name" className="block text-sm font-semibold">Your name</label>
-            <input ref={nameInput} id="room-display-name" name="displayName" autoComplete="nickname" maxLength={40} value={name} disabled={busy} onChange={event => { setName(event.target.value); setNameError(false); setError(null); }} aria-invalid={nameError} aria-describedby={`room-name-help${nameError ? " room-entry-error" : ""}`} className="mt-2 min-h-12 w-full rounded-xl border border-border bg-card px-4 text-base outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50" />
+            <label htmlFor="room-display-name" className="block text-sm font-bold">Your name</label>
+            <input ref={nameInput} id="room-display-name" name="displayName" autoComplete="nickname" maxLength={40} value={name} disabled={busy} onChange={event => { setName(event.target.value); setNameError(false); setError(null); }} aria-invalid={nameError} aria-describedby={`room-name-help${nameError ? " room-entry-error" : ""}`} className="field mt-2 min-h-12 text-base" />
             <p id="room-name-help" className="mt-2 text-sm text-muted-foreground">Everyone in the room will see this. Up to 40 characters.</p>
           </div>
-          {kind === "join" && <p className="text-sm leading-relaxed">{remembered ? "Asking again gives up your current spot, including any host controls." : "Already in this room in another tab? Use that tab instead."}</p>}
-          <button ref={submitButton} type="submit" disabled={busy} className={`${control} min-h-12 w-full bg-accent text-accent-foreground hover:brightness-105`}>{busy ? <><LoaderCircle size={18} className="motion-safe:animate-spin" aria-hidden /> {kind === "create" ? "Creating room…" : "Asking to join…"}</> : <>{kind === "create" ? "Create room" : "Ask to join"}<ArrowRight size={18} aria-hidden /></>}</button>
-          <p className="text-sm leading-relaxed text-muted-foreground">Your camera and mic stay off until you turn them on.</p>
+          {kind === "join" && <p className="text-sm">{remembered ? "Asking again gives up your current spot, including any host controls." : "Already in this room in another tab? Use that tab instead."}</p>}
+          <button ref={submitButton} type="submit" disabled={busy} className="btn btn-primary min-h-12 w-full disabled:cursor-wait">{busy ? <><LoaderCircle size={18} className="motion-safe:animate-spin" aria-hidden /> {kind === "create" ? "Creating room…" : "Asking to join…"}</> : <>{kind === "create" ? "Create room" : "Ask to join"}<ArrowRight size={18} aria-hidden /></>}</button>
+          <p className="flex items-center justify-center gap-2 text-center text-sm text-muted-foreground"><CameraOff size={15} className="shrink-0" aria-hidden />Your camera and mic stay off until you turn them on.</p>
         </form>}
-        {error && <p id="room-entry-error" role="alert" className="mt-5 text-sm leading-relaxed">{error}</p>}
-        {!invalid && (phase === "failed" || phase === "unavailable") && <div className="mt-6 flex flex-wrap gap-3">
-          <button onClick={() => setRetry(value => value + 1)} className={`${control} bg-muted hover:bg-border`}><RefreshCw size={16} aria-hidden /> Try again</button>
-          {denied && code && <Link href={roomV2Url(code)} replace className={`${control} bg-accent text-accent-foreground`}>Ask to join again</Link>}
+        {error && <p id="room-entry-error" role="alert" className="notice mt-5 border border-destructive/25 bg-destructive/8">{error}</p>}
+        {!invalid && (phase === "failed" || phase === "unavailable") && <div className="mt-5 flex flex-wrap gap-2">
+          <button onClick={() => setRetry(value => value + 1)} className="btn btn-quiet disabled:cursor-wait"><RefreshCw size={16} aria-hidden /> Try again</button>
+          {denied && code && <Link href={roomV2Url(code)} replace className="btn btn-primary">Ask to join again</Link>}
         </div>}
-        {(invalid || phase === "failed" || phase === "unavailable") && <div className="mt-8 flex flex-wrap gap-3 border-t border-border pt-5">
-          <Link href="/booth" className={`${control} bg-accent text-accent-foreground`}><Camera size={17} aria-hidden /> Use solo booth</Link>
-          <Link href="/projects" className={`${control} hover:bg-muted`}>My projects</Link>
+        {(invalid || phase === "failed" || phase === "unavailable") && <div className="mt-6 flex flex-wrap gap-2 border-t border-border pt-5">
+          <Link href="/booth" className="btn btn-tinted"><Camera size={17} aria-hidden /> Use solo booth</Link>
+          <Link href="/projects" className="btn btn-plain">My projects</Link>
         </div>}
       </section>
     </main>

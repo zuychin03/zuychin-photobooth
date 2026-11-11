@@ -4,10 +4,10 @@ import { useAppNavigationGuard } from "@/components/AppNavigation";
 import type { ChallengeDraftJournal } from "@/lib/memories/challenge-drafts";
 
 import { useEffect, useRef, useState, type ComponentType } from "react";
-import { Check, Cloud, LoaderCircle, Plus, RefreshCw } from "lucide-react";
+import { ArrowRight, Check, Cloud, LoaderCircle, LockKeyhole, Mail, Plus, RefreshCw, Users } from "lucide-react";
 import { Dropdown } from "@/components/Dropdown";
 import { CloudInvitationId } from "./CloudMembers";
-import { cloudControl, cloudError, cloudInput, cloudSize } from "./CloudControls";
+import { cloudError, cloudSize } from "./CloudControls";
 import { CLOUD_PROJECT_LIMITS, type CloudProjectList, type CloudProjectListItem, type CloudProjectView } from "@/lib/projects/cloud-contract";
 import type { CloudProjectClient } from "@/lib/projects/cloud-client";
 import type { CloudUploadManager } from "@/lib/projects/cloud-upload";
@@ -87,32 +87,36 @@ export function CloudLibrary({ client, uploads, drafts, ownerId, ProjectView }: 
   const back = () => { setView(null); setError(null); void refresh(); requestAnimationFrame(() => heading.current?.focus()); };
 
   if (view) return <ProjectView view={view} onBack={back} />;
-  return <section aria-labelledby="cloud-library-heading" className="mt-8">
-    <div className="flex flex-wrap items-end justify-between gap-4 border-b border-border pb-6">
-      <div><h2 ref={heading} tabIndex={-1} id="cloud-library-heading" className="font-display text-3xl font-semibold outline-none">Your cloud library</h2><p className="mt-2 max-w-xl text-sm leading-relaxed text-foreground/70">Nothing uploads unless you choose it.</p></div>
-      {state === "ready" && <button ref={newProjectButton} className={`${cloudControl} bg-accent text-accent-foreground`} disabled={recovery || busy || creating} onClick={() => { setCreating(true); requestAnimationFrame(() => nameInput.current?.focus()); }}><Plus size={17} aria-hidden /> New cloud project</button>}
+  return <section aria-labelledby="cloud-library-heading" className="flex flex-col gap-5">
+    <div className="panel overflow-hidden">
+      <div className="flex flex-wrap items-center justify-between gap-3 p-4 sm:px-6 sm:pt-6 sm:pb-5">
+        <div className="flex min-w-0 items-center gap-3"><span className="glyph bg-[#0ea5e9]"><Cloud size={18} strokeWidth={2.25} aria-hidden /></span><div className="min-w-0"><h2 ref={heading} tabIndex={-1} id="cloud-library-heading" className="font-display text-xl leading-tight outline-none">Your cloud library</h2><p className="mt-0.5 text-sm text-muted-foreground">Nothing uploads unless you choose it.</p></div></div>
+        {state === "ready" && <div className="flex flex-wrap gap-2"><button className="btn btn-plain min-h-10 text-sm" disabled={busy} onClick={() => void refresh()}><RefreshCw size={15} aria-hidden /> Refresh</button><button ref={newProjectButton} className="btn btn-primary min-h-10 text-sm" disabled={recovery || busy || creating} onClick={() => { setCreating(true); requestAnimationFrame(() => nameInput.current?.focus()); }}><Plus size={17} aria-hidden /> New cloud project</button></div>}
+      </div>
+      {state === "loading" && <p role="status" className="flex min-h-40 items-center justify-center gap-2 border-t border-border text-sm text-muted-foreground"><LoaderCircle size={18} aria-hidden className="animate-spin motion-reduce:animate-none" /> Connecting…</p>}
+      {state === "unavailable" && <div className="flex flex-col items-center gap-3 border-t border-border px-6 py-10 text-center"><h3 className="font-display text-xl">Cloud projects aren&apos;t available right now</h3><button className="btn btn-quiet" disabled={busy} onClick={() => void refresh()}><RefreshCw size={16} aria-hidden /> Check again</button></div>}
+      {error && <p role="alert" className="notice mx-4 mb-4 border border-destructive/25 bg-destructive/8 font-bold text-destructive sm:mx-6">{error}</p>}
+      {creating && <form className="panel-muted mx-4 mb-4 grid gap-4 p-4 sm:mx-6 sm:grid-cols-2 sm:p-5" onSubmit={event => { event.preventDefault(); void create(); }}>
+        <label className="block text-sm font-bold">Project name<input ref={nameInput} className="field mt-1.5 font-medium" value={title} onChange={event => setTitle(event.target.value)} maxLength={100} required disabled={busy || Boolean(creation)} autoComplete="off" /></label>
+        <Dropdown label="Who is this project for?" showLabel value={kind} onChange={value => setKind(value as typeof kind)} disabled={busy || Boolean(creation)} options={[{ value: "personal", label: "Only me" }, { value: "friend", label: "Me and invited friends" }]} />
+        <p className="text-sm text-muted-foreground sm:col-span-2">{kind === "personal" ? "Only you can see it." : "You can invite up to three friends. They see photos once they accept."} You can&apos;t change this later. Storage: {cloudSize(CLOUD_PROJECT_LIMITS.projectBytes)}.</p>
+        <div className="flex flex-wrap gap-2 sm:col-span-2"><button className="btn btn-primary" disabled={recovery || busy || !title.trim()}>{creation ? "Try again" : kind === "personal" ? "Create private project" : "Create shared project"}</button><button type="button" className="btn btn-quiet" disabled={busy} onClick={() => { setCreating(false); setCreation(null); setTitle(""); requestAnimationFrame(() => newProjectButton.current?.focus()); }}>Cancel</button></div>
+        {creation && !busy && <p className="text-sm text-muted-foreground sm:col-span-2">The last attempt might have worked. Try again to finish it, or refresh the library first.</p>}
+      </form>}
+      {state === "ready" && <>
+        {listing.projects.length ? <ul aria-label="Cloud projects" className="divide-y divide-border border-t border-border">{listing.projects.map(project => <li key={project.id} className="flex flex-wrap items-center gap-x-4 gap-y-3 px-4 py-4 sm:px-6">
+          <span className={`flex size-12 shrink-0 items-center justify-center rounded-2xl ${project.membership === "invited" ? "bg-partner/15 text-partner" : "bg-muted text-muted-foreground"}`}>{project.membership === "invited" ? <Mail size={20} aria-hidden /> : project.kind === "personal" ? <LockKeyhole size={20} aria-hidden /> : <Users size={20} aria-hidden />}</span>
+          <div className="min-w-0 flex-1 basis-40"><h3 className="break-words text-lg font-bold">{project.title}</h3><p className="mt-0.5 text-sm text-muted-foreground">{project.membership === "invited" ? "Invitation" : project.kind === "personal" ? "Only you" : "Shared project"} · {new Date(project.createdAt).toLocaleDateString("en-AU")}</p></div>
+          <button className={`btn min-h-10 shrink-0 text-sm ${project.membership === "invited" ? "btn-partner" : "btn-quiet"}`} disabled={busy || recovery && project.membership === "invited"} onClick={() => void open(project)}>{project.membership === "invited" ? <><Check size={16} aria-hidden /> Accept invitation</> : <>Open project <ArrowRight size={16} aria-hidden /></>}</button>
+        </li>)}</ul> : <p className="border-t border-border px-6 py-10 text-center font-display text-xl">No cloud projects yet</p>}
+        {listing.nextCursor && <div className="border-t border-border p-3 text-center"><button className="btn btn-quiet text-sm" disabled={busy} onClick={() => void run(async signal => { const result = await client.list(listing.nextCursor!, 20, signal); if (!signal.aborted) setListing(previous => ({ projects: [...previous.projects, ...result.projects.filter(item => !previous.projects.some(old => old.id === item.id))], nextCursor: result.nextCursor })); })}>Show more</button></div>}
+      </>}
     </div>
-    {state === "loading" && <p role="status" className="flex min-h-48 items-center gap-2 text-foreground/70"><LoaderCircle size={18} aria-hidden className="animate-spin motion-reduce:animate-none" /> Connecting…</p>}
-    {state === "unavailable" && <div className="py-10"><Cloud size={26} className="text-foreground/60" aria-hidden /><h3 className="mt-4 font-display text-2xl">Cloud projects aren&apos;t available right now</h3><p className="mt-3 max-w-lg leading-relaxed text-foreground/70">Your device projects still work.</p><button className={`${cloudControl} mt-5 border border-border`} disabled={busy} onClick={() => void refresh()}><RefreshCw size={16} aria-hidden /> Check again</button></div>}
-    {error && <p role="alert" className="mt-4 rounded-xl bg-muted p-4 text-sm leading-relaxed">{error}</p>}
-    {creating && <form className="mt-6 max-w-lg space-y-4 border-b border-border pb-6" onSubmit={event => { event.preventDefault(); void create(); }}>
-      <label className="block text-sm font-medium">Project name<input ref={nameInput} className={`${cloudInput} mt-2`} value={title} onChange={event => setTitle(event.target.value)} maxLength={100} required disabled={busy || Boolean(creation)} autoComplete="off" /></label>
-      <Dropdown label="Who is this project for?" showLabel value={kind} onChange={value => setKind(value as typeof kind)} disabled={busy || Boolean(creation)} options={[{ value: "personal", label: "Only me" }, { value: "friend", label: "Me and invited friends" }]} />
-      <p className="text-sm leading-relaxed text-foreground/70">{kind === "personal" ? "Only you can see it." : "You can invite up to three friends. They see photos once they accept."} You can&apos;t change this later. Storage: {cloudSize(CLOUD_PROJECT_LIMITS.projectBytes)}.</p>
-      <div className="flex flex-wrap gap-2"><button className={`${cloudControl} bg-accent text-accent-foreground`} disabled={recovery || busy || !title.trim()}>{creation ? "Try again" : kind === "personal" ? "Create private project" : "Create shared project"}</button><button type="button" className={cloudControl} disabled={busy} onClick={() => { setCreating(false); setCreation(null); setTitle(""); requestAnimationFrame(() => newProjectButton.current?.focus()); }}>Cancel</button></div>
-      {creation && !busy && <p className="text-sm text-foreground/70">The last attempt might have worked. Try again to finish it, or refresh the library first.</p>}
-    </form>}
-    {state === "ready" && <>
-      <div className="my-3 flex items-center justify-between gap-3"><p className="text-sm text-foreground/70">{listing.projects.length ? "Projects and invitations" : "No cloud projects yet"}</p><button className={cloudControl} disabled={busy} onClick={() => void refresh()}><RefreshCw size={15} aria-hidden /> Refresh</button></div>
-      {listing.projects.length ? <ul aria-label="Cloud projects">{listing.projects.map(project => <li key={project.id} className="flex flex-col gap-4 border-t border-border py-5 sm:flex-row sm:items-center sm:justify-between">
-        <div className="min-w-0"><h3 className="break-words text-lg font-medium">{project.title}</h3><p className="mt-1 text-sm text-foreground/70">{project.membership === "invited" ? "Invitation" : project.kind === "personal" ? "Only you" : "Shared project"} · {new Date(project.createdAt).toLocaleDateString("en-AU")}</p></div>
-        <button className={`${cloudControl} shrink-0 self-start ${project.membership === "invited" ? "bg-accent text-accent-foreground" : "border border-border hover:bg-muted"}`} disabled={busy || recovery && project.membership === "invited"} onClick={() => void open(project)}>{project.membership === "invited" ? <><Check size={16} aria-hidden /> Accept invitation</> : "Open project"}</button>
-      </li>)}</ul> : <div className="py-10"><p className="max-w-lg leading-relaxed text-foreground/70">Create a cloud project to upload photos.</p></div>}
-      {listing.nextCursor && <button className={`${cloudControl} mt-4 border border-border`} disabled={busy} onClick={() => void run(async signal => { const result = await client.list(listing.nextCursor!, 20, signal); if (!signal.aborted) setListing(previous => ({ projects: [...previous.projects, ...result.projects.filter(item => !previous.projects.some(old => old.id === item.id))], nextCursor: result.nextCursor })); })}>Show more</button>}
-    </>}
-    {state === "ready" && <CloudInvitationId ownerId={ownerId} />}
-    {!recovery && drafts && <ChallengeDraftRecovery journal={drafts} disabled={busy} runAction={run} openProject={id => void run(async signal => { const result = await client.view(id, signal); if (!signal.aborted) { setView(result); setCreating(false); } })} />}
-    <CloudUploadRecovery uploads={uploads} disabled={busy} runAction={run} openProject={id => void run(async signal => { const result = await client.view(id, signal); if (!signal.aborted) { setView(result); setCreating(false); } })} />
-    {busy && <p role="status" className="mt-4 flex items-center gap-2 text-sm"><LoaderCircle size={16} aria-hidden className="animate-spin motion-reduce:animate-none" /> Updating…</p>}
+    {busy && <p role="status" className="flex items-center gap-2 text-sm font-bold"><LoaderCircle size={16} aria-hidden className="animate-spin text-accent motion-reduce:animate-none" /> Updating…</p>}
+    <div className="grid gap-5 lg:grid-cols-2 lg:[&>:only-child]:col-span-2">
+      {state === "ready" && <CloudInvitationId ownerId={ownerId} />}
+      {!recovery && drafts && <ChallengeDraftRecovery journal={drafts} disabled={busy} runAction={run} openProject={id => void run(async signal => { const result = await client.view(id, signal); if (!signal.aborted) { setView(result); setCreating(false); } })} />}
+      <CloudUploadRecovery uploads={uploads} disabled={busy} runAction={run} openProject={id => void run(async signal => { const result = await client.view(id, signal); if (!signal.aborted) { setView(result); setCreating(false); } })} />
+    </div>
   </section>;
 }

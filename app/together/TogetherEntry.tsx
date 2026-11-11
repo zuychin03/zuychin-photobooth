@@ -6,14 +6,17 @@ import { useLocalRelease } from "@/components/ReleaseMode";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowRight, BookOpen, Camera, Clock, RefreshCw, Users } from "lucide-react";
+import { ArrowRight, BookOpen, Camera, Clock, LoaderCircle, RefreshCw, Users } from "lucide-react";
 import { StoryGuide } from "@/components/StoryGuide";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { Section } from "@/components/ui/Section";
 import { useAuth } from "@/lib/auth";
 import { isValidRoomCode, newRoomCode, normalizeRoomCode } from "@/lib/room-code";
 import { createRoomEntryApi, isV2RoomCode, roomV2Url } from "@/lib/rtc/entry-v2";
+import { STORY_CATEGORIES } from "@/lib/stories/catalogue";
 import { createStoryPlan, type StoryPlan } from "@/lib/stories/model";
 
-const control = "inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-50";
+const chip = "inline-flex min-h-7 items-center rounded-full bg-muted px-3 text-xs font-bold text-muted-foreground tabular-nums";
 
 export default function TogetherEntry({ roomsConfigured, cloudConfigured, challengesConfigured }: { roomsConfigured: boolean; cloudConfigured: boolean; challengesConfigured: boolean }) {
   const router = useRouter(), { enabled: authEnabled } = useAuth();
@@ -39,38 +42,57 @@ export default function TogetherEntry({ roomsConfigured, cloudConfigured, challe
     router.push(legacyRooms ? `/room/${code}` : roomV2Url(code));
   };
 
-  return <main lang="en" className="mx-auto min-h-dvh w-full max-w-5xl px-5 py-6 sm:px-8 sm:py-8">
-    <header className="mt-3 mb-10 max-w-2xl">
-      <h1 className="font-display text-4xl font-semibold sm:text-5xl">Make a moment together</h1>
-      <p className="mt-4 text-base leading-relaxed text-foreground/70">{legacyRooms ? "A live photo booth for you and your friends." : "Capture live, take turns later, or try a photo story."}</p>
-    </header>
+  return <main lang="en" className="mx-auto flex min-h-dvh w-full max-w-5xl flex-1 flex-col gap-6 px-4 pt-4 pb-10 sm:px-8 sm:pt-6">
+    <PageHeader title="Make a moment together" />
+    <div className="page-body flex flex-col gap-5">
+      <div className="grid gap-5 lg:grid-cols-2">
+        <Section id="live-title" title="In the booth together" icon={Users} tone="violet" action={<span className={chip}>2–4 people</span>}>
+          {legacyRooms || roomState === "ready" ? <div className="flex flex-col gap-4">
+            {legacyRooms ? <button type="button" onClick={() => router.push(`/room/${newRoomCode()}?host=1`)} className="btn btn-primary min-h-14 w-full text-base"><Camera size={20} aria-hidden />Create a room</button> : <Link href="/room/new?v=2" className="btn btn-primary min-h-14 w-full text-base"><Camera size={20} aria-hidden />Create a room</Link>}
+            <form onSubmit={join} className="flex flex-col gap-2">
+              <label htmlFor="together-room-code" className="sr-only">Room code</label>
+              <div className={`flex min-h-14 items-center gap-2 rounded-full bg-muted py-1.5 pr-1.5 pl-5 ${codeError ? "shadow-[inset_0_0_0_2px_var(--destructive)]" : "shadow-[inset_0_0_0_1px_var(--border)] focus-within:shadow-[inset_0_0_0_2px_var(--ring)]"}`}>
+                <input ref={codeInput} id="together-room-code" value={code} onChange={event => { setCode(normalizeRoomCode(event.target.value)); setCodeError(false); }} placeholder="Room code" autoComplete="off" spellCheck={false} autoCapitalize="characters" maxLength={6} aria-invalid={codeError} aria-describedby={codeError ? "together-code-error" : "together-code-hint"} className={`min-h-11 min-w-0 flex-1 bg-transparent text-lg font-black tracking-[0.24em] uppercase outline-none placeholder:text-base placeholder:font-bold placeholder:tracking-normal placeholder:normal-case placeholder:text-muted-foreground ${codeError ? "text-destructive" : ""}`} />
+                <button className="btn btn-partner min-h-11 px-5" type="submit">Join</button>
+              </div>
+              {codeError ? <p id="together-code-error" role="alert" className="pl-5 text-sm font-bold text-destructive">Room codes are 6 letters or numbers. Check with your host.</p> : <p id="together-code-hint" className="pl-5 text-sm text-muted-foreground">{legacyRooms ? "Ask your friend for their room code or invite link." : "The host has to let you in."}</p>}
+            </form>
+          </div> : <div className="flex flex-col gap-3">
+            <p role="status" className="notice flex items-center gap-2">{roomState === "checking" && <LoaderCircle size={16} className="shrink-0 animate-spin motion-reduce:animate-none" aria-hidden />}{roomState === "checking" ? "Checking if live rooms are up…" : "Live rooms aren't available right now."}</p>
+            <div className="flex flex-wrap gap-2">
+              {roomsConfigured && roomState === "unavailable" && <button type="button" onClick={() => { setRoomState("checking"); setRetry(value => value + 1); }} className="btn btn-tinted min-h-10 text-sm"><RefreshCw size={15} aria-hidden />Check again</button>}
+              <Link href="/booth" className="btn btn-quiet min-h-10 text-sm"><Camera size={15} aria-hidden />Open solo booth</Link>
+            </div>
+          </div>}
+        </Section>
 
-    <section aria-labelledby="live-title" className="grid grid-cols-1 gap-6 border-t border-border py-8 md:grid-cols-[1fr_1.2fr] md:gap-12">
-      <div><Users size={23} aria-hidden className="text-partner" /><h2 id="live-title" className="mt-3 font-display text-2xl font-semibold">In the booth together</h2><p className="mt-3 text-sm leading-relaxed text-foreground/70">A live booth for 2–4 people.</p></div>
-      <div className="space-y-4">
-        {legacyRooms || roomState === "ready" ? <>
-          {legacyRooms ? <button type="button" onClick={() => router.push(`/room/${newRoomCode()}?host=1`)} className={`${control} bg-accent text-accent-foreground`}><Camera size={18} aria-hidden />Create a room</button> : <Link href="/room/new?v=2" className={`${control} bg-accent text-accent-foreground`}><Camera size={18} aria-hidden />Create a room</Link>}
-          <form onSubmit={join} className="space-y-2">
-            <label htmlFor="together-room-code" className="block text-sm font-medium">Have a room code?</label>
-            <div className="flex gap-2"><input ref={codeInput} id="together-room-code" value={code} onChange={event => { setCode(normalizeRoomCode(event.target.value)); setCodeError(false); }} autoComplete="off" spellCheck={false} autoCapitalize="characters" maxLength={6} aria-invalid={codeError} aria-describedby={codeError ? "together-code-error" : "together-code-hint"} className="min-h-11 min-w-0 flex-1 rounded-xl border border-border bg-card px-3 font-mono text-lg uppercase focus-visible:outline-2 focus-visible:outline-ring" /><button className={`${control} bg-partner/15 text-partner`} type="submit">Join<ArrowRight size={16} aria-hidden /></button></div>
-            {codeError ? <p id="together-code-error" role="alert" className="text-sm text-destructive">Room codes are 6 letters or numbers. Check with your host.</p> : <p id="together-code-hint" className="text-xs leading-relaxed text-foreground/70">{legacyRooms ? "Ask your friend for their room code or invite link." : "The host will need to let you in."}</p>}
-          </form>
-        </> : <div className="space-y-3 rounded-xl bg-muted p-4"><p role="status" className="text-sm leading-relaxed">{roomState === "checking" ? "Checking if live rooms are up…" : "Live rooms aren't available right now. You can still browse the stories and use the solo booth."}</p>{roomsConfigured && roomState === "unavailable" && <button type="button" onClick={() => { setRoomState("checking"); setRetry(value => value + 1); }} className={`${control} border border-border`}><RefreshCw size={16} aria-hidden />Check again</button>}<Link href="/booth" className={`${control} border border-border`}>Open solo booth</Link></div>}
+        <Section id="later-title" title="Take your turn later" icon={Clock} tone="amber" bodyClassName="mt-2">
+          <ul className="divide-y divide-border">
+            <li className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 py-4">
+              <div className="min-w-0">
+                <h3 className="flex flex-wrap items-center gap-2 font-bold">Photo challenges <span className={chip}>2–4 people</span></h3>
+                <p className="mt-1 text-sm text-muted-foreground">{legacyRooms ? "Feature incoming" : challengesConfigured && authEnabled ? "Start one from a shared cloud project." : "Challenges aren't available right now."}</p>
+              </div>
+              {cloudConfigured && authEnabled && <Link href="/projects/cloud" className="btn btn-quiet min-h-10 text-sm">Cloud projects<ArrowRight size={15} aria-hidden /></Link>}
+            </li>
+            {authEnabled && <li className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 py-4">
+              <div className="min-w-0">
+                <h3 className="font-bold">Paired relay</h3>
+                <p className="mt-1 text-sm text-muted-foreground">Just you and your partner</p>
+              </div>
+              <Link href="/relay/new" className="btn btn-quiet min-h-10 text-sm">Start a relay<ArrowRight size={15} aria-hidden /></Link>
+            </li>}
+          </ul>
+        </Section>
       </div>
-    </section>
 
-    <section aria-labelledby="later-title" className="grid grid-cols-1 gap-6 border-t border-border py-8 md:grid-cols-[1fr_1.2fr] md:gap-12">
-      <div><Clock size={23} aria-hidden className="text-accent" /><h2 id="later-title" className="mt-3 font-display text-2xl font-semibold">Take your turn later</h2><p className="mt-3 text-sm leading-relaxed text-foreground/70">Photo challenges for 2–4 people, at your own pace.</p></div>
-      <div className="space-y-4">
-        <p className="text-sm leading-relaxed text-foreground/70">{legacyRooms ? "Feature incoming" : challengesConfigured && authEnabled ? "Start a challenge from a shared cloud project." : "Challenges aren't available right now."}</p>
-        <div className="flex flex-wrap gap-2">{cloudConfigured && authEnabled && <Link href="/projects/cloud" className={`${control} border border-border`}>Open cloud projects<ArrowRight size={16} aria-hidden /></Link>}{authEnabled && <Link href="/relay/new" className={`${control} underline underline-offset-4`}>Paired relay</Link>}</div>
-        {authEnabled && <p className="text-xs leading-relaxed text-foreground/70">Relays are for you and your paired partner.</p>}
-      </div>
-    </section>
-
-    <section aria-labelledby="stories-title" className="grid grid-cols-1 gap-6 border-t border-border py-8 md:grid-cols-[1fr_1.2fr] md:gap-12">
-      <div><BookOpen size={23} aria-hidden className="text-accent" /><h2 id="stories-title" className="mt-3 font-display text-2xl font-semibold">Four photos, a little story</h2><p className="mt-3 text-sm leading-relaxed text-foreground/70">Preview prompts for dates, friends and celebrations. <HelpTooltip label="About story previews">This is just a preview. To use a story, pick it in the booth or a live room before you start. Every pose has a relaxed version.</HelpTooltip></p><Link href="/booth#photo-story" className={`${control} mt-4 border border-border`}>Pick a story in the solo booth<ArrowRight size={16} aria-hidden /></Link></div>
-      <StoryGuide plan={story} members={[{ id: "preview", name: "You" }]} onChange={setStory} />
-    </section>
+      <Section id="stories-title" title="Four photos, a little story" icon={BookOpen} tone="rose" action={<HelpTooltip label="About story previews">This is just a preview. To use a story, pick it in the booth or a live room before you start. Every pose has a relaxed version.</HelpTooltip>} bodyClassName="mt-5 grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)] lg:gap-8">
+        <div className="flex flex-col gap-5">
+          <ul aria-label="Story types" className="flex flex-wrap gap-2">{Object.values(STORY_CATEGORIES).map(category => <li key={category} className="rounded-full bg-accent/10 px-3.5 py-1.5 text-sm font-bold text-accent">{category}</li>)}</ul>
+          <Link href="/booth#photo-story" className="btn btn-tinted self-start">Pick a story in the solo booth<ArrowRight size={16} aria-hidden /></Link>
+        </div>
+        <StoryGuide plan={story} members={[{ id: "preview", name: "You" }]} onChange={setStory} />
+      </Section>
+    </div>
   </main>;
 }

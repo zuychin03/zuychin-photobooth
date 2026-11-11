@@ -1,8 +1,25 @@
 "use client";
-import { useEffect, useId, useRef } from "react";
+import { useEffect, useId, useRef, type ReactNode, type Ref } from "react";
+import type { LucideIcon } from "lucide-react";
 
-export const eventControl = "inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-50";
-export const eventInput = "min-h-11 w-full min-w-0 rounded-xl border border-border bg-card px-3 py-2 text-sm focus-visible:outline-2 focus-visible:outline-ring disabled:opacity-60";
+// v2-lab rehearsals still append their own fill to this.
+export const eventControl = "btn min-h-11 text-sm disabled:cursor-not-allowed";
+const tones = { rose: "bg-[#f43f5e]", violet: "bg-[#8b5cf6]", amber: "bg-[#f59e0b]", sky: "bg-[#0ea5e9]", green: "bg-[#10b981]", slate: "bg-[#64748b]" } as const;
+export type EventTone = keyof typeof tones;
+export function EventGlyph({ icon: Icon, tone, className = "" }: { icon: LucideIcon; tone: EventTone; className?: string }) {
+  return <span className={`glyph ${tones[tone]} ${className}`}><Icon size={18} strokeWidth={2.25} aria-hidden /></span>;
+}
+// Section's header, for panels whose heading takes focus.
+export function EventPanelHead({ id, icon, tone, headingRef, action, as: Heading = "h2", children }: { id?: string; icon: LucideIcon; tone: EventTone; headingRef?: Ref<HTMLHeadingElement>; action?: ReactNode; as?: "h2" | "h3"; children: ReactNode }) {
+  return <div className="flex min-h-9 flex-wrap items-center justify-between gap-3">
+    <div className="flex min-w-0 items-center gap-3"><EventGlyph icon={icon} tone={tone} /><Heading ref={headingRef} id={id} tabIndex={headingRef ? -1 : undefined} className="flex min-w-0 items-center gap-1.5 font-display text-xl leading-tight outline-none">{children}</Heading></div>
+    {action}
+  </div>;
+}
+const statusDot: Record<string, string> = { open: "bg-[#10b981]", paused: "bg-[#f59e0b]", draft: "bg-[#0ea5e9]", closed: "bg-[#64748b]", deleted: "bg-destructive" };
+export function EventStatusChip({ status }: { status: string }) {
+  return <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-1 text-xs leading-none font-bold text-foreground capitalize"><span aria-hidden className={`size-1.5 rounded-full ${statusDot[status] ?? "bg-muted-foreground"}`} />{status}</span>;
+}
 export function eventError(error: unknown) {
   const code = error && typeof error === "object" && "code" in error ? String(error.code) : "";
   return ({ access_denied: "Your access has changed. Go back to your events.", identity_changed: "You switched accounts. Reopen your events.", capacity: "You've reached a limit for events or requests.", conflict: "This changed somewhere else. Check the event before trying again.", expired: "This event has closed or expired. Refresh to check.", not_ready: "This isn't ready yet. Refresh and try again.", rate_limited: "Too many requests. Wait a minute before trying again.", invalid_request: "Check the dates, limits and text before trying again." } as Record<string, string>)[code] ?? "No reply from the server, but it may have worked. Check the event before trying again.";
@@ -36,8 +53,8 @@ export function EventHostConfirm({ title, children, action, busy, returnFocus, r
       });
     };
   }, [returnFocus, returnFocusRef, fallbackFocusRef]);
-  return <dialog ref={dialog} aria-labelledby={titleId} aria-describedby={descriptionId} aria-busy={busy} className="m-auto max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-lg overflow-y-auto overscroll-contain rounded-2xl border border-border bg-card p-5 text-foreground shadow-xl backdrop:bg-black/60" onCancel={event => { event.preventDefault(); if (!busy) onKeep(); }}>
-    <h3 id={titleId} className="font-display text-2xl">{title}</h3><div id={descriptionId} className="mt-3 text-sm leading-relaxed">{children}</div>
-    <div className="mt-5 flex flex-wrap gap-2"><button ref={keep} type="button" className={`${eventControl} border border-border`} disabled={busy} onClick={() => { if (!busy) onKeep(); }}>Keep working</button><button type="button" className={`${eventControl} bg-accent text-accent-foreground`} disabled={busy} onClick={() => { if (!busy) onConfirm(); }}>{action}</button></div>
+  return <dialog ref={dialog} aria-labelledby={titleId} aria-describedby={descriptionId} aria-busy={busy} className="glass-strong m-auto max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-lg overflow-y-auto overscroll-contain rounded-[1.75rem] border-0 p-5 text-foreground sm:p-6" onCancel={event => { event.preventDefault(); if (!busy) onKeep(); }}>
+    <h3 id={titleId} className="font-display text-2xl leading-tight">{title}</h3><div id={descriptionId} className="mt-3 text-sm leading-relaxed">{children}</div>
+    <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end"><button ref={keep} type="button" className="btn btn-quiet" disabled={busy} onClick={() => { if (!busy) onKeep(); }}>Keep working</button><button type="button" className="btn btn-primary" disabled={busy} onClick={() => { if (!busy) onConfirm(); }}>{action}</button></div>
   </dialog>;
 }

@@ -3,7 +3,7 @@
 import { HelpTooltip } from "@/components/HelpTooltip";
 
 import { useEffect, useId, useRef, useState } from "react";
-import { cloudControl, cloudInput } from "@/components/cloud/CloudControls";
+import { Mic } from "lucide-react";
 import type { VoiceClient } from "@/lib/memories/voice-client";
 import type { VoiceCaptionSnapshot } from "@/lib/memories/voice-contract";
 import { voiceDraftRequest, type VoiceDraft, type VoiceDraftJournal } from "@/lib/memories/voice-drafts";
@@ -94,14 +94,14 @@ export default function VoiceMemoryCaption({ activityId, client, journal, onDirt
     setSnapshot(saved); setDraft(null); setText(saved.text); setBlob(null); setAudioChange("keep"); clearPreview();
     setNote(frozen.kind === "delete" ? "Caption deleted." : "Caption saved.");
   }
-  const button = `${cloudControl} border border-border hover:bg-muted`;
-  return <section inert={locked} className="space-y-4 border-t border-border pt-6" aria-labelledby={`${id}-title`}>
-    <h3 ref={heading} tabIndex={-1} id={`${id}-title`} className="font-display text-xl outline-none">Voice caption</h3>
-    <p className="text-sm text-foreground/75">Only you can see this. Record up to 30 seconds, or write a caption.</p>
-    <p role="status" className="text-sm">{recording === "recording" ? `Recording: ${seconds} / 30 seconds` : recording === "requesting" ? synthetic ? "Preparing synthetic audio…" : "Waiting for microphone permission…" : recording === "finishing" ? "Finishing recording…" : busy ? "Loading…" : note}</p>
-    {error && <p role="alert" className="text-sm text-red-700 dark:text-red-300">{error}</p>}
-    <div className="flex flex-wrap gap-2">
-      <button className={button} disabled={disabled || pending} onClick={() => {
+  const button = "btn btn-quiet min-h-10 px-3.5 text-[0.8125rem]";
+  return <section inert={locked} className="space-y-3" aria-labelledby={`${id}-title`}>
+    <h3 ref={heading} tabIndex={-1} id={`${id}-title`} className="font-display text-lg leading-tight outline-none">Voice caption</h3>
+    <p className="text-sm text-muted-foreground">Only you can see this. Record up to 30 seconds, or write a caption.</p>
+    <p role="status" className={`text-sm ${recording === "recording" ? "flex items-center gap-2 font-bold text-accent" : ""}`}>{recording === "recording" && <span aria-hidden className="size-2 animate-pulse rounded-full bg-accent motion-reduce:animate-none" />}{recording === "recording" ? `Recording: ${seconds} / 30 seconds` : recording === "requesting" ? synthetic ? "Preparing synthetic audio…" : "Waiting for microphone permission…" : recording === "finishing" ? "Finishing recording…" : busy ? "Loading…" : note}</p>
+    {error && <p role="alert" className="notice border border-destructive/25 bg-destructive/8 font-bold text-destructive">{error}</p>}
+    <div className="flex flex-wrap gap-1.5">
+      <button className="btn btn-tinted min-h-10 px-3.5 text-[0.8125rem]" disabled={disabled || pending} onClick={() => {
         try { active(); } catch (failure) { setError(message(failure)); return; }
         recorder.current?.cancel();
         setError(""); setSeconds(0);
@@ -111,21 +111,21 @@ export default function VoiceMemoryCaption({ activityId, client, journal, onDirt
           void run(async signal => { await keepDraft(value, "replace", signal); setNote("Audio saved on this device. Choose Save caption to upload it."); });
         } }, acquire);
         void recorder.current.start();
-      }}>{synthetic ? "Record synthetic PCM tone" : "Allow microphone and record"}</button>
+      }}><Mic size={15} aria-hidden />{synthetic ? "Record synthetic PCM tone" : "Allow microphone and record"}</button>
       {recording === "recording" && <button className={button} onClick={() => recorder.current?.stop()}>Stop recording</button>}
       {recording !== "idle" && <button className={button} onClick={() => recorder.current?.cancel()}>Cancel recording</button>}
       {snapshot?.audio && audioChange === "keep" && <button className={button} disabled={disabled} onClick={() => void run(async signal => { const audio = await client.download(activityId, signal); active(signal); showPreview(audio); })}>Load audio</button>}
     </div>
-    {preview && <audio ref={player} controls={!confirmation && !locked} preload="metadata" src={preview} aria-label="Voice caption" />}
-    {(blob || snapshot?.audio && audioChange === "keep") && <div className="flex flex-wrap gap-2">
+    {preview && <audio ref={player} controls={!confirmation && !locked} preload="metadata" src={preview} aria-label="Voice caption" className="w-full max-w-md" />}
+    {(blob || snapshot?.audio && audioChange === "keep") && <div className="flex flex-wrap gap-1.5">
       <button className={button} disabled={disabled} onClick={() => void run(async signal => { const audio = blob ?? await client.download(activityId, signal); active(signal); download(audio, "voice-caption.wav"); })}>Download audio</button>
       <button className={button} disabled={disabled || pending} onClick={() => { clearPreview(); setBlob(null); setAudioChange("remove"); setNote("Audio will be removed when you save the caption."); }}>Remove audio</button>
     </div>}
-    <label htmlFor={`${id}-text`} className="block text-sm font-medium">Text caption</label>
-    <textarea id={`${id}-text`} rows={4} className={cloudInput} maxLength={PCM_VOICE.text} value={text} disabled={disabled || pending} onChange={event => setText(event.target.value)} />
-    <p className="text-xs text-foreground/70">Save before you leave, or keep a draft. <HelpTooltip label="About audio downloads">Recordings download as WAV files, up to 2.9 MB.</HelpTooltip></p>
-    <div className="flex flex-wrap gap-2">
-      <button className={button} disabled={disabled} onClick={() => void run(async signal => {
+    <label htmlFor={`${id}-text`} className="block pt-1 text-sm font-bold">Text caption</label>
+    <textarea id={`${id}-text`} rows={4} className="field -mt-1.5 py-2.5 font-medium" maxLength={PCM_VOICE.text} value={text} disabled={disabled || pending} onChange={event => setText(event.target.value)} />
+    <p className="flex items-center gap-1 text-xs text-muted-foreground">Save before you leave, or keep a draft. <HelpTooltip label="About audio downloads">Recordings download as WAV files, up to 2.9 MB.</HelpTooltip></p>
+    <div className="flex flex-wrap gap-1.5">
+      <button className="btn btn-primary min-h-10 px-3.5 text-[0.8125rem]" disabled={disabled} onClick={() => void run(async signal => {
         const savedDraft = pending ? draft! : await keepDraft(blob, audioChange, signal); active(signal);
         const frozen = await journal.freeze(activityId, savedDraft.revision); active(signal); setDraft(frozen);
         await send(frozen, signal);
@@ -136,9 +136,9 @@ export default function VoiceMemoryCaption({ activityId, client, journal, onDirt
       <button className={button} disabled={disabled || Boolean(draft)} onClick={event => ask("delete", event.currentTarget)}>Delete caption</button>
       <button className={button} disabled={busy || lost || recording !== "idle" || locked || confirmation !== null} onClick={event => { if (dirty) ask("refresh", event.currentTarget); else void run(load); }}>Refresh</button>
     </div>
-    {confirmation && <div role="group" aria-label="Confirm caption change" aria-describedby={`${id}-confirmation`} onKeyDown={event => { if (event.key === "Escape" && !unavailable) { event.preventDefault(); cancelConfirmation(); } }} className="space-y-3 rounded-xl border border-border p-4">
-      <p id={`${id}-confirmation`} className="text-sm">{confirmation.kind === "delete" ? "Delete this caption and its audio? You can't undo this." : confirmation.kind === "discard" ? "Discard your draft? If a save already went through, it stays." : "Refresh and lose unsaved changes? Your kept draft stays."}</p>
-      <div className="flex flex-wrap gap-2"><button className={button} disabled={unavailable} onClick={() => {
+    {confirmation && <div role="group" aria-label="Confirm caption change" aria-describedby={`${id}-confirmation`} onKeyDown={event => { if (event.key === "Escape" && !unavailable) { event.preventDefault(); cancelConfirmation(); } }} className="notice space-y-3">
+      <p id={`${id}-confirmation`}>{confirmation.kind === "delete" ? "Delete this caption and its audio? You can't undo this." : confirmation.kind === "discard" ? "Discard your draft? If a save already went through, it stays." : "Refresh and lose unsaved changes? Your kept draft stays."}</p>
+      <div className="flex flex-wrap gap-2"><button className={confirmation.kind === "refresh" ? button : "btn btn-danger min-h-10 px-3.5 text-[0.8125rem]"} disabled={unavailable} onClick={() => {
         const action = confirmation; setConfirmation(null);
         void run(async signal => {
           if (action.kind === "delete") { const frozen = await journal.prepareDelete(activityId, action.revision); active(signal); setDraft(frozen); await send(frozen, signal); }

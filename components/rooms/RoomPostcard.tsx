@@ -22,13 +22,13 @@ export function RoomPostcard({ controller, disabled, databaseName, onBusyChange 
     signal?.throwIfAborted();
     if (!life.current || life.current.signal.aborted || document.hidden || controller.scope.kind === "account" && controller.scope.ownerId !== user?.id || roomPostcardPlan(controller.getSnapshot()).fingerprint !== fingerprint) throw new Error("The room or account changed. Open the postcard again from the latest round.");
   }, [controller, fingerprint, user?.id]);
-  if (!plan) return <p className="mt-5 text-sm leading-relaxed text-muted-foreground">{problem}</p>;
+  if (!plan) return <p className="text-sm text-muted-foreground">{problem}</p>;
   const render = async (signal: AbortSignal, design: TemplateDesign) => {
     assertActive(signal);
     return renderRoomPostcard({ initial: plan, current: controller.getSnapshot, design, signal: AbortSignal.any([signal, life.current!.signal]), assertActive, databaseName });
   };
-  return <div className="mt-5">
-    {plan.design.look.sceneId && <p className="text-sm leading-relaxed text-muted-foreground">This postcard uses everyone&apos;s original photos side by side, without the Together scene.</p>}
+  return <div>
+    {plan.design.look.sceneId && <p className="notice">This postcard uses everyone&apos;s original photos side by side, without the Together scene.</p>}
     <EventPostcardComposer key={fingerprint} source={plan.source} design={plan.design} render={render} assertSourceActive={assertActive} disabled={disabled} onBusyChange={onBusyChange} />
   </div>;
 }

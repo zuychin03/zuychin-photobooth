@@ -3,16 +3,18 @@
 import { type FocusEvent, useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ChevronLeft, ChevronRight, Menu, X, type LucideIcon } from "lucide-react";
+import { useLiquidIndicator } from "@/components/ui/useLiquidIndicator";
+import { useGlassLens } from "@/components/ui/useGlassLens";
 
 export interface SiteNavLink { href: string; label: string; active: boolean; icon: LucideIcon }
 
-export function MobileNav({ links, canNavigate, collapsible = false }: { links: SiteNavLink[]; collapsible?: boolean; canNavigate(href: string, event: { preventDefault(): void }): boolean }) {
+export function MobileNav({ links, canNavigate, collapsible = false, presence = "below-md" }: { links: SiteNavLink[]; collapsible?: boolean; presence?: "below-md" | "shown" | "hidden"; canNavigate(href: string, event: { preventDefault(): void }): boolean }) {
   const tray = useRef<HTMLElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
   const [expanded, setExpanded] = useState(false);
   const panelId = useId();
   const visible = !collapsible || expanded;
-  const viewport = useRef<HTMLDivElement>(null), options = useRef<HTMLDivElement>(null);
+  const viewport = useRef<HTMLDivElement>(null), options = useRef<HTMLDivElement>(null), droplet = useRef<HTMLSpanElement>(null);
   const scrollId = useId();
   const [edges, setEdges] = useState({ start: true, end: true });
   const measureScroll = useCallback(() => {
@@ -65,7 +67,9 @@ export function MobileNav({ links, canNavigate, collapsible = false }: { links: 
     if (element) element.scrollTo({ left: end ? element.scrollWidth - element.clientWidth : 0, behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth" });
   };
   const revealFocus = (event: FocusEvent<HTMLDivElement>) => reveal(event.target);
-  const arrowStyle = "flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-accent/10 hover:text-accent disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-muted-foreground focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring";
+  useLiquidIndicator(options, droplet, `${destinationSignature}:${visible}`);
+  useGlassLens(tray, !collapsible && presence !== "hidden");
+  const arrowStyle = "flex h-11 w-8 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:text-accent disabled:opacity-25 disabled:hover:text-muted-foreground focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring";
 
   useLayoutEffect(() => {
     const element = tray.current;
@@ -82,25 +86,27 @@ export function MobileNav({ links, canNavigate, collapsible = false }: { links: 
     return () => { observer.disconnect(); window.removeEventListener("resize", measure); document.documentElement.style.removeProperty("--app-bottom-nav-height"); };
   }, [collapsible]);
 
-  const tabStyle = "group flex min-h-14 min-w-[4.5rem] shrink-0 flex-col items-center justify-center gap-1 rounded-full px-1 py-1 text-xs font-medium transition-colors hover:text-accent focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring";
-  const glass = "rounded-full border border-border/70 bg-background/85 backdrop-blur-xl";
-  return <nav ref={tray} aria-label="Mobile navigation" className={`fixed left-[calc(0.375rem+env(safe-area-inset-left))] right-[calc(0.375rem+env(safe-area-inset-right))] bottom-[calc(0.375rem+env(safe-area-inset-bottom))] z-[45] md:hidden ${collapsible ? "pointer-events-none flex h-11 justify-end" : `${glass} px-2 py-2`}`}>
-    <div className={collapsible ? `absolute inset-x-0 bottom-0 ${expanded ? `${glass} pointer-events-auto px-2 py-2 motion-safe:animate-[surface-enter_180ms_ease-out]` : "pointer-events-none"}` : undefined}>
+  const tabStyle = "relative z-[1] flex min-h-[3.25rem] min-w-[4.25rem] shrink-0 flex-col items-center justify-center gap-0.5 rounded-full px-1.5 text-[0.6875rem] font-bold transition-colors focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring";
+  const glass = "glass rounded-full";
+  const presenceClass = presence === "below-md" ? "md:hidden" : presence === "hidden" ? "hidden" : "";
+  return <>{!collapsible && <div aria-hidden className={`scroll-edge scroll-edge-bottom ${presenceClass}`} data-on="" />}<nav ref={tray} aria-label="Mobile navigation" className={`mobile-tabbar fixed bottom-[calc(0.5rem+env(safe-area-inset-bottom))] z-[45] ${presenceClass} ${collapsible ? "right-[calc(0.625rem+env(safe-area-inset-right))] left-[calc(0.625rem+env(safe-area-inset-left))] pointer-events-none flex h-11 justify-end" : `${glass} left-1/2 w-max max-w-[calc(100vw-1.25rem-env(safe-area-inset-left)-env(safe-area-inset-right))] -translate-x-1/2 p-1.5`}`}>
+    <div className={collapsible ? `absolute right-0 bottom-0 w-max max-w-full ${expanded ? `${glass} pointer-events-auto p-1.5 motion-safe:animate-[sheet-rise_420ms_var(--spring-soft)]` : "pointer-events-none"}` : undefined}>
     <div className={`flex items-center gap-1 ${visible ? "mx-auto max-w-lg" : "justify-end"}`}>
       {visible && <div id={panelId} className="contents">
       <button type="button" aria-label="Scroll mobile menu to start" aria-controls={scrollId} disabled={edges.start} onClick={() => scroll(false)} className={arrowStyle}><ChevronLeft size={18} aria-hidden /></button>
       <div ref={viewport} id={scrollId} onScroll={measureScroll} onFocusCapture={revealFocus} className="scrollbar-hide min-w-0 flex-1 overflow-x-auto overscroll-x-contain rounded-full">
-      <div ref={options} className="flex w-max min-w-full items-center justify-between gap-1">
-      {links.map(({ icon: Icon, ...link }) => <Link key={link.href} href={link.href} aria-current={link.active ? "page" : undefined} onNavigate={event => { if (canNavigate(link.href, event)) setExpanded(false); }} className={`${tabStyle} ${link.active ? "text-accent" : "text-muted-foreground"}`}>
-        <span className={`flex h-7 w-11 max-w-full shrink-0 items-center justify-center rounded-full transition-colors group-active:bg-accent/20 ${link.active ? "bg-accent/15 group-hover:bg-accent/20" : "group-hover:bg-accent/10"}`}><Icon size={21} aria-hidden /></span>
+      <div ref={options} className="relative flex w-max min-w-full items-center justify-between gap-0.5">
+      <span ref={droplet} aria-hidden className="droplet" />
+      {links.map(({ icon: Icon, ...link }) => <Link key={link.href} href={link.href} aria-current={link.active ? "page" : undefined} onNavigate={event => { if (canNavigate(link.href, event)) setExpanded(false); }} className={`${tabStyle} ${link.active ? "text-accent" : "text-foreground/75"}`}>
+        <Icon size={22} strokeWidth={link.active ? 2.4 : 2} aria-hidden />
         <span>{link.label}</span>
       </Link>)}
       </div>
       </div>
       <button type="button" aria-label="Scroll mobile menu to end" aria-controls={scrollId} disabled={edges.end} onClick={() => scroll(true)} className={arrowStyle}><ChevronRight size={18} aria-hidden /></button>
       </div>}
-      {collapsible && <button ref={trigger} type="button" aria-label={expanded ? "Collapse mobile menu" : "Menu"} aria-expanded={expanded} aria-controls={panelId} onClick={() => setExpanded(value => !value)} className={expanded ? arrowStyle : `${glass} pointer-events-auto flex h-11 min-w-11 items-center justify-center gap-2 px-4 text-sm font-medium transition-colors hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring motion-reduce:transition-none`}>{expanded ? <X size={18} aria-hidden /> : <><Menu size={18} aria-hidden />Menu</>}</button>}
+      {collapsible && <button ref={trigger} type="button" aria-label={expanded ? "Collapse mobile menu" : "Menu"} aria-expanded={expanded} aria-controls={panelId} onClick={() => setExpanded(value => !value)} className={expanded ? arrowStyle : `${glass} pointer-events-auto flex h-11 min-w-11 items-center justify-center gap-2 px-4 text-sm font-bold transition-colors hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring motion-reduce:transition-none`}>{expanded ? <X size={18} aria-hidden /> : <><Menu size={18} aria-hidden />Menu</>}</button>}
     </div>
     </div>
-  </nav>;
+  </nav></>;
 }

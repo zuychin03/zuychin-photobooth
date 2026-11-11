@@ -2,13 +2,13 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { ArrowLeft, LoaderCircle } from "lucide-react";
+import { ArrowLeft, Bell, CalendarHeart, HeartHandshake, LoaderCircle } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/client";
 import { getMyCouple, type Couple } from "@/lib/couple";
 import { createRitualClient, type RitualClient } from "@/lib/memories/ritual-client";
-import { cloudControl } from "@/components/cloud/CloudControls";
 import { PushToggle } from "@/components/PushToggle";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { RitualWorkspace } from "./RitualWorkspace";
 
 function AccountRituals({ ownerId }: { ownerId: string }) {
@@ -28,15 +28,18 @@ function AccountRituals({ ownerId }: { ownerId: string }) {
     }).catch(() => { stop(); unsubscribe?.(); if (mounted) { setState(null); setError(true); } }).finally(() => clearTimeout(timeout));
     return () => { mounted = false; clearTimeout(timeout); stop(); unsubscribe?.(); };
   }, [ownerId, attempt]);
-  if (error) return <div className="mt-9"><p role="alert" className="max-w-xl text-sm leading-relaxed">Couldn&apos;t check your account or pairing. Check your connection and try again.</p><button className={`${cloudControl} mt-4 border border-border`} onClick={() => { setError(false); setState(null); setAttempt(value => value + 1); }}>Try again</button></div>;
-  if (!state) return <p role="status" className="mt-9 flex items-center gap-2"><LoaderCircle size={18} aria-hidden className="animate-spin motion-reduce:animate-none" /> Checking your account…</p>;
-  if (!state.couple?.member_b) return <section className="mt-9 border-t border-border py-8"><h2 className="font-display text-2xl">Pair with your partner first</h2><p className="mt-3 max-w-xl text-sm leading-relaxed text-foreground/75">Rituals are for paired partners. Pair up in your album, then come back.</p><Link href="/timeline" className={`${cloudControl} mt-5 bg-accent text-accent-foreground`}>Open album</Link></section>;
-  return <><div className="mt-7 flex items-center gap-3 text-sm"><span>Notifications on this device</span><PushToggle key={ownerId} userId={ownerId} /></div><RitualWorkspace key={`${ownerId}-${state.couple.id}-${attempt}`} client={state.client} coupleId={state.couple.id} /></>;
+  if (error) return <div className="notice border border-destructive/25 bg-destructive/8"><p role="alert" className="font-bold text-destructive">Couldn&apos;t check your account or pairing. Check your connection and try again.</p><button className="btn btn-quiet mt-3 min-h-10 text-sm" onClick={() => { setError(false); setState(null); setAttempt(value => value + 1); }}>Try again</button></div>;
+  if (!state) return <p role="status" className="panel flex min-h-48 items-center justify-center gap-2 text-sm text-muted-foreground"><LoaderCircle size={18} aria-hidden className="animate-spin motion-reduce:animate-none" /> Checking your account…</p>;
+  if (!state.couple?.member_b) return <section className="panel flex min-h-64 flex-col items-center justify-center gap-4 px-6 py-12 text-center"><span className="glyph size-14 rounded-2xl bg-[#8b5cf6]"><HeartHandshake size={26} aria-hidden /></span><h2 className="font-display text-2xl">Pair with your partner first</h2><Link href="/timeline" className="btn btn-primary">Open album</Link></section>;
+  return <><div className="panel flex min-h-16 flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6"><span className="flex items-center gap-3 font-bold"><span className="glyph bg-[#64748b]"><Bell size={18} strokeWidth={2.25} aria-hidden /></span>Notifications on this device</span><PushToggle key={ownerId} userId={ownerId} /></div><RitualWorkspace key={`${ownerId}-${state.couple.id}-${attempt}`} client={state.client} coupleId={state.couple.id} /></>;
 }
 
 export function RitualHub({ available }: { available: boolean }) {
   const { user, loading, enabled } = useAuth();
-  return <main className="mx-auto min-h-dvh max-w-4xl px-5 py-6 sm:px-8 sm:py-8"><nav aria-label="Memory navigation"><Link href="/timeline" className={`${cloudControl} -ml-4 hover:bg-muted`}><ArrowLeft size={17} aria-hidden /> Your album</Link></nav><header className="mt-8"><h1 className="font-display text-4xl font-semibold sm:text-5xl">Photo rituals</h1><p className="mt-3 max-w-xl leading-relaxed text-foreground/75">Plan your next photo together.</p></header>
-    {!available || !enabled ? <section className="mt-9 border-t border-border py-8"><h2 className="font-display text-2xl">Rituals aren&apos;t available here yet</h2><p className="mt-3 max-w-xl text-sm leading-relaxed text-foreground/75">Your album and projects still work.</p><Link href="/projects" className={`${cloudControl} mt-5 border border-border`}>Open my projects</Link></section> : loading ? <p role="status" className="mt-9">Checking your account…</p> : user ? <AccountRituals key={user.id} ownerId={user.id} /> : <section className="mt-9 border-t border-border py-8"><h2 className="font-display text-2xl">Sign in to plan a ritual</h2><p className="mt-3 text-sm">Rituals are shared with your paired partner.</p><Link href="/login?next=%2Fmemories%2Frituals" className={`${cloudControl} mt-5 bg-accent text-accent-foreground`}>Sign in</Link></section>}
+  return <main className="mx-auto flex min-h-dvh w-full max-w-5xl flex-1 flex-col gap-6 px-4 pt-4 pb-10 sm:px-8 sm:pt-6">
+    <PageHeader title="Photo rituals" leading={<nav aria-label="Memory navigation"><Link href="/timeline" className="btn btn-plain -ml-3.5 min-h-10 text-sm"><ArrowLeft size={16} aria-hidden /> Your album</Link></nav>} />
+    <div className="page-body flex flex-col gap-5">
+      {!available || !enabled ? <section className="panel flex min-h-64 flex-col items-center justify-center gap-4 px-6 py-12 text-center"><span className="glyph size-14 rounded-2xl bg-[#64748b]"><CalendarHeart size={26} aria-hidden /></span><h2 className="font-display text-2xl">Rituals aren&apos;t available here yet</h2><Link href="/projects" className="btn btn-quiet">Open my projects</Link></section> : loading ? <p role="status" className="panel flex min-h-48 items-center justify-center gap-2 text-sm text-muted-foreground"><LoaderCircle size={18} aria-hidden className="animate-spin motion-reduce:animate-none" /> Checking your account…</p> : user ? <AccountRituals key={user.id} ownerId={user.id} /> : <section className="panel flex min-h-64 flex-col items-center justify-center gap-4 px-6 py-12 text-center"><span className="glyph size-14 rounded-2xl bg-[#f59e0b]"><CalendarHeart size={26} aria-hidden /></span><h2 className="font-display text-2xl">Sign in to plan a ritual</h2><p className="max-w-sm text-sm text-muted-foreground">Rituals are shared with your paired partner.</p><Link href="/login?next=%2Fmemories%2Frituals" className="btn btn-primary">Sign in</Link></section>}
+    </div>
   </main>;
 }

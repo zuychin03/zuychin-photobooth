@@ -1,5 +1,9 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono, Fraunces, Noto_Emoji } from "next/font/google";
+import { Geist, Geist_Mono, Fraunces, Mochiy_Pop_One, Noto_Emoji, Zen_Maru_Gothic } from "next/font/google";
+import { AmbientBackdrop } from "@/components/AmbientBackdrop";
+import { CanvasFontWarmup } from "@/components/CanvasFontWarmup";
+import { GlassLight } from "@/components/GlassLight";
+import { InlineScript } from "@/components/InlineScript";
 import { SessionProvider } from "@/lib/session";
 import { AuthProvider } from "@/lib/auth";
 import AuthCookieMigration from "@/components/AuthCookieMigration";
@@ -11,8 +15,22 @@ import { Suspense } from "react";
 import { connection } from "next/server";
 import { isLocalRelease, isRecoveryRelease } from "@/lib/release-mode";
 import { ReleaseFeatureBoundary, ReleaseModeProvider } from "@/components/ReleaseMode";
+import { themeBootScript } from "@/lib/theme-boot";
 import "./globals.css";
 
+const zenMaru = Zen_Maru_Gothic({
+  variable: "--font-zen-maru",
+  weight: ["400", "500", "700", "900"],
+  subsets: ["latin"],
+});
+
+const mochiy = Mochiy_Pop_One({
+  variable: "--font-mochiy",
+  weight: "400",
+  subsets: ["latin"],
+});
+
+// Output-only: strip and recap canvases draw captions in these. CanvasFontWarmup loads them.
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -51,7 +69,10 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0c0a09",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f6f1f2" },
+    { media: "(prefers-color-scheme: dark)", color: "#100d0f" },
+  ],
 };
 
 export default async function RootLayout({
@@ -64,9 +85,17 @@ export default async function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} ${fraunces.variable} ${notoEmoji.variable} h-full antialiased`}
+      className={`${zenMaru.variable} ${mochiy.variable} ${geistSans.variable} ${geistMono.variable} ${fraunces.variable} ${notoEmoji.variable} h-full antialiased`}
+      suppressHydrationWarning
     >
-      <body className="min-h-full flex flex-col">
+      <head>
+        <InlineScript html={themeBootScript} />
+      </head>
+      {/* Extensions such as Grammarly add attributes to body before hydration. */}
+      <body className="min-h-full flex flex-col" suppressHydrationWarning>
+        <AmbientBackdrop />
+        <CanvasFontWarmup />
+        <GlassLight />
         <PwaRegister />
         {!localOnly && <AuthCookieMigration />}
         <Suspense fallback={<main className="min-h-dvh" aria-label="Loading" />}>

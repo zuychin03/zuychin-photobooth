@@ -2,7 +2,7 @@
 
 import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Loader2, Mail } from "lucide-react";
+import { Camera, Loader2, Mail } from "lucide-react";
 import { safeAuthReturnPath } from "@/lib/auth-return-path";
 import { createClient, hasSupabase } from "@/lib/supabase/client";
 
@@ -50,37 +50,26 @@ function LoginInner() {
   };
 
   return (
-    <main className="relative flex min-h-dvh flex-1 items-center justify-center px-6">
-      <div aria-hidden className="pointer-events-none absolute inset-x-0 top-[calc(-1*var(--app-nav-height,0px))] bottom-0 -z-10 overflow-hidden">
-        <div className="fluid-orb absolute -top-24 -left-24 h-96 w-96 rounded-full bg-accent/20 blur-3xl" />
-        <div className="fluid-orb--slow fluid-orb absolute bottom-0 -right-24 h-[24rem] w-[24rem] rounded-full bg-partner/20 blur-3xl" />
-      </div>
-
-      <div className="glass-card w-full max-w-sm rounded-3xl p-7">
-        <h1
-          className="text-2xl font-semibold"
-          style={{ fontFamily: "var(--font-fraunces)" }}
-        >
-          Sign in
-        </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Save and share with your Zuychin account.
-        </p>
+    <main className="relative flex min-h-dvh flex-1 items-center justify-center px-4 py-10">
+      <div className="page-head glass-strong w-full max-w-sm rounded-[1.75rem] p-6 sm:p-7">
+        <div className="flex flex-col items-center text-center">
+          <span className="glyph size-14 rounded-2xl bg-[#f43f5e]"><Camera size={26} strokeWidth={2.25} aria-hidden /></span>
+          <h1 className="mt-4 font-display text-3xl leading-tight">Sign in</h1>
+        </div>
 
         {!enabled ? (
-          <p className="mt-6 rounded-xl bg-muted p-3 text-sm text-muted-foreground">
+          <p className="notice mt-6 text-center text-muted-foreground">
             Sign-in is unavailable. You can still use the solo booth.
           </p>
         ) : (
           <>
-            <div className="mt-5 flex rounded-full bg-muted p-0.5 text-sm font-medium">
+            <div className="segmented mt-6 flex w-full">
               {(["password", "magic-link"] as Mode[]).map((m) => (
                 <button
                   key={m}
                   onClick={() => setMode(m)}
-                  className={`min-h-9 flex-1 rounded-full transition ${
-                    mode === m ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"
-                  }`}
+                  aria-pressed={mode === m}
+                  className="flex-1 transition-[color,background-color,box-shadow] duration-300 ease-[var(--spring-soft)]"
                 >
                   {m === "password" ? "Password" : "Magic link"}
                 </button>
@@ -96,7 +85,7 @@ function LoginInner() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
-                className="min-h-12 rounded-xl border border-border bg-card px-4 outline-none focus:border-accent"
+                className="field min-h-12 px-4"
               />
               {mode === "password" && (
                 <input
@@ -107,16 +96,16 @@ function LoginInner() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Password"
-                  className="min-h-12 rounded-xl border border-border bg-card px-4 outline-none focus:border-accent"
+                  className="field min-h-12 px-4"
                 />
               )}
               <button
                 type="submit"
                 disabled={busy}
-                className="flex min-h-12 items-center justify-center gap-2 rounded-xl bg-accent font-semibold text-accent-foreground transition active:scale-[0.99] disabled:opacity-50"
+                className="btn btn-primary mt-1 min-h-12 w-full"
               >
                 {busy ? (
-                  <Loader2 size={18} className="animate-spin" />
+                  <Loader2 size={18} className="animate-spin motion-reduce:animate-none" />
                 ) : mode === "magic-link" ? (
                   <>
                     <Mail size={18} /> Send magic link
@@ -129,8 +118,8 @@ function LoginInner() {
 
             {msg && (
               <p
-                className={`mt-3 text-sm ${
-                  msg.kind === "error" ? "text-destructive" : "text-success"
+                className={`notice mt-4 font-bold ${
+                  msg.kind === "error" ? "border border-destructive/25 bg-destructive/8 text-destructive" : "text-success"
                 }`}
               >
                 {msg.text}

@@ -32,11 +32,11 @@ export function EditorFinishMenu({ children, triggerRef }: { children: ReactNode
   }}>
     <button ref={triggerRef} type="button" aria-label="Finish" aria-expanded={open} aria-controls={id}
       onClick={() => setOpen(value => !value)}
-      className="editor-finish-trigger ml-auto flex min-h-11 items-center gap-1.5 rounded-full border border-border bg-background/85 px-3 text-xs font-medium backdrop-blur-xl">
-      <Download size={16} aria-hidden="true" /><span>Finish</span><ChevronDown size={14} aria-hidden="true" className={`editor-finish-chevron transition-transform motion-reduce:transition-none ${open ? "rotate-180" : ""}`} />
+      className="editor-finish-trigger btn btn-primary ml-auto gap-1.5 px-4 text-sm">
+      <Download size={16} aria-hidden="true" /><span>Finish</span><ChevronDown size={15} aria-hidden="true" className={`editor-finish-chevron transition-transform duration-300 ease-[var(--spring-soft)] motion-reduce:transition-none ${open ? "rotate-180" : ""}`} />
     </button>
     {open && <div id={id} role="group" aria-label="Finish your strip"
-      className="mt-2 flex w-44 max-w-[calc(100vw-2rem)] flex-col gap-2 rounded-2xl border border-border bg-card p-2 shadow-xl motion-safe:animate-[surface-enter_180ms_ease-out]"
+      className="glass-strong mt-2 flex w-52 max-w-[calc(100vw-2rem)] origin-top-right flex-col gap-1.5 rounded-[1.25rem] p-2 motion-safe:animate-[pop-enter_320ms_var(--spring-soft)]"
       onClick={event => {
         if (!(event.target as HTMLElement).closest("button:not(:disabled)")) return;
         setOpen(false);

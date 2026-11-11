@@ -100,15 +100,15 @@ export function StripPreview({ input, assetsVersion, children, gesturesEnabled =
     gesture.current?.start(event.pointerId, event.clientX, event.clientY);
   }}>
     {children}
-    <button ref={trigger} type="button" aria-label="Expand strip preview" aria-haspopup="dialog" aria-expanded={open} onClick={show} className="absolute left-3 top-3 flex min-h-11 min-w-11 items-center justify-center rounded-full border border-border bg-card/95 text-foreground shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"><Expand size={19} aria-hidden /></button>
-    <dialog ref={dialog} aria-labelledby={titleId} onCancel={event => { event.preventDefault(); gesture.current?.cancel(); close(); }} onClose={() => close(true)} onPointerDown={() => { ignoreOpeningClick.current = false; }} onClick={() => { if (!ignoreOpeningClick.current) { gesture.current?.cancel(); close(); } }} className="fixed inset-0 m-0 h-dvh max-h-none w-screen max-w-none overflow-hidden bg-background p-0 text-foreground backdrop:bg-black/75 open:flex open:flex-col">
-      <header className="flex items-center justify-between gap-3 px-4 pt-[max(.5rem,env(safe-area-inset-top))]">
+    <button ref={trigger} type="button" aria-label="Expand strip preview" aria-haspopup="dialog" aria-expanded={open} onClick={show} className="btn btn-glass absolute top-3 left-3 z-10 w-11 px-0"><Expand size={19} aria-hidden /></button>
+    <dialog ref={dialog} aria-labelledby={titleId} onCancel={event => { event.preventDefault(); gesture.current?.cancel(); close(); }} onClose={() => close(true)} onPointerDown={() => { ignoreOpeningClick.current = false; }} onClick={() => { if (!ignoreOpeningClick.current) { gesture.current?.cancel(); close(); } }} className="glass-strong fixed inset-0 m-0 h-dvh max-h-none w-screen max-w-none overflow-hidden rounded-none border-0 p-0 text-foreground open:flex open:flex-col">
+      <header className="flex items-center justify-between gap-3 px-4 pt-[max(.75rem,env(safe-area-inset-top))] pb-1 sm:px-6">
         <h2 id={titleId} className="font-display text-xl">Your strip</h2>
-        <button type="button" autoFocus aria-label="Close strip preview" onClick={() => { gesture.current?.cancel(); close(); }} className="flex min-h-11 min-w-11 items-center justify-center rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"><X size={22} aria-hidden /></button>
+        <button type="button" autoFocus aria-label="Close strip preview" onClick={() => { gesture.current?.cancel(); close(); }} className="btn btn-quiet w-11 px-0"><X size={22} aria-hidden /></button>
       </header>
       <div className="flex min-h-0 flex-1 items-center justify-center px-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
-        {error && <p role="alert">Couldn&apos;t draw the preview. Close it and try again.</p>}
-        <canvas ref={canvas} hidden={error} role="img" aria-label="Full strip preview" className="max-h-full max-w-full object-contain" />
+        {error && <p role="alert" className="notice font-bold">Couldn&apos;t draw the preview. Close it and try again.</p>}
+        <canvas ref={canvas} hidden={error} role="img" aria-label="Full strip preview" className="max-h-full max-w-full rounded-md object-contain shadow-2xl shadow-black/30" />
       </div>
     </dialog>
   </div>;

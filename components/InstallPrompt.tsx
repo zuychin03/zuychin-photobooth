@@ -53,7 +53,8 @@ export function InstallPrompt() {
     <div className="flex flex-col items-center gap-2">
       <button
         onClick={onClick}
-        className="glass-card flex min-h-11 items-center gap-2 rounded-full px-5 text-sm font-medium transition hover:border-accent/40 active:scale-[0.99]"
+        type="button"
+        className="btn btn-glass text-sm"
       >
         <MonitorDown size={16} className="text-accent" /> Install to device
       </button>

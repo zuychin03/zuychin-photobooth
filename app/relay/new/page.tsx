@@ -4,8 +4,10 @@ import { useAppNavigationGuard } from "@/components/AppNavigation";
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Check, Copy, Loader2 } from "lucide-react";
+import { ArrowLeft, Camera, Check, Copy, LayoutGrid, Loader2, Sparkles, Users } from "lucide-react";
 import { FilterBar } from "@/components/FilterBar";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { Section } from "@/components/ui/Section";
 import { RelayOriginalRecovery } from "@/components/RelayOriginalRecovery";
 import { loadRelayOriginals, saveRelayOriginals } from "@/lib/relay-recovery";
 import { RoleCapture } from "@/components/RoleCapture";
@@ -115,16 +117,18 @@ function NewRelayAccountPage() {
 
   if (!enabled || (checked && !paired)) {
     return (
-      <main className="flex min-h-dvh flex-1 flex-col items-center justify-center gap-4 px-6 text-center">
-        <p className="text-lg font-semibold">Pair with your partner first</p>
-        {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
-        <p className="max-w-sm text-sm text-muted-foreground">
-          Relay strips need a paired partner to finish your half. Set that up in
-          your Shared Vault.
-        </p>
-        <button onClick={() => router.push("/timeline")} className="rounded-full bg-accent px-5 py-2.5 font-semibold text-accent-foreground">
-          Go to the vault
-        </button>
+      <main className="mx-auto flex min-h-dvh w-full max-w-lg flex-1 flex-col justify-center px-4 py-10">
+        <section className="panel page-body flex flex-col items-center gap-4 p-6 text-center sm:p-8">
+          <span className="glyph size-14 rounded-2xl bg-[#8b5cf6]"><Users size={26} strokeWidth={2.25} aria-hidden /></span>
+          <h1 className="font-display text-2xl sm:text-3xl">Pair with your partner first</h1>
+          {error && <p role="alert" className="text-sm font-bold text-destructive">{error}</p>}
+          <p className="max-w-sm text-sm text-muted-foreground">
+            Your partner finishes the other half. Pair up in your Shared Vault.
+          </p>
+          <button onClick={() => router.push("/timeline")} className="btn btn-primary">
+            Go to the vault
+          </button>
+        </section>
       </main>
     );
   }
@@ -132,7 +136,7 @@ function NewRelayAccountPage() {
   if (loading || !user || !checked) {
     return (
       <main className="flex min-h-dvh flex-1 items-center justify-center">
-        <Loader2 className="animate-spin text-muted-foreground" />
+        <Loader2 className="animate-spin text-muted-foreground motion-reduce:animate-none" />
       </main>
     );
   }
@@ -157,96 +161,86 @@ function NewRelayAccountPage() {
 
   if (step === "saving") {
     return (
-      <main className="flex min-h-dvh flex-1 flex-col items-center justify-center gap-3">
-        <Loader2 className="animate-spin text-muted-foreground" />
-        <p className="text-sm text-muted-foreground">Saving your half…</p>
-        {error && <p role="alert" className="max-w-sm px-4 text-sm">{error}</p>}
+      <main className="flex min-h-dvh flex-1 flex-col items-center justify-center gap-3 px-4">
+        <Loader2 className="animate-spin text-muted-foreground motion-reduce:animate-none" />
+        <p className="text-sm font-bold text-muted-foreground">Saving your half…</p>
+        {error && <p role="alert" className="notice max-w-sm">{error}</p>}
       </main>
     );
   }
 
   if (step === "failed" && pendingUpload) {
     return (
-      <main className="flex min-h-dvh flex-1 flex-col items-center justify-center gap-4 px-6 text-center">
-        <p role="alert" className="max-w-sm text-sm text-destructive">{error}</p>
-        <RelayOriginalRecovery originals={originals} saved={originalsSaved} />
-        <button onClick={() => void onShot(pendingUpload.frames)} className="rounded-full bg-accent px-5 py-2.5 font-semibold text-accent-foreground">Retry saving</button>
+      <main className="mx-auto flex min-h-dvh w-full max-w-lg flex-1 flex-col justify-center px-4 py-10">
+        <section className="panel flex flex-col items-center gap-4 p-6 text-center sm:p-8">
+          <p role="alert" className="max-w-sm text-sm font-bold text-destructive">{error}</p>
+          <RelayOriginalRecovery originals={originals} saved={originalsSaved} />
+          <button onClick={() => void onShot(pendingUpload.frames)} className="btn btn-primary">Retry saving</button>
+        </section>
       </main>
     );
   }
 
   if (step === "done") {
     return (
-      <main className="flex min-h-dvh flex-1 flex-col items-center justify-center gap-4 px-6 text-center">
-        <div className="flex h-14 w-14 items-center justify-center rounded-full bg-success/15">
-          <Check className="text-success" size={28} />
-        </div>
-        <p className="text-lg font-semibold" style={{ fontFamily: "var(--font-fraunces)" }}>
-          Your half is saved
-        </p>
-        <p className="max-w-sm text-sm text-muted-foreground">
-          Tell your partner to open Photobooth. It&apos;s waiting in their shared
-          album to finish.
-        </p>
-        <div className="flex gap-3">
-          <button
-            onClick={copyLink}
-            className="glass-card flex min-h-11 items-center gap-2 rounded-full px-4 text-sm font-medium"
-          >
-            {copied ? <Check size={16} className="text-success" /> : <Copy size={16} />}
-            {copied ? "Copied" : "Copy link"}
-          </button>
-          <button onClick={() => router.push("/timeline")} className="rounded-full bg-accent px-5 font-semibold text-accent-foreground">
-            Done
-          </button>
-        </div>
+      <main className="mx-auto flex min-h-dvh w-full max-w-lg flex-1 flex-col justify-center px-4 py-10">
+        <section className="panel page-body flex flex-col items-center gap-4 p-6 text-center sm:p-8">
+          <span className="glyph size-14 rounded-2xl bg-[#10b981]"><Check size={28} strokeWidth={2.5} aria-hidden /></span>
+          <h1 className="font-display text-2xl sm:text-3xl">Your half is saved</h1>
+          <p className="max-w-sm text-sm text-muted-foreground">
+            Tell your partner. It&apos;s waiting in their shared album to finish.
+          </p>
+          <div className="flex flex-wrap justify-center gap-2">
+            <button onClick={copyLink} className="btn btn-quiet">
+              {copied ? <Check size={16} className="text-success" /> : <Copy size={16} />}
+              {copied ? "Copied" : "Copy link"}
+            </button>
+            <button onClick={() => router.push("/timeline")} className="btn btn-primary">
+              Done
+            </button>
+          </div>
+        </section>
       </main>
     );
   }
 
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-md flex-1 flex-col gap-6 px-5 py-6">
-      <header className="flex items-center gap-3">
-        <button onClick={() => router.push("/timeline")} aria-label="Back" className="flex h-11 w-11 items-center justify-center rounded-full bg-muted">
-          <ArrowLeft size={18} />
-        </button>
-        <h1 className="text-xl font-semibold" style={{ fontFamily: "var(--font-fraunces)" }}>
-          Relay strip
-        </h1>
-      </header>
+    <main className="mx-auto flex min-h-dvh w-full max-w-5xl flex-1 flex-col gap-6 px-4 pt-4 pb-10 sm:px-8 sm:pt-6">
+      <PageHeader
+        title="Relay strip"
+        leading={<button onClick={() => router.push("/timeline")} aria-label="Back" className="btn btn-quiet min-w-11 px-0"><ArrowLeft size={18} /></button>}
+      />
+      <div className="page-body flex flex-1 flex-col gap-5">
+        <div className="grid gap-5 lg:grid-cols-2">
+          <Section id="relay-layout-title" title="Layout" icon={LayoutGrid} tone="rose">
+            <div className="flex flex-col gap-2">
+              {DUO_LAYOUTS.map((l) => (
+                <button
+                  key={l.id}
+                  onClick={() => setLayoutId(l.id)}
+                  className={`flex min-h-12 items-center justify-between gap-3 rounded-2xl px-4 text-left text-sm font-bold ${
+                    layoutId === l.id ? "bg-accent/10 text-accent shadow-[inset_0_0_0_2px_var(--accent)]" : "bg-muted"
+                  }`}
+                >
+                  <span>{l.name}</span> <span className={`shrink-0 font-medium ${layoutId === l.id ? "" : "text-muted-foreground"}`}>{l.shots} shots each</span>
+                </button>
+              ))}
+            </div>
+          </Section>
 
-      <p className="text-sm text-muted-foreground">
-        Take your photos now. Your partner can finish the strip later.
-      </p>
-
-      <section>
-        <h2 className="mb-2 text-sm font-medium text-muted-foreground">Layout</h2>
-        <div className="flex flex-col gap-2">
-          {DUO_LAYOUTS.map((l) => (
-            <button
-              key={l.id}
-              onClick={() => setLayoutId(l.id)}
-              className={`min-h-12 rounded-xl border px-4 text-left text-sm font-medium transition ${
-                layoutId === l.id ? "border-accent bg-accent/10" : "border-border"
-              }`}
-            >
-              {l.name} · {l.shots} shots each
-            </button>
-          ))}
+          <Section id="relay-filter-title" title="Filter" icon={Sparkles} tone="rose">
+            <FilterBar value={filterId} onChange={setFilterId} />
+          </Section>
         </div>
-      </section>
 
-      <section>
-        <h2 className="mb-2 text-sm font-medium text-muted-foreground">Filter</h2>
-        <FilterBar value={filterId} onChange={setFilterId} />
-      </section>
-
-      <button
-        onClick={() => { const id = captureId ?? crypto.randomUUID(); setCaptureId(id); const url = new URL(location.href); url.searchParams.set("draft", id); window.history.replaceState(window.history.state, "", url.pathname + url.search); setStep("shoot"); }}
-        className="mt-auto min-h-13 rounded-2xl bg-accent font-semibold text-accent-foreground shadow-lg shadow-accent/25"
-      >
-        Shoot my half
-      </button>
+        <button
+          onClick={() => { const id = captureId ?? crypto.randomUUID(); setCaptureId(id); const url = new URL(location.href); url.searchParams.set("draft", id); window.history.replaceState(window.history.state, "", url.pathname + url.search); setStep("shoot"); }}
+          className="btn btn-primary mt-auto min-h-14 w-full text-base sm:w-auto sm:self-end sm:px-10"
+        >
+          <Camera size={20} aria-hidden />
+          Shoot my half
+        </button>
+      </div>
     </main>
   );
 }

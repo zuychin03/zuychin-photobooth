@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { Archive } from "lucide-react";
+import { Section } from "@/components/ui/Section";
 import type { ProjectScope } from "@/lib/projects/model";
 import { clearExpiredRoomMetadata, inspectRoomMetadata, type RoomMetadataSummary } from "@/lib/rtc/local-cleanup";
 
@@ -30,14 +32,13 @@ export function RoomMetadataHousekeeping({ ownerId }: { ownerId: string | null }
     } catch { if (token === epoch.current) setMessage("Couldn't finish clearing. Check again and retry."); }
     finally { if (token === epoch.current) setBusy(false); }
   };
-  const button = "min-h-11 rounded-lg border border-border px-4 py-2 text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:opacity-50";
-  return <section className="mt-6 border-t border-border pt-6" aria-labelledby="room-housekeeping-title">
-    <h2 id="room-housekeeping-title" className="font-medium">Old room data</h2>
-    <p className="mt-2 max-w-2xl text-sm text-foreground/70">Clear leftover data from expired rooms. Your projects and photos aren&apos;t affected.</p>
+  const button = "btn btn-quiet min-h-10 text-sm";
+  return <Section id="room-housekeeping-title" title="Old room data" icon={Archive} tone="slate" bodyClassName="mt-3">
+    <p className="max-w-2xl text-sm text-muted-foreground">Leftovers from expired rooms. Projects and photos aren&apos;t affected.</p>
     <button type="button" className={`${button} mt-3`} disabled={busy} onClick={() => void inspect()}>{busy ? "Checking…" : "Check room storage"}</button>
-    {visible && <ul className="mt-3 divide-y divide-border">{visible.map(row => <li key={`${row.scope.kind}:${row.roomId}:${row.sessionId}`} className="flex flex-wrap items-center justify-between gap-3 py-3 text-sm"><div><p>Room {row.roomId.slice(0, 8)} · {row.scope.kind === "device" ? "Device" : "Your account"}</p><p className="mt-1 text-foreground/65">{row.records} checkpoints · {row.expired} expired{row.pending ? ` · ${row.pending} still recovering` : ""}{row.unknownExpiry ? ` · ${row.unknownExpiry} with no known expiry` : ""}</p></div><button type="button" className={button} disabled={busy || !row.expired} onClick={() => setConfirm(row)}>Clear expired</button></li>)}</ul>}
-    {visible?.length === 0 && <p className="mt-3 text-sm text-foreground/65">No saved room data here.</p>}
-    {selected && <div role="alertdialog" aria-modal="false" aria-labelledby="room-clear-title" aria-describedby="room-clear-detail" className="mt-4 rounded-xl border border-border bg-muted p-4"><h3 id="room-clear-title" className="font-medium">Clear this room&apos;s old data?</h3><p id="room-clear-detail" className="mt-2 text-sm">This removes expired data for room {selected.roomId.slice(0, 8)}. Your projects and photos aren&apos;t affected.</p><div className="mt-3 flex flex-wrap gap-2"><button type="button" className={button} disabled={busy} onClick={() => setConfirm(null)}>Cancel</button><button type="button" className={`${button} bg-accent text-accent-foreground`} disabled={busy} onClick={() => void clear()}>Clear</button></div></div>}
+    {visible && <ul className="mt-3 divide-y divide-border">{visible.map(row => <li key={`${row.scope.kind}:${row.roomId}:${row.sessionId}`} className="flex flex-wrap items-center justify-between gap-3 py-3 text-sm"><div><p>Room {row.roomId.slice(0, 8)} · {row.scope.kind === "device" ? "Device" : "Your account"}</p><p className="mt-1 text-muted-foreground">{row.records} checkpoints · {row.expired} expired{row.pending ? ` · ${row.pending} still recovering` : ""}{row.unknownExpiry ? ` · ${row.unknownExpiry} with no known expiry` : ""}</p></div><button type="button" className={button} disabled={busy || !row.expired} onClick={() => setConfirm(row)}>Clear expired</button></li>)}</ul>}
+    {visible?.length === 0 && <p className="mt-3 text-sm text-muted-foreground">No saved room data here.</p>}
+    {selected && <div role="alertdialog" aria-modal="false" aria-labelledby="room-clear-title" aria-describedby="room-clear-detail" className="notice mt-4"><h3 id="room-clear-title" className="font-bold">Clear this room&apos;s old data?</h3><p id="room-clear-detail" className="mt-1">This removes expired data for room {selected.roomId.slice(0, 8)}. Your projects and photos aren&apos;t affected.</p><div className="mt-3 flex flex-wrap gap-2"><button type="button" className={button} disabled={busy} onClick={() => setConfirm(null)}>Cancel</button><button type="button" className="btn btn-primary min-h-10 text-sm" disabled={busy} onClick={() => void clear()}>Clear</button></div></div>}
     {message && <p role="status" className="mt-3 text-sm">{message}</p>}
-  </section>;
+  </Section>;
 }

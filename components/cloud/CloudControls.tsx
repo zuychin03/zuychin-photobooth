@@ -14,5 +14,5 @@ export function cloudError(error: unknown): string {
   return "Couldn't reach the cloud. Try again.";
 }
 export function CloudBack({ disabled, onBack }: { disabled: boolean; onBack(): void }) {
-  return <button className={`${cloudControl} -ml-4 mb-4`} disabled={disabled} onClick={onBack}><ArrowLeft size={16} aria-hidden /> Cloud library</button>;
+  return <button className="btn btn-plain -ml-3.5 min-h-10 text-sm" disabled={disabled} onClick={onBack}><ArrowLeft size={16} aria-hidden /> Cloud library</button>;
 }

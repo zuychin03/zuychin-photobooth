@@ -4,7 +4,7 @@ import { challengeDraftMessage, type ChallengeDraft, type ChallengeDraftJournal 
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, LoaderCircle, RefreshCw } from "lucide-react";
+import { ArrowLeft, Clock, LoaderCircle, Plus, RefreshCw } from "lucide-react";
 import type { CloudProjectView } from "@/lib/projects/cloud-contract";
 import type { CloudProjectClient } from "@/lib/projects/cloud-client";
 import type { CloudUploadManager } from "@/lib/projects/cloud-upload";
@@ -12,7 +12,6 @@ import type { ChallengeClient } from "@/lib/memories/challenge-client";
 import type { ChallengeList, ChallengeResult } from "@/lib/memories/challenge-contract";
 import { challengeError } from "@/lib/memories/challenge-ui";
 import { challengePath } from "@/lib/memories/challenge-entry";
-import { cloudControl } from "./CloudControls";
 import { ChallengeCreate } from "./ChallengeCreate";
 import { ChallengeDetail } from "./ChallengeDetail";
 
@@ -51,12 +50,14 @@ export function ChallengeWorkspace({ project, client, challenges, uploads, draft
     client.assertActive(signal); if (record.kind !== "create") return; setCreationDraft(record); setSavedCreation(true); setCreating(true);
   });
   if (selected && !("unsupported" in selected)) return <ChallengeDetail drafts={drafts} key={selected.id} initialView={selected} project={project} client={client} challenges={challenges} uploads={uploads} onBack={() => { setSelected(null); void run(async signal => setList(await challenges.list(project.project.id, undefined, undefined, signal))); }} />;
-  return <section className="mt-7" aria-labelledby="challenge-list-heading">
-    <button className={`${cloudControl} -ml-4 mb-4`} disabled={busy} onClick={onBack}><ArrowLeft size={16} aria-hidden /> {project.project.title}</button>
-    <header className="flex flex-wrap items-center justify-between gap-4 border-b border-border pb-5"><div><h2 ref={heading} tabIndex={-1} id="challenge-list-heading" className="font-display text-3xl font-semibold outline-none">Photo challenges</h2><p className="mt-2 max-w-xl text-sm leading-relaxed text-foreground/70">Add photos in your own time.</p></div><button className={cloudControl} disabled={busy || creating} onClick={() => void run(async signal => { setSelected(null); setList(await challenges.list(project.project.id, undefined, undefined, signal)); })}><RefreshCw size={16} aria-hidden /> Refresh</button></header>
-    {error && <p role="alert" className="mt-5 rounded-xl bg-muted p-4 text-sm leading-relaxed">{error}</p>}
-    {busy && <p role="status" className="mt-4 flex items-center gap-2 text-sm"><LoaderCircle size={16} aria-hidden className="animate-spin motion-reduce:animate-none" /> Waiting for confirmation…</p>}
-    {selected && "unsupported" in selected && <p role="status" className="mt-5 text-sm">This older challenge can&apos;t be opened here.</p>}
+  return <section className="flex flex-col gap-5" aria-labelledby="challenge-list-heading">
+    <header className="flex flex-col gap-3">
+      <div><button className="btn btn-plain -ml-3.5 max-w-full text-sm" disabled={busy} onClick={onBack}><ArrowLeft size={16} aria-hidden /> <span className="min-w-0 truncate">{project.project.title}</span></button></div>
+      <div className="flex flex-wrap items-end justify-between gap-3"><h2 ref={heading} tabIndex={-1} id="challenge-list-heading" className="font-display text-3xl outline-none sm:text-4xl">Photo challenges</h2><div className="flex flex-wrap gap-2"><button className="btn btn-quiet" disabled={busy || creating} onClick={() => void run(async signal => { setSelected(null); setList(await challenges.list(project.project.id, undefined, undefined, signal)); })}><RefreshCw size={16} aria-hidden /> Refresh</button>{!(creating && creationDraft && drafts) && list && project.project.ownerId === client.ownerId && <button className="btn btn-primary" disabled={busy || !drafts} onClick={() => void beginCreation()}><Plus size={17} aria-hidden />{savedCreation ? "Continue new challenge" : "New photo challenge"}</button>}</div></div>
+    </header>
+    {error && <p role="alert" className="notice border border-destructive/25 bg-destructive/8">{error}</p>}
+    {busy && <p role="status" className="flex items-center gap-2 text-sm font-bold"><LoaderCircle size={16} aria-hidden className="animate-spin motion-reduce:animate-none" /> Waiting for confirmation…</p>}
+    {selected && "unsupported" in selected && <p role="status" className="notice">This older challenge can&apos;t be opened here.</p>}
     {creating && creationDraft && drafts ? <ChallengeCreate key={`${creationDraft.id}:${creationDraft.revision}`} initialDraft={creationDraft} journal={drafts} project={project} ownerId={client.ownerId} busy={busy} storySupported={storySupported} onCancel={() => { setCreating(false); void run(async signal => setList(await challenges.list(project.project.id, undefined, undefined, signal))); }} onCreate={(input, record) => run(async signal => {
       const current = await client.view(project.project.id, signal);
       if (current.project.ownerId !== client.ownerId || current.project.status !== "active") throw { code: "access_denied" };
@@ -70,11 +71,12 @@ export function ChallengeWorkspace({ project, client, challenges, uploads, draft
       await drafts.forget(record.id, record.revision); client.assertActive(signal);
       if (!signal.aborted) { setSavedCreation(false); setCreating(false); setCreationDraft(null); setSelected(result); }
     })} /> : <>
-      {!list && !error && <p role="status" className="py-8">Loading your challenges…</p>}
-      {list && <ul className="divide-y divide-border" aria-label="Your photo challenges">{list.challenges.map((challenge, index) => <li key={challenge.id} className="flex flex-wrap items-center justify-between gap-4 py-5"><div className="min-w-0"><h3 className="font-medium">Challenge {index + 1}</h3><p className="mt-1 text-sm capitalize text-foreground/70">{challenge.status} · {challenge.membership}</p><p className="mt-1 text-sm text-foreground/70">Deadline {new Date(challenge.expiresAt).toLocaleString("en-AU")}</p></div><div className="flex flex-wrap items-center gap-2"><button className={`${cloudControl} border border-border`} disabled={busy} aria-label={`Open challenge ${index + 1}`} onClick={() => void run(async signal => setSelected(await challenges.view(challenge.id, signal)))}>Open</button><Link href={challengePath(challenge.id)} prefetch={false} className={`${cloudControl} underline underline-offset-4`} aria-label={`Open direct link for challenge ${index + 1}`}>Direct link</Link></div></li>)}</ul>}
-      {list?.challenges.length === 0 && <div className="py-9"><h3 className="font-display text-2xl">No challenges yet.</h3><p className="mt-3 max-w-xl text-sm leading-relaxed text-foreground/70">The project owner can start one for two to four people.</p></div>}
-      {list?.nextCursor && <button className={`${cloudControl} my-4 border border-border`} disabled={busy} onClick={() => void run(async signal => { const next = await challenges.list(project.project.id, list.nextCursor!, undefined, signal); setList({ ...next, challenges: [...list.challenges, ...next.challenges.filter(item => !list.challenges.some(prior => prior.id === item.id))] }); })}>Show more</button>}
-      {list && project.project.ownerId === client.ownerId && <button className={`${cloudControl} mt-5 bg-accent text-accent-foreground`} disabled={busy || !drafts} onClick={() => void beginCreation()}>{savedCreation ? "Continue new challenge" : "New photo challenge"}</button>}
+      {!list && !error && <p role="status" className="panel flex min-h-40 items-center justify-center gap-2 text-sm text-muted-foreground"><LoaderCircle size={18} aria-hidden className="animate-spin motion-reduce:animate-none" /> Loading your challenges…</p>}
+      {list && <div className="panel overflow-hidden">
+        {list.challenges.length > 0 && <ul className="divide-y divide-border" aria-label="Your photo challenges">{list.challenges.map((challenge, index) => <li key={challenge.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-4 sm:px-5"><div className="min-w-0"><h3 className="font-bold">Challenge {index + 1}</h3><p className="mt-0.5 text-sm text-muted-foreground"><span className="capitalize">{challenge.status} · {challenge.membership}</span> · Deadline {new Date(challenge.expiresAt).toLocaleString("en-AU")}</p></div><div className="flex flex-wrap items-center gap-1.5"><button className="btn btn-tinted min-h-10 text-sm" disabled={busy} aria-label={`Open challenge ${index + 1}`} onClick={() => void run(async signal => setSelected(await challenges.view(challenge.id, signal)))}>Open</button><Link href={challengePath(challenge.id)} prefetch={false} className="btn btn-plain min-h-10 text-sm" aria-label={`Open direct link for challenge ${index + 1}`}>Direct link</Link></div></li>)}</ul>}
+        {list.challenges.length === 0 && <div className="flex flex-col items-center gap-3 px-6 py-12 text-center"><span className="glyph size-14 rounded-2xl bg-[#f59e0b]"><Clock size={26} aria-hidden /></span><h3 className="font-display text-2xl">No challenges yet.</h3><p className="max-w-sm text-sm text-muted-foreground">The project owner can start one for two to four people.</p></div>}
+        {list.nextCursor && <div className="border-t border-border p-3 text-center"><button className="btn btn-quiet text-sm" disabled={busy} onClick={() => void run(async signal => { const next = await challenges.list(project.project.id, list.nextCursor!, undefined, signal); setList({ ...next, challenges: [...list.challenges, ...next.challenges.filter(item => !list.challenges.some(prior => prior.id === item.id))] }); })}>Show more</button></div>}
+      </div>}
     </>}
   </section>;
 }

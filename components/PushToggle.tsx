@@ -88,13 +88,13 @@ function AccountPushToggle({ userId }: { userId: string }) {
   const warning = !!error || state === "unregistered" || state === "unsupported_subscription" || state === "denied";
   const guidance = error ?? (state === "unsupported_subscription" ? "This browser's notifications aren't supported here. Turn them off or use another browser." : state === "unregistered" ? "This browser subscription isn't saved for your account." : state === "denied" ? "Notifications are blocked in browser settings." : null);
   const controls = open ? <div ref={popup} id={id} role="region" aria-labelledby={`${id}-heading`} popover={portalRoot ? undefined : "manual"}
-    className="m-0 overflow-y-auto rounded-xl border border-border bg-card p-3 text-left text-sm text-foreground shadow-lg shadow-black/15"
+    className="glass-strong m-0 overflow-y-auto rounded-[1.375rem] border-0 p-4 text-left text-sm text-foreground"
     style={{ position: "fixed", inset: "auto", zIndex: 1100, display: "block", visibility: "hidden" }}>
-    <div className="flex items-center justify-between gap-2"><h2 ref={heading} id={`${id}-heading`} tabIndex={-1} className="font-semibold outline-none">Notifications</h2><button type="button" onClick={() => close(true)} className="min-h-11 rounded-lg px-2 hover:bg-muted focus-visible:outline-2 focus-visible:outline-ring">Close</button></div>
-    <p role={error ? "alert" : "status"}>{guidance ?? (busy ? "Updating notifications…" : state === null ? "Checking notifications…" : state === "subscribed" ? "On for this account and browser." : "Off in this browser.")}</p>
+    <div className="flex items-center justify-between gap-2"><h2 ref={heading} id={`${id}-heading`} tabIndex={-1} className="flex items-center gap-2 text-base font-bold outline-none"><span className={`flex size-7 items-center justify-center rounded-lg text-white ${state === "subscribed" ? "bg-[#f43f5e]" : "bg-[#64748b]"}`}>{state === "subscribed" ? <BellRing size={15} aria-hidden /> : <Bell size={15} aria-hidden />}</span>Notifications</h2><button type="button" onClick={() => close(true)} className="btn btn-plain -mr-2 min-h-10 text-sm">Close</button></div>
+    <p role={error ? "alert" : "status"} className={`mt-2 ${warning ? "font-bold" : "text-muted-foreground"}`}>{guidance ?? (busy ? "Updating notifications…" : state === null ? "Checking notifications…" : state === "subscribed" ? "On for this account and browser." : "Off in this browser.")}</p>
     <div className="mt-3 flex flex-wrap gap-2">
-      {(state === null || state === "unregistered" || state === "unsubscribed") && <button type="button" disabled={busy} onClick={() => void update(state === null ? "check" : "enable")} className="min-h-11 rounded-lg bg-accent px-3 font-medium text-accent-foreground disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">{error || state === "unregistered" ? "Retry" : state === null ? "Check again" : "Turn on"}</button>}
-      {canDisable && <button type="button" disabled={busy} onClick={() => void update("disable")} className="min-h-11 rounded-lg border border-border px-3 disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">Turn off</button>}
+      {(state === null || state === "unregistered" || state === "unsubscribed") && <button type="button" disabled={busy} onClick={() => void update(state === null ? "check" : "enable")} className="btn btn-primary min-h-10 text-sm">{error || state === "unregistered" ? "Retry" : state === null ? "Check again" : "Turn on"}</button>}
+      {canDisable && <button type="button" disabled={busy} onClick={() => void update("disable")} className="btn btn-quiet min-h-10 text-sm">Turn off</button>}
     </div>
   </div> : null;
 
@@ -108,7 +108,7 @@ function AccountPushToggle({ userId }: { userId: string }) {
       aria-expanded={open}
       aria-controls={open ? id : undefined}
       title={warning ? "Notification settings need attention" : "Notification settings"}
-      className={`relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-muted transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring ${
+      className={`btn btn-quiet relative size-11 shrink-0 px-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring ${
         state === "denied" ? "opacity-40" : ""
       } ${state === "subscribed" ? "text-accent" : ""}`}
     >
@@ -119,7 +119,7 @@ function AccountPushToggle({ userId }: { userId: string }) {
       ) : (
         <Bell size={18} aria-hidden />
       )}
-      {warning && <span aria-hidden className="absolute right-1 top-1 flex size-3.5 items-center justify-center rounded-full bg-accent text-[10px] font-bold text-accent-foreground">!</span>}
+      {warning && <span aria-hidden className="absolute top-1.5 right-1.5 size-2.5 rounded-full bg-accent shadow-[0_0_0_2px_var(--card)]" />}
     </button>
     {portalRoot && controls ? createPortal(controls, portalRoot) : controls}
     </span>

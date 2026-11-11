@@ -4,7 +4,7 @@ import { useAppNavigationGuard } from "@/components/AppNavigation";
 
 import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, Clock, Loader2, Trash2 } from "lucide-react";
+import { ArrowLeft, Check, Clock, Loader2, Trash2 } from "lucide-react";
 import { RelayOriginalRecovery } from "@/components/RelayOriginalRecovery";
 import { loadRelayOriginals, saveRelayOriginals } from "@/lib/relay-recovery";
 import { RoleCapture } from "@/components/RoleCapture";
@@ -134,11 +134,13 @@ function RelayAccountPage() {
 
   if (!enabled) {
     return (
-      <main className="flex min-h-dvh flex-1 flex-col items-center justify-center gap-4 px-6 text-center">
-        <p className="text-lg font-semibold">Relays aren&apos;t available here</p>
-        <button onClick={() => router.push("/")} className="rounded-full bg-accent px-5 py-2.5 font-semibold text-accent-foreground">
-          Back to booth
-        </button>
+      <main className="mx-auto flex min-h-dvh w-full max-w-lg flex-1 flex-col justify-center px-4 py-10">
+        <section className="panel flex flex-col items-center gap-4 p-6 text-center sm:p-8">
+          <h1 className="font-display text-2xl">Relays aren&apos;t available here</h1>
+          <button onClick={() => router.push("/")} className="btn btn-primary">
+            Back to booth
+          </button>
+        </section>
       </main>
     );
   }
@@ -146,18 +148,20 @@ function RelayAccountPage() {
   if (loading || !user || !checked) {
     return (
       <main className="flex min-h-dvh flex-1 items-center justify-center">
-        <Loader2 className="animate-spin text-muted-foreground" />
+        <Loader2 className="animate-spin text-muted-foreground motion-reduce:animate-none" />
       </main>
     );
   }
 
   if (!relay) {
     return (
-      <main className="flex min-h-dvh flex-1 flex-col items-center justify-center gap-4 px-6 text-center">
-        <p className="text-lg font-semibold">{error ?? "Relay not found"}</p>
-        <button onClick={() => router.push("/timeline")} className="rounded-full bg-accent px-5 py-2.5 font-semibold text-accent-foreground">
-          Back to the album
-        </button>
+      <main className="mx-auto flex min-h-dvh w-full max-w-lg flex-1 flex-col justify-center px-4 py-10">
+        <section className="panel flex flex-col items-center gap-4 p-6 text-center sm:p-8">
+          <p className="font-display text-2xl">{error ?? "Relay not found"}</p>
+          <button onClick={() => router.push("/timeline")} className="btn btn-primary">
+            Back to the album
+          </button>
+        </section>
       </main>
     );
   }
@@ -169,7 +173,7 @@ function RelayAccountPage() {
     return (
       <main className="booth-mode relative flex min-h-dvh flex-1 flex-col">
         <div className="absolute top-0 z-40 p-4">
-          <button disabled={captureUnsaved} onClick={() => router.push("/timeline")} aria-label="Back" className="glass-card flex h-11 w-11 items-center justify-center rounded-full">
+          <button disabled={captureUnsaved} onClick={() => router.push("/timeline")} aria-label="Back" className="btn btn-glass min-w-11 px-0">
             <ArrowLeft size={20} />
           </button>
         </div>
@@ -190,43 +194,47 @@ function RelayAccountPage() {
   }
 
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-md flex-1 flex-col items-center justify-center gap-4 px-6 text-center">
-      {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+    <main className="mx-auto flex min-h-dvh w-full max-w-lg flex-1 flex-col justify-center px-4 py-10">
+      <section className="panel page-body flex flex-col items-center gap-4 p-6 text-center sm:p-8">
+      {error && <p role="alert" className="text-sm font-bold text-destructive">{error}</p>}
       {cancelled ? (
-        <><p role="status">This relay was cancelled, and its photos will be cleaned up shortly.</p><button onClick={() => router.push("/timeline")} className="text-sm underline">Back to the album</button></>
+        <><p role="status">This relay was cancelled, and its photos will be cleaned up shortly.</p><button onClick={() => router.push("/timeline")} className="btn btn-quiet">Back to the album</button></>
       ) : busy ? (
         <>
-          <Loader2 className="animate-spin text-muted-foreground" />
-          <p className="text-sm text-muted-foreground">Putting your strip together…</p>
+          <Loader2 className="animate-spin text-muted-foreground motion-reduce:animate-none" />
+          <p className="text-sm font-bold text-muted-foreground">Putting your strip together…</p>
         </>
       ) : pendingFrames && relay.status !== "complete" ? (
         <>
           <RelayOriginalRecovery originals={originals} saved={originalsSaved} />
-          <button onClick={() => void onShot(pendingFrames)} className="rounded-full bg-accent px-5 py-2.5 font-semibold text-accent-foreground">Retry saving</button>
+          <button onClick={() => void onShot(pendingFrames)} className="btn btn-primary">Retry saving</button>
         </>
       ) : relay.status === "complete" ? (
         <>
-          <p className="text-lg font-semibold" style={{ fontFamily: "var(--font-fraunces)" }}>
+          <span className="glyph size-14 rounded-2xl bg-[#10b981]"><Check size={28} strokeWidth={2.5} aria-hidden /></span>
+          <h1 className="font-display text-2xl sm:text-3xl">
             This relay is complete
-          </p>
-          <button onClick={() => openInEditor(relay)} className="rounded-full bg-accent px-5 py-2.5 font-semibold text-accent-foreground">
-            Open in editor
-          </button>
-          <button onClick={() => router.push("/timeline")} className="text-sm text-muted-foreground underline">
-            Back to the album
-          </button>
+          </h1>
+          <div className="flex flex-wrap justify-center gap-2">
+            <button onClick={() => openInEditor(relay)} className="btn btn-primary">
+              Open in editor
+            </button>
+            <button onClick={() => router.push("/timeline")} className="btn btn-plain">
+              Back to the album
+            </button>
+          </div>
         </>
       ) : (
         <>
-          <Clock className="text-accent" size={28} />
-          <p className="text-lg font-semibold" style={{ fontFamily: "var(--font-fraunces)" }}>
+          <span className="glyph size-14 rounded-2xl bg-[#f59e0b]"><Clock size={26} strokeWidth={2.25} aria-hidden /></span>
+          <h1 className="font-display text-2xl sm:text-3xl">
             Waiting for your partner
-          </p>
+          </h1>
           <p className="max-w-sm text-sm text-muted-foreground">
             You shot your half of this {layout.name.toLowerCase()}. It finishes once
             your partner adds theirs.
           </p>
-          <div className="flex gap-3">
+          <div className="flex flex-wrap justify-center gap-2">
             <button
               onClick={async () => {
                 const current = scope.capture(); if (!current()) return;
@@ -236,16 +244,17 @@ function RelayAccountPage() {
                 catch (failure) { if (current()) setError(failure instanceof Error ? failure.message : "Couldn't cancel the relay. Try again."); }
                 finally { if (current()) setBusy(false); }
               }}
-              className="flex min-h-11 items-center gap-2 rounded-full bg-destructive/15 px-4 text-sm font-medium text-destructive"
+              className="btn btn-danger"
             >
               <Trash2 size={15} /> Cancel relay
             </button>
-            <button onClick={() => router.push("/timeline")} className="rounded-full bg-accent px-5 font-semibold text-accent-foreground">
+            <button onClick={() => router.push("/timeline")} className="btn btn-primary">
               Back
             </button>
           </div>
         </>
       )}
+      </section>
     </main>
   );
 }

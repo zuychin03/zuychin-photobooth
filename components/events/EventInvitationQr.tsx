@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { eventControl } from "./EventHostControls";
+import { Download } from "lucide-react";
 import type { EventInvitationAudience } from "@/lib/events/invitation";
 
 export function EventInvitationQr({ eventId, token, expiresAt, audience = "guest" }: { eventId: string; token: string; expiresAt: string; audience?: EventInvitationAudience }) {
@@ -23,13 +23,13 @@ function InvitationQr({ eventId, token, expiresAt, audience }: { eventId: string
     const timer = setInterval(check, 1000);
     return () => { active = false; clearInterval(timer); if (url) URL.revokeObjectURL(url); };
   }, [eventId, token, expiresAt, audience]);
-  return <figure className="mt-5 max-w-sm">
+  return <figure className="mt-4 max-w-sm">
     {ready ? <>
       {/* This private SVG stays in the browser and must not pass through image optimisation. */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={ready} width={256} height={256} alt={`Private QR ${label} for this event`} className="h-auto w-64 max-w-full rounded-sm bg-white" />
-      <a className={`${eventControl} mt-3 border border-border`} href={ready} download={audience === "guest" ? "event-invitation.svg" : `event-${audience}-access.svg`} onClick={event => { if (Date.now() >= Date.parse(expiresAt)) event.preventDefault(); }}>Download QR {label}</a>
-    </> : <p role="status" className="text-sm">{expired ? "This link has expired. Create a new one to get a new QR code." : failed ? "Couldn't make the QR code. You can still copy the link." : `Making your QR ${label}…`}</p>}
-    <figcaption className="mt-2 text-xs leading-relaxed text-foreground/70">{audience === "guest" ? "Only share this with your guests. It works like the invitation link." : audience === "gallery" ? "Anyone with this code can see approved gallery photos." : "Anyone with this code can see the event wall."}</figcaption>
+      <img src={ready} width={256} height={256} alt={`Private QR ${label} for this event`} className="h-auto w-56 max-w-full rounded-2xl bg-white p-2 shadow-[inset_0_0_0_1px_var(--panel-stroke)]" />
+      <a className="btn btn-quiet mt-3 min-h-10 text-sm" href={ready} download={audience === "guest" ? "event-invitation.svg" : `event-${audience}-access.svg`} onClick={event => { if (Date.now() >= Date.parse(expiresAt)) event.preventDefault(); }}><Download size={15} aria-hidden /> Download QR {label}</a>
+    </> : <p role="status" className="text-sm text-muted-foreground">{expired ? "This link has expired. Create a new one to get a new QR code." : failed ? "Couldn't make the QR code. You can still copy the link." : `Making your QR ${label}…`}</p>}
+    <figcaption className="mt-2 text-xs text-muted-foreground">{audience === "guest" ? "Only share this with your guests. It works like the invitation link." : audience === "gallery" ? "Anyone with this code can see approved gallery photos." : "Anyone with this code can see the event wall."}</figcaption>
   </figure>;
 }

@@ -6,9 +6,11 @@ import { HelpTooltip } from "@/components/HelpTooltip";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { LayoutTemplate, LoaderCircle, Plus, RefreshCw, Upload } from "lucide-react";
+import { HardDrive, LayoutTemplate, LoaderCircle, Plus, RefreshCw, Upload } from "lucide-react";
 import { TemplateRow, type ShelfRow, type Action, type Recovery } from "@/components/TemplateRow";
 import { Dropdown } from "@/components/Dropdown";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { Section } from "@/components/ui/Section";
 import { useAuth } from "@/lib/auth";
 import { useBoothSession } from "@/lib/session";
 import { downloadProjectBlob, projectDownloadName } from "@/lib/projects/download";
@@ -18,7 +20,7 @@ import { templateFromProject } from "@/lib/templates/from-project";
 import { templateScopeKey, validateTemplateRecipe, type TemplateScope } from "@/lib/templates/model";
 import { openTemplateShelf } from "@/lib/templates/storage";
 
-const control = "inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-3 text-sm font-medium transition hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-wait disabled:opacity-50";
+const toggle = "relative h-7 w-12 shrink-0 cursor-pointer appearance-none rounded-full bg-[color-mix(in_srgb,var(--foreground)_16%,transparent)] transition-colors duration-200 checked:bg-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-50 before:absolute before:top-0.5 before:left-0.5 before:size-6 before:rounded-full before:bg-white before:shadow-[0_2px_6px_rgb(0_0_0/0.25)] before:transition-transform before:duration-300 before:ease-[var(--spring-bounce)] checked:before:translate-x-5 motion-reduce:before:transition-none";
 const failureText = (error: unknown) => error instanceof Error ? error.message : "Something went wrong with that template. Try again.";
 
 
@@ -111,15 +113,33 @@ function TemplateShelfPage({ owner, authLoading }: { owner: string | null; authL
     guard(key); setRefresh(value => value + 1); setNotice("Template imported.");
   });
 
-  return <main className="mx-auto flex min-h-dvh w-full max-w-4xl flex-1 flex-col px-5 py-6 sm:px-8 sm:py-8">
-    <header className="mt-8 flex flex-col justify-between gap-6 border-b border-border pb-7 sm:flex-row sm:items-end"><div><h1 ref={heading} tabIndex={-1} className="font-display text-4xl font-semibold focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring sm:text-5xl">My templates</h1><p className="mt-3 max-w-lg text-foreground/70">Reuse your favourite layouts and looks.</p></div><div className="flex shrink-0 flex-wrap gap-2"><button type="button" disabled={Boolean(busy) || session.hydrating || !session.project} onClick={() => setSaving(value => !value)} className={`${control} bg-accent text-accent-foreground hover:bg-accent/90`}><Plus size={17} aria-hidden /> Save current design</button><button type="button" disabled={Boolean(busy)} onClick={() => input.current?.click()} className={`${control} border border-border bg-card`}><Upload size={17} aria-hidden /> Import</button><input ref={input} type="file" accept={`.pbtemplate,${TEMPLATE_BUNDLE_MIME}`} className="sr-only" tabIndex={-1} aria-label="Import a .pbtemplate file" onChange={event => { const file = event.target.files?.[0]; event.target.value = ""; if (file) void importFile(file); }} /></div></header>
-    <div className="mt-4 flex flex-wrap items-center justify-between gap-2"><div className="flex min-w-0 items-center gap-2"><p className="max-w-xl text-sm text-foreground/70">{owner ? "Includes templates from your account." : "No account needed."}</p><HelpTooltip label="About template roles">When you start a new project from a template, people get roles A to D in order.</HelpTooltip></div><button type="button" disabled={Boolean(busy) || loading} onClick={() => setRefresh(value => value + 1)} className={control}><RefreshCw size={15} aria-hidden /> Refresh</button></div>
-    {saving && <form className="mt-5 flex flex-wrap items-end gap-3 rounded-xl bg-muted p-4" onSubmit={event => { event.preventDefault(); void saveCurrent(); }}><label className="min-w-0 flex-1 basis-52 text-sm font-medium">Template name<input data-template-focus="name" value={name} disabled={Boolean(busy)} onChange={event => setName(event.target.value)} maxLength={100} required className="mt-1 min-h-11 w-full rounded-xl border border-border bg-card px-3 outline-ring" /></label><Dropdown label="Save to" value={destination} options={[{ value: "device", label: "This browser" }, ...(owner && !authLoading ? [{ value: "account", label: "My account on this device" }] : [])]} onChange={setDestination} disabled={Boolean(busy)} /><button disabled={Boolean(busy) || !name.trim()} className={`${control} bg-accent text-accent-foreground hover:bg-accent/90`}>Save template</button><button type="button" disabled={Boolean(busy)} onClick={() => setSaving(false)} className={control}>Cancel</button></form>}
-    {error && <div role="alert" className="mt-4 rounded-xl bg-muted p-4"><p className="font-medium">That didn&apos;t work</p><p className="mt-1 break-words text-sm">{error}</p></div>}
-    {notice && <p role="status" className="mt-4 rounded-xl bg-muted p-4 text-sm">{notice}</p>}
-    {busy && <p role="status" className="mt-4 flex items-center gap-2 text-sm"><LoaderCircle size={16} className="animate-spin motion-reduce:animate-none" aria-hidden /> {busy === "import" ? "Importing template…" : "Working on it…"}</p>}
-    <div className="mt-5 flex flex-wrap items-center justify-between gap-3"><label className="flex min-h-11 max-w-xl cursor-pointer items-center gap-3 text-sm"><input type="checkbox" checked={includeText} disabled={Boolean(busy)} onChange={event => setIncludeText(event.target.checked)} className="size-4 shrink-0 accent-accent" /><span>Include captions and text in exports</span></label><Link href="/templates/design" className={control}><LayoutTemplate size={17} aria-hidden /> Design from my current project</Link></div>
-    {loading ? <p role="status" className="flex min-h-48 items-center justify-center gap-2 text-sm text-foreground/70"><LoaderCircle size={18} className="animate-spin motion-reduce:animate-none" aria-hidden /> Loading your templates…</p> : page.length ? <><ul aria-label="Saved templates" className="mt-3">{page.map(item => <TemplateRow key={item.key} item={item} busy={Boolean(busy)} canApply={Boolean(session.project) && !session.hydrating} recovery={recovery} act={act} />)}</ul>{visible.length > page.length && <button type="button" onClick={() => setCount(value => value + 20)} className={`${control} my-4 self-center bg-muted`}>Show more templates</button>}</> : !error && <section className="flex min-h-64 flex-col items-start justify-center py-10"><h2 className="font-display text-2xl font-semibold">No templates yet.</h2><p className="mt-3 max-w-lg text-foreground/70">Save the design you&apos;re working on, or make one in the frame designer.</p><Link href="/templates/design" className={`${control} mt-5 bg-accent text-accent-foreground hover:bg-accent/90`}><LayoutTemplate size={17} aria-hidden /> Design a frame</Link></section>}
-    <footer className="mt-8 border-t border-border pt-5 pb-3"><p className="max-w-2xl text-sm text-foreground/70">Templates are saved in this browser. Export any you want to keep.</p></footer>
+  return <main className="mx-auto flex min-h-dvh w-full max-w-5xl flex-1 flex-col gap-6 px-4 pt-4 pb-10 sm:px-8 sm:pt-6">
+    <PageHeader title="My templates" headingRef={heading} meta={owner ? "Includes templates from your account." : undefined} actions={<>
+      <button type="button" disabled={Boolean(busy) || session.hydrating || !session.project} onClick={() => setSaving(value => !value)} className="btn btn-primary"><Plus size={18} aria-hidden /> Save current design</button>
+      <button type="button" disabled={Boolean(busy)} onClick={() => input.current?.click()} className="btn btn-quiet"><Upload size={17} aria-hidden /> Import</button>
+      <Link href="/templates/design" className="btn btn-quiet"><LayoutTemplate size={17} aria-hidden /> Frame designer</Link>
+      <input ref={input} type="file" accept={`.pbtemplate,${TEMPLATE_BUNDLE_MIME}`} className="sr-only" tabIndex={-1} aria-label="Import a .pbtemplate file" onChange={event => { const file = event.target.files?.[0]; event.target.value = ""; if (file) void importFile(file); }} />
+    </>} />
+    <div className="page-body flex flex-col gap-5">
+      {saving && <Section id="template-save-title" title="New template" icon={Plus} tone="rose">
+        <form className="flex flex-wrap items-end gap-3" onSubmit={event => { event.preventDefault(); void saveCurrent(); }}>
+          <label className="min-w-0 flex-1 basis-56 text-sm font-bold">Template name<input data-template-focus="name" value={name} disabled={Boolean(busy)} onChange={event => setName(event.target.value)} maxLength={100} required className="field mt-1.5 font-medium" /></label>
+          <Dropdown label="Save to" showLabel className="w-full sm:w-64" value={destination} options={[{ value: "device", label: "This browser" }, ...(owner && !authLoading ? [{ value: "account", label: "My account on this device" }] : [])]} onChange={setDestination} disabled={Boolean(busy)} />
+          <div className="flex flex-wrap gap-2"><button disabled={Boolean(busy) || !name.trim()} className="btn btn-primary">Save template</button><button type="button" disabled={Boolean(busy)} onClick={() => setSaving(false)} className="btn btn-quiet">Cancel</button></div>
+        </form>
+      </Section>}
+      {error && <div role="alert" className="notice border border-destructive/25 bg-destructive/8"><p className="font-bold text-destructive">That didn&apos;t work</p><p className="mt-1 break-words">{error}</p></div>}
+      {notice && <p role="status" className="notice max-w-2xl">{notice}</p>}
+      {busy && <p role="status" className="flex items-center gap-2 text-sm font-bold"><LoaderCircle size={16} className="animate-spin text-accent motion-reduce:animate-none" aria-hidden /> {busy === "import" ? "Importing template…" : "Working on it…"}</p>}
+      {loading ? <p role="status" className="panel flex min-h-48 items-center justify-center gap-2 text-sm text-muted-foreground"><LoaderCircle size={18} className="animate-spin motion-reduce:animate-none" aria-hidden /> Loading your templates…</p> : page.length ? <section aria-labelledby="template-list-title" className="panel overflow-hidden">
+        <div className="flex items-center justify-between gap-3 border-b border-border py-2 pr-2 pl-4 sm:pl-5"><div className="flex min-w-0 items-center gap-1.5"><h2 id="template-list-title" className="text-sm font-bold text-muted-foreground tabular-nums">{visible.length} {visible.length === 1 ? "template" : "templates"}</h2><HelpTooltip label="About template roles">When you start a new project from a template, people get roles A to D in order.</HelpTooltip></div><button type="button" disabled={Boolean(busy) || loading} onClick={() => setRefresh(value => value + 1)} className="btn btn-plain min-h-10 text-sm"><RefreshCw size={15} aria-hidden /> Refresh</button></div>
+        <ul aria-label="Saved templates" className="divide-y divide-border">{page.map(item => <TemplateRow key={item.key} item={item} busy={Boolean(busy)} canApply={Boolean(session.project) && !session.hydrating} recovery={recovery} act={act} />)}</ul>
+        {visible.length > page.length && <div className="border-t border-border p-3 text-center"><button type="button" onClick={() => setCount(value => value + 20)} className="btn btn-quiet text-sm">Show more templates</button></div>}
+      </section> : !error && <section className="panel flex min-h-64 flex-col items-center justify-center gap-4 px-6 py-12 text-center"><span className="glyph size-14 rounded-2xl bg-[#f43f5e]"><LayoutTemplate size={26} aria-hidden /></span><h2 className="font-display text-2xl">No templates yet</h2><Link href="/templates/design" className="btn btn-tinted"><LayoutTemplate size={17} aria-hidden /> Design a frame</Link></section>}
+      <Section id="template-backup-title" title="Back up your templates" icon={HardDrive} tone="sky" bodyClassName="mt-3 grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,24rem)] md:items-center">
+        <p className="text-sm text-muted-foreground">Templates are saved in this browser. Export any you want to keep.</p>
+        <label className="panel-muted flex min-h-14 cursor-pointer items-center justify-between gap-4 px-4 py-3 text-sm font-bold"><span>Include captions and text in exports</span><input type="checkbox" checked={includeText} disabled={Boolean(busy)} onChange={event => setIncludeText(event.target.checked)} className={toggle} /></label>
+      </Section>
+    </div>
   </main>;
 }

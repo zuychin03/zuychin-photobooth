@@ -3,8 +3,10 @@
 import { HelpTooltip } from "@/components/HelpTooltip";
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { ChevronDown, Download, ImagePlus, RotateCw } from "lucide-react";
 import { Dropdown } from "./Dropdown";
 import { MotionExportPanel } from "./MotionExportPanel";
+import { settingRow, switchTrack } from "./CaptureFeedbackSettings";
 import { useBoothSession } from "@/lib/session";
 import type { PhotoProject } from "@/lib/projects/model";
 import { openProjectRepository, type ProjectListItem } from "@/lib/projects/storage";
@@ -13,7 +15,7 @@ import { downloadProjectBlob, projectDownloadName } from "@/lib/projects/downloa
 import { createExportCanvas, encodeExportCanvas, ExportJob, releaseExportCanvas } from "@/lib/exports/still";
 import { DEFAULT_THEN_NOW_ALIGNMENT, drawThenNowAlternatingFrame, drawThenNowComparison, drawThenNowGhost, thenNowDateFromInstant, thenNowDateLabel, thenNowOutputSize, validateThenNowPlan, type ThenNowPlan } from "@/lib/memories/then-and-now";
 
-const button = "min-h-11 rounded-xl border border-border px-4 py-2 text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:opacity-40";
+const button = "btn btn-quiet text-sm";
 type SavedSource = { projectId: string; mediaId: string; label: string; date: string | null };
 const makePlan = (date: string | null, strip: boolean): ThenNowPlan => ({ version: 1, reference: { mediaId: "pending-reference", provenance: { kind: strip ? "imported-strip" : "imported-image" }, date, crop: strip ? { x: 0, y: 0, width: 1, height: 1 } : null }, alignment: { ...DEFAULT_THEN_NOW_ALIGNMENT }, ghostOpacity: .35 });
 
@@ -21,7 +23,7 @@ function ReferenceSlider({ label, value, min, max, step = .05, disabled, onCommi
   const [draft, setDraft] = useState({ base: value, next: value });
   const displayed = draft.base === value ? draft.next : value;
   const commit = (next: number) => { if (next !== value) onCommit(next); };
-  return <label className="block text-sm">{label}<span className="float-right tabular-nums text-muted-foreground">{displayed.toFixed(2)}</span><input type="range" min={min} max={max} step={step} value={displayed} disabled={disabled} onChange={event => setDraft({ base: value, next: Number(event.target.value) })} onPointerUp={event => commit(Number(event.currentTarget.value))} onKeyUp={event => { if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End", "PageUp", "PageDown"].includes(event.key)) commit(Number(event.currentTarget.value)); }} onBlur={event => commit(Number(event.currentTarget.value))} className="mt-1 min-h-11 w-full accent-accent" /></label>;
+  return <label className="block text-sm font-bold">{label}<span className="float-right font-medium tabular-nums text-muted-foreground">{displayed.toFixed(2)}</span><input type="range" min={min} max={max} step={step} value={displayed} disabled={disabled} onChange={event => setDraft({ base: value, next: Number(event.target.value) })} onPointerUp={event => commit(Number(event.currentTarget.value))} onKeyUp={event => { if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End", "PageUp", "PageDown"].includes(event.key)) commit(Number(event.currentTarget.value)); }} onBlur={event => commit(Number(event.currentTarget.value))} className="mt-1 min-h-11 w-full accent-accent" /></label>;
 }
 
 export function ThenNowGhost({ reference, plan, aspect }: { reference: HTMLCanvasElement; plan: ThenNowPlan; aspect: number }) {
@@ -130,36 +132,41 @@ export default function ThenNowStudio({ project, disabled = false, onBusyChange 
     } finally { releaseExportCanvas(canvas); }
   }, [referenceCanvas, plan, current, currentDate, aspect]);
 
-  return <details id="then-now" className="rounded-xl border border-border p-4" open={Boolean(plan)}>
-    <summary className="min-h-11 cursor-pointer content-center font-semibold">Then & now</summary>
-    <section aria-label="Then and now" className="mt-3 space-y-4">
+  return <details id="then-now" className="group panel p-4 sm:p-5" open={Boolean(plan)}>
+    <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 font-display text-[1.0625rem] [&::-webkit-details-marker]:hidden">Then & now<ChevronDown size={18} aria-hidden className="shrink-0 text-muted-foreground transition-transform duration-300 group-open:rotate-180 motion-reduce:transition-none" /></summary>
+    <section aria-label="Then and now" className="mt-2 space-y-4">
       <p className="text-sm leading-relaxed text-muted-foreground">Line up a new photo with an old favourite. <HelpTooltip label="About the photo guide">A faint copy of the old photo shows over the camera to help you match the pose. It isn&apos;t saved in the new photo.</HelpTooltip></p>
-      {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+      {error && <p role="alert" className="text-sm font-bold text-destructive">{error}</p>}
       {notice && <p role="status" className="text-sm text-muted-foreground">{notice}</p>}
-      <label className="block text-sm">Date of the old photo (optional)<input type="date" aria-label="Date of the old photo" value={date} disabled={blocked} onChange={event => setDate(event.target.value)} className="mt-2 min-h-11 w-full rounded-xl border border-border bg-background px-3" /></label>
-      <Dropdown showLabel label="What are you importing?" value={strip ? "strip" : "image"} onChange={value => setStrip(value === "strip")} disabled={blocked} options={[{ value: "image", label: "A single photo" }, { value: "strip", label: "A whole photo strip" }]} />
-      <label className={`${button} relative flex cursor-pointer items-center justify-center focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-ring`}><span>{plan ? "Import a different old photo" : "Import an old photo"}</span><input type="file" aria-label="Import an old photo" className="sr-only" accept="image/jpeg,image/png,image/webp" disabled={blocked} onChange={event => { const file = event.target.files?.[0]; event.target.value = ""; if (file) void run(async () => { await attachReference(file, makePlan(date || null, strip)); }); }} /></label>
+      <label className="block text-sm font-bold">Date of the old photo (optional)<input type="date" aria-label="Date of the old photo" value={date} disabled={blocked} onChange={event => setDate(event.target.value)} className="field mt-1.5 font-medium" /></label>
+      <div>
+        <span className="mb-1.5 block text-sm font-bold">What are you importing?</span>
+        <div role="group" aria-label="What are you importing?" className="segmented w-full">
+          <button type="button" aria-pressed={!strip} disabled={blocked} onClick={() => setStrip(false)} className="flex-1 disabled:opacity-50">Single photo</button>
+          <button type="button" aria-pressed={strip} disabled={blocked} onClick={() => setStrip(true)} className="flex-1 disabled:opacity-50">Photo strip</button>
+        </div>
+      </div>
+      <label className={`${button} relative w-full cursor-pointer focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-ring`}><ImagePlus size={17} aria-hidden /><span>{plan ? "Import a different old photo" : "Import an old photo"}</span><input type="file" aria-label="Import an old photo" className="sr-only" accept="image/jpeg,image/png,image/webp" disabled={blocked} onChange={event => { const file = event.target.files?.[0]; event.target.value = ""; if (file) void run(async () => { await attachReference(file, makePlan(date || null, strip)); }); }} /></label>
       <button type="button" className={`${button} w-full`} disabled={blocked} onClick={listSources}>Pick from my saved photos</button>
       {savedProjects && (savedProjects.length ? <div className="space-y-3"><Dropdown showLabel label="Project" value={savedProjectKey} onChange={value => { setSavedProjectKey(value); setSources(null); }} disabled={blocked} options={savedProjects.map(item => ({ value: item.id, label: item.name }))} /><button type="button" className={button} disabled={blocked || !savedProjectKey} onClick={loadSources}>Show its photos</button></div> : <p role="status" className="text-sm text-muted-foreground">You don&apos;t have any other projects saved here.</p>)}
       {sources && (sources.length ? <div className="space-y-3"><Dropdown label="Photo" value={sourceKey} onChange={setSourceKey} disabled={blocked} options={sources.map(source => ({ value: `${source.projectId}/${source.mediaId}`, label: source.label }))} /><button type="button" disabled={blocked || !sourceKey} className={button} onClick={() => void run(async () => { const source = sources.find(item => `${item.projectId}/${item.mediaId}` === sourceKey); if (!source) throw new Error("Pick a photo first."); await copyReference(source.projectId, source.mediaId, makePlan(source.date, false)); if (mounted.current) setDate(source.date ?? ""); })}>Use this photo</button></div> : <p role="status" className="text-sm text-muted-foreground">That project has no photos to use. Import one instead.</p>)}
       {plan && referenceCanvas && <>
-        <figure className="space-y-2"><canvas ref={sourcePreview} role="img" aria-label="The old photo, with the selected area outlined" className="w-full rounded-lg" /><figcaption className="text-xs text-muted-foreground">{wholeStrip ? "Use the crop sliders to pick one photo from the strip." : plan.reference.provenance.kind.endsWith("strip") ? "Your crop from the strip." : "Your old photo."}</figcaption></figure>
-        <p className="text-sm">Date of the old photo: {thenNowDateLabel(plan.reference.date)}</p>
-        <button type="button" className={button} disabled={blocked || date === (plan.reference.date ?? "")} onClick={() => change({ ...plan, reference: { ...plan.reference, date: date || null } })}>Save date</button>
-        {plan.reference.crop && <fieldset className="space-y-3"><legend className="text-sm font-medium">Crop the strip</legend>{(["x", "y", "width", "height"] as const).map(field => <ReferenceSlider key={field} label={{ x: "Left edge", y: "Top edge", width: "Width", height: "Height" }[field]} min={field === "width" || field === "height" ? .02 : 0} max={field === "x" ? 1 - plan.reference.crop!.width : field === "y" ? 1 - plan.reference.crop!.height : field === "width" ? 1 - plan.reference.crop!.x : 1 - plan.reference.crop!.y} step={.01} value={plan.reference.crop![field]} disabled={blocked} onCommit={value => change({ ...plan, reference: { ...plan.reference, crop: { ...plan.reference.crop!, [field]: value } } })} />)}</fieldset>}
-        <fieldset className="space-y-3"><legend className="text-sm font-medium">Line up the old photo</legend>{([{ key: "zoom", label: "Zoom", min: 1, max: 4 }, { key: "offsetX", label: "Move left or right", min: -1, max: 1 }, { key: "offsetY", label: "Move up or down", min: -1, max: 1 }] as const).map(field => <ReferenceSlider key={field.key} label={field.label} min={field.min} max={field.max} value={plan.alignment[field.key]} disabled={blocked} onCommit={value => change({ ...plan, alignment: { ...plan.alignment, [field.key]: value } })} />)}
+        <figure className="space-y-2"><canvas ref={sourcePreview} role="img" aria-label="The old photo, with the selected area outlined" className="w-full rounded-2xl" /><figcaption className="text-xs text-muted-foreground">{wholeStrip ? "Use the crop sliders to pick one photo from the strip." : plan.reference.provenance.kind.endsWith("strip") ? "Your crop from the strip." : "Your old photo."}</figcaption></figure>
+        <div className="flex flex-wrap items-center justify-between gap-2"><p className="text-sm">Date of the old photo: {thenNowDateLabel(plan.reference.date)}</p><button type="button" className={`${button} min-h-10`} disabled={blocked || date === (plan.reference.date ?? "")} onClick={() => change({ ...plan, reference: { ...plan.reference, date: date || null } })}>Save date</button></div>
+        {plan.reference.crop && <fieldset className="border-t border-border pt-4"><legend className="float-left w-full pb-3 text-sm font-bold">Crop the strip</legend><div className="clear-both space-y-3">{(["x", "y", "width", "height"] as const).map(field => <ReferenceSlider key={field} label={{ x: "Left edge", y: "Top edge", width: "Width", height: "Height" }[field]} min={field === "width" || field === "height" ? .02 : 0} max={field === "x" ? 1 - plan.reference.crop!.width : field === "y" ? 1 - plan.reference.crop!.height : field === "width" ? 1 - plan.reference.crop!.x : 1 - plan.reference.crop!.y} step={.01} value={plan.reference.crop![field]} disabled={blocked} onCommit={value => change({ ...plan, reference: { ...plan.reference, crop: { ...plan.reference.crop!, [field]: value } } })} />)}</div></fieldset>}
+        <fieldset className="border-t border-border pt-4"><legend className="float-left w-full pb-3 text-sm font-bold">Line up the old photo</legend><div className="clear-both space-y-3">{([{ key: "zoom", label: "Zoom", min: 1, max: 4 }, { key: "offsetX", label: "Move left or right", min: -1, max: 1 }, { key: "offsetY", label: "Move up or down", min: -1, max: 1 }] as const).map(field => <ReferenceSlider key={field.key} label={field.label} min={field.min} max={field.max} value={plan.alignment[field.key]} disabled={blocked} onCommit={value => change({ ...plan, alignment: { ...plan.alignment, [field.key]: value } })} />)}
           <ReferenceSlider label="Guide opacity" min={0} max={1} value={plan.ghostOpacity} disabled={blocked} onCommit={value => change({ ...plan, ghostOpacity: value })} />
-          <label className="flex min-h-11 items-center gap-3 text-sm"><input type="checkbox" checked={plan.alignment.mirror} disabled={blocked} onChange={event => change({ ...plan, alignment: { ...plan.alignment, mirror: event.target.checked } })} className="h-5 w-5 accent-accent" />Mirror the old photo</label>
-          <button type="button" className={button} disabled={blocked} onClick={() => change({ ...plan, alignment: { ...plan.alignment, rotation: ((plan.alignment.rotation + 90) % 360) as 0 | 90 | 180 | 270 } })}>Rotate the old photo</button>
-        </fieldset>
-        {photos.length > 0 && <><Dropdown showLabel label="New photo to compare" value={String(photos.find(item => String(item.index) === selected)?.index ?? photos[0].index)} onChange={setSelected} disabled={blocked} options={photos.map(item => ({ value: String(item.index), label: `Photo ${item.index + 1}` }))} /></>}
-        <canvas ref={preview} role="img" aria-label={current ? "Then and now comparison" : "Preview of the lined-up old photo"} className="w-full rounded-lg" />
+          <label className={settingRow}><span>Mirror the old photo</span><input type="checkbox" checked={plan.alignment.mirror} disabled={blocked} onChange={event => change({ ...plan, alignment: { ...plan.alignment, mirror: event.target.checked } })} className="peer sr-only" /><span aria-hidden className={switchTrack} /></label>
+          <button type="button" className={`${button} w-full`} disabled={blocked} onClick={() => change({ ...plan, alignment: { ...plan.alignment, rotation: ((plan.alignment.rotation + 90) % 360) as 0 | 90 | 180 | 270 } })}><RotateCw size={16} aria-hidden />Rotate the old photo</button>
+        </div></fieldset>
+        {photos.length > 0 && <div className="border-t border-border pt-4"><Dropdown showLabel label="New photo to compare" value={String(photos.find(item => String(item.index) === selected)?.index ?? photos[0].index)} onChange={setSelected} disabled={blocked} options={photos.map(item => ({ value: String(item.index), label: `Photo ${item.index + 1}` }))} /></div>}
+        <canvas ref={preview} role="img" aria-label={current ? "Then and now comparison" : "Preview of the lined-up old photo"} className="w-full rounded-2xl" />
         {current ? <><button type="button" className={`${button} w-full`} disabled={blocked} onClick={() => void run(async signal => {
           const size = thenNowOutputSize(1536, aspect, "comparison"), canvas = createExportCanvas(size.width, size.height), job = new ExportJob({ signal });
           try { const ctx = canvas.getContext("2d"); if (!ctx) throw new Error("Your browser couldn't draw the image."); drawThenNowComparison(ctx, referenceCanvas, current, plan, { ...size, currentDate }); const blob = await encodeExportCanvas(canvas, "png", 1, job); job.check(); if (mounted.current) { downloadProjectBlob(blob, projectDownloadName(`${project.name}-then-and-now`, "png")); setNotice("Downloading now. Check your downloads folder."); } }
           finally { releaseExportCanvas(canvas); }
-        })}>Download the comparison</button><MotionExportPanel getFrames={frames} name={`${project.name}-then-and-now`} delayMs={1500} disabled={disabled || working} onBusyChange={motionBusyChange} /></> : <p className="text-sm text-muted-foreground">Take or import a new photo to compare.</p>}
-        <button type="button" disabled={blocked} className={`${button} w-full`} onClick={() => void run(async () => { await editProject({ thenNow: null }, undefined, project); })}>Remove the old photo</button>
+        })}><Download size={16} aria-hidden />Download the comparison</button><MotionExportPanel getFrames={frames} name={`${project.name}-then-and-now`} delayMs={1500} disabled={disabled || working} onBusyChange={motionBusyChange} /></> : <p className="text-sm text-muted-foreground">Take or import a new photo to compare.</p>}
+        <button type="button" disabled={blocked} className="btn btn-danger w-full text-sm" onClick={() => void run(async () => { await editProject({ thenNow: null }, undefined, project); })}>Remove the old photo</button>
       </>}
     </section>
   </details>;

@@ -58,6 +58,7 @@ desktop.ini
 *.local.md
 CHANGELOG.md
 ROADMAP.md
+DESIGN.md
 /notes/
 /external/
 /.tmp-*

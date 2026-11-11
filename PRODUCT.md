@@ -16,7 +16,7 @@ Preserve the existing Next.js/React/Canvas application and routes. Local project
 
 ## Brand commitments
 
-Retain the Zuychin name and approved logo. Extend the incumbent rose, warm neutral and partner-purple system, Fraunces headings, Geist controls and Lucide icons. New project and capture surfaces are working tools inside this app, not a replacement landing-page identity.
+Retain the Zuychin name and approved logo. Keep the rose accent, blush neutrals, partner purple and Lucide icons. Since November 2026 the UI uses Mochiy Pop One for headings and Zen Maru Gothic for controls and text (picked from rendered specimens for a soft, playful voice), and Apple Liquid Glass on the control layer only (nav, toolbars, sheets, menus, floating buttons) with content on solid grouped panels. Strip and recap canvases keep Fraunces, Geist and Geist Mono as output fonts. New project and capture surfaces are working tools inside this app, not a replacement landing-page identity.
 
 ## Evidence and decisions
 

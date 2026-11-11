@@ -6,15 +6,22 @@ import { Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState } f
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
+  BookHeart,
   Bookmark,
   BookmarkCheck,
+  CalendarDays,
   CalendarHeart,
+  Camera,
   Check,
   Clock,
   Copy,
   Flame,
   Heart,
+  Images,
   Loader2,
+  LogOut,
+  Plus,
+  RefreshCw,
   Sparkles,
   Trash2,
   Unlink,
@@ -49,9 +56,12 @@ import { renderWeeklyRecap, weeklyStripUrl } from "@/lib/recap";
 import { createClient } from "@/lib/supabase/client";
 import { PushToggle } from "@/components/PushToggle";
 import { Dropdown } from "@/components/Dropdown";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { Section } from "@/components/ui/Section";
+import { useStickyTop } from "@/components/ui/useStickyTop";
 
 export default function TimelinePage() {
-  return <Suspense fallback={<main className="min-h-dvh p-6" role="status">Opening your Shared Vault…</main>}><TimelineContent /></Suspense>;
+  return <Suspense fallback={<main className="flex min-h-dvh flex-1 items-center justify-center p-6 text-sm text-muted-foreground" role="status">Opening your Shared Vault…</main>}><TimelineContent /></Suspense>;
 }
 
 function TimelineContent() {
@@ -60,7 +70,7 @@ function TimelineContent() {
   const boothSession = useBoothSession();
   const [signOutOpen, setSignOutOpen] = useState(false);
   const [unpairTarget, setUnpairTarget] = useState<{ coupleId: string; ownerId: string } | null>(null);
-  const vaultHeading = useRef<HTMLHeadingElement>(null), unpairButton = useRef<HTMLButtonElement>(null);
+  const vaultHeading = useRef<HTMLHeadingElement>(null), unpairButton = useRef<HTMLButtonElement>(null), vaultSidebar = useStickyTop();
   const [signingOut, setSigningOut] = useState(false);
   const [signOutError, setSignOutError] = useState<string | null>(null);
   const [signOutResult, setSignOutResult] = useState<SignOutResult | null>(null);
@@ -165,22 +175,22 @@ function TimelineContent() {
     finally { resume?.(); setSigningOut(false); }
   };
 
-  const signOutPanel = <section className="rounded-2xl border border-border bg-card p-5" aria-labelledby="sign-out-title">
-    <h2 ref={signOutHeading} tabIndex={-1} id="sign-out-title" className="font-display text-xl font-semibold outline-none">{signOutResult ? "You're signed out" : "Sign out of this account?"}</h2>
+  const signOutPanel = <section className="panel p-4 sm:p-6" aria-labelledby="sign-out-title">
+    <div className="flex min-w-0 items-center gap-3"><span className="glyph bg-[#64748b]"><LogOut size={18} strokeWidth={2.25} aria-hidden /></span><h2 ref={signOutHeading} tabIndex={-1} id="sign-out-title" className="font-display text-xl leading-tight outline-none">{signOutResult ? "You're signed out" : "Sign out of this account?"}</h2></div>
     {signOutResult ? <>
       <p className="mt-3 text-sm">{signOutResult.localCopies === "kept" ? "Your account drafts are hidden on this device. They'll come back when you sign in to this account again." : signOutResult.cleanupError ? "You're signed out, but some drafts couldn't be deleted from this device. They're hidden for now, so sign in again and check My projects." : `Deleted ${signOutResult.cleanup?.removed ?? 0} account draft${signOutResult.cleanup?.removed === 1 ? "" : "s"} from this browser.`}</p>
       {Boolean(signOutResult.cleanup?.retained) && <p className="mt-2 text-sm">{signOutResult.cleanup!.retained} draft{signOutResult.cleanup!.retained === 1 ? " was" : "s were"} hidden instead of deleted.</p>}
       {signOutResult.cleanup?.incomplete && <p className="mt-2 text-sm">We couldn&apos;t confirm every draft was deleted. Sign in again to check.</p>}
       {signOutResult.roomCleanup && <p className="mt-2 text-sm">Room data for this account was cleared from this browser too.</p>}
-      <button type="button" onClick={() => router.replace("/")} className="mt-4 min-h-11 rounded-xl bg-accent px-4 text-sm font-semibold text-accent-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">Back to booth</button>
+      <button type="button" onClick={() => router.replace("/")} className="btn btn-primary mt-4">Back to booth</button>
     </> : <>
-      <p className="mt-3 max-w-xl text-sm text-foreground/75">Your account drafts are saved in this browser. Hide them until you sign in again, or delete them. Export anything important before deleting.</p>
-      {boothSession.storageStatus === "error" && <p className="mt-3 text-sm font-medium">Some recent edits didn&apos;t save. Keeping drafts keeps only the last save. Go back to export or retry first.</p>}
-      {signOutError && <p role="alert" className="mt-3 text-sm font-medium">{signOutError}</p>}
-      {signingOut ? <p role="status" className="mt-4 flex items-center gap-2 text-sm"><Loader2 size={16} className="animate-spin motion-reduce:animate-none" aria-hidden /> Signing you out…</p> : <div className="mt-4 flex flex-wrap gap-2">
-        <button type="button" onClick={() => void finishSignOut(false)} className="min-h-11 rounded-xl bg-accent px-4 text-sm font-semibold text-accent-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">Sign out and keep drafts</button>
-        <button type="button" onClick={() => void finishSignOut(true)} className="min-h-11 rounded-xl border border-border px-4 text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">Sign out and delete drafts from this device</button>
-        {user && <button type="button" onClick={() => { setSignOutOpen(false); requestAnimationFrame(() => vaultHeading.current?.focus()); }} className="min-h-11 rounded-xl px-4 text-sm font-medium hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">Cancel</button>}
+      <p className="mt-3 text-sm text-muted-foreground">Your account drafts are saved in this browser. Hide them until you sign in again, or delete them. Export anything important before deleting.</p>
+      {boothSession.storageStatus === "error" && <p className="notice mt-3 font-bold text-warning">Some recent edits didn&apos;t save. Keeping drafts keeps only the last save. Go back to export or retry first.</p>}
+      {signOutError && <p role="alert" className="notice mt-3 border border-destructive/25 bg-destructive/8 font-bold text-destructive">{signOutError}</p>}
+      {signingOut ? <p role="status" className="mt-4 flex items-center gap-2 text-sm font-bold"><Loader2 size={16} className="animate-spin text-accent motion-reduce:animate-none" aria-hidden /> Signing you out…</p> : <div className="mt-4 flex flex-wrap gap-2">
+        <button type="button" onClick={() => void finishSignOut(false)} className="btn btn-primary">Sign out and keep drafts</button>
+        <button type="button" onClick={() => void finishSignOut(true)} className="btn btn-danger h-auto py-2.5 text-center whitespace-normal">Sign out and delete drafts from this device</button>
+        {user && <button type="button" onClick={() => { setSignOutOpen(false); requestAnimationFrame(() => vaultHeading.current?.focus()); }} className="btn btn-plain">Cancel</button>}
       </div>}
     </>}
   </section>;
@@ -365,334 +375,361 @@ function TimelineContent() {
 
   if (!enabled) {
     return (
-      <main className="flex min-h-dvh flex-1 flex-col items-center justify-center gap-4 px-6 text-center">
-        <p className="text-lg font-semibold">The Shared Vault isn&apos;t available here</p>
-        <p className="max-w-sm text-sm text-muted-foreground">
-          Accounts are unavailable here. You can still use the booth.
-        </p>
-        <button onClick={() => router.push("/")} className="rounded-full bg-accent px-5 py-2.5 font-semibold text-accent-foreground">
-          Back to booth
-        </button>
+      <main className="mx-auto flex min-h-dvh w-full max-w-xl flex-1 flex-col items-center justify-center px-4 py-16">
+        <section className="page-head panel flex w-full flex-col items-center gap-4 px-6 py-10 text-center sm:px-10 sm:py-12">
+          <span className="glyph size-16 rounded-[1.25rem] bg-[#8b5cf6]"><Heart size={30} strokeWidth={2.25} aria-hidden /></span>
+          <p className="font-display text-2xl leading-tight sm:text-3xl">The Shared Vault isn&apos;t available here</p>
+          <p className="max-w-sm text-sm text-muted-foreground">
+            Accounts are unavailable here. You can still use the booth.
+          </p>
+          <button onClick={() => router.push("/")} className="btn btn-primary">
+            Back to booth
+          </button>
+        </section>
       </main>
     );
   }
 
-  if (!user && signOutOpen) return <main className="mx-auto flex min-h-dvh w-full max-w-2xl flex-1 flex-col justify-center px-5 py-8">{signOutPanel}</main>;
+  if (!user && signOutOpen) return <main className="mx-auto flex min-h-dvh w-full max-w-2xl flex-1 flex-col justify-center px-4 py-8">{signOutPanel}</main>;
 
   if (loading || !user) {
     return (
       <main className="flex min-h-dvh flex-1 items-center justify-center">
-        <Loader2 className="animate-spin text-muted-foreground" />
+        <Loader2 className="animate-spin text-muted-foreground motion-reduce:animate-none" />
       </main>
     );
   }
 
-  if (dataOwner !== user.id) return <main className="flex min-h-dvh flex-1 items-center justify-center gap-2" role="status"><Loader2 size={20} className="animate-spin motion-reduce:animate-none text-muted-foreground" aria-hidden /> Opening your Shared Vault…</main>;
+  if (dataOwner !== user.id) return <main className="flex min-h-dvh flex-1 items-center justify-center gap-2 text-sm text-muted-foreground" role="status"><Loader2 size={20} className="animate-spin motion-reduce:animate-none" aria-hidden /> Opening your Shared Vault…</main>;
 
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-3xl flex-1 flex-col gap-6 px-5 py-6">
-      <header className="flex items-center justify-between">
-        <h1 ref={vaultHeading} tabIndex={-1} className="text-xl font-semibold outline-none" style={{ fontFamily: "var(--font-fraunces)" }}>
-          Shared Vault
-        </h1>
-        <div className="flex items-center gap-2">
+    <main className="mx-auto flex min-h-dvh w-full max-w-5xl flex-1 flex-col gap-6 px-4 pt-4 pb-10 sm:px-8 sm:pt-6">
+      <PageHeader
+        title="Shared Vault"
+        headingRef={vaultHeading}
+        actions={<>
+          {paired && <>
+            <Link href="/memories" className="btn btn-quiet"><BookHeart size={17} aria-hidden /> Memories</Link>
+            <Link href="/memories/rituals" className="btn btn-quiet"><CalendarHeart size={17} aria-hidden /> Photo rituals</Link>
+          </>}
           <PushToggle userId={user.id} />
-        </div>
-      </header>
-      {signOutOpen && signOutPanel}
-      {unpairTarget && unpairTarget.ownerId === user.id && unpairTarget.coupleId === couple?.id && <UnpairConfirmation busy={busy} error={err} onCancel={() => { setUnpairTarget(null); requestAnimationFrame(() => unpairButton.current?.focus()); }} onConfirm={() => void handleUnpair(unpairTarget)} />}
-      {err && <div role="alert" className="rounded-xl border border-destructive/30 p-3 text-sm"><p>{err}</p><button disabled={busy} onClick={() => void refresh()} className="mt-1 min-h-11 underline disabled:opacity-50">Refresh vault status</button></div>}
-      {keepNote && (
-        <div role="status" className="rounded-xl bg-muted/60 px-3 py-2 text-sm">
-          <p>{keepNote}</p>
-          <button onClick={() => void refresh()} className="mt-1 underline">Refresh status</button>
-        </div>
-      )}
-
-      {/* Pairing */}
-      {!paired && (
-        <section className="glass-card rounded-2xl p-5">
-          <div className="mb-2 flex items-center gap-2 font-semibold">
-            <Heart size={18} className="text-accent" /> Pair with your partner
+        </>}
+      />
+      <div className="page-body flex flex-col gap-5">
+        {signOutOpen && signOutPanel}
+        {unpairTarget && unpairTarget.ownerId === user.id && unpairTarget.coupleId === couple?.id && <UnpairConfirmation busy={busy} error={err} onCancel={() => { setUnpairTarget(null); requestAnimationFrame(() => unpairButton.current?.focus()); }} onConfirm={() => void handleUnpair(unpairTarget)} />}
+        {err && <div role="alert" className="notice border border-destructive/25 bg-destructive/8"><p className="font-bold text-destructive">{err}</p><button disabled={busy} onClick={() => void refresh()} className="btn btn-quiet mt-2 min-h-10 text-sm"><RefreshCw size={15} aria-hidden /> Refresh vault status</button></div>}
+        {keepNote && (
+          <div role="status" className="notice flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+            <p>{keepNote}</p>
+            <button onClick={() => void refresh()} className="btn btn-plain -mr-2 min-h-10 text-sm"><RefreshCw size={15} aria-hidden /> Refresh status</button>
           </div>
-          {pending ? (
-            <div className="flex flex-col gap-3">
-              <p className="text-sm text-muted-foreground">
-                Share this code with your partner so your strips land in one Shared
-                Vault.
-              </p>
-              <div className="flex items-center gap-2">
-                <span className="rounded-xl bg-muted px-4 py-2 font-mono text-lg tracking-[0.3em]">
-                  {couple!.pair_code}
-                </span>
-                <button
-                  onClick={copyCode}
-                  className="flex min-h-11 items-center gap-2 rounded-xl bg-accent/15 px-4 text-sm font-medium text-accent"
-                >
-                  {copied ? <Check size={16} /> : <Copy size={16} />}
-                  {copied ? "Copied" : "Copy"}
-                </button>
-              </div>
-              <button disabled={busy} onClick={() => void handleUnpair()} className="min-h-11 self-start text-xs text-muted-foreground underline disabled:opacity-50">
-                Cancel this code
-              </button>
-            </div>
-          ) : (
-            <div className="flex flex-col gap-4 sm:flex-row">
-              <button
-                onClick={handleCreate}
-                disabled={busy}
-                className="flex-1 rounded-xl bg-accent px-4 py-3 font-semibold text-accent-foreground disabled:opacity-50"
-              >
-                Create a pairing code
-              </button>
-              <div className="flex flex-1 items-center gap-2">
-                <input
-                  aria-label="Pairing code"
-                  value={joinInput}
-                  onChange={(e) => setJoinInput(normalizeRoomCode(e.target.value))}
-                  placeholder="Enter code"
-                  className="min-h-12 w-full min-w-0 flex-1 rounded-xl border border-border bg-card px-4 font-mono tracking-[0.2em] uppercase outline-none focus:border-partner"
-                />
-                <button
-                  onClick={handleJoin}
-                  disabled={busy || joinInput.length < 6}
-                  className="min-h-12 rounded-xl bg-partner/15 px-4 font-semibold text-partner disabled:opacity-50"
-                >
-                  Join
-                </button>
-              </div>
-            </div>
-          )}
-        </section>
-      )}
+        )}
 
-      {paired && (
-        <div className="flex items-center justify-between rounded-2xl bg-muted/60 px-4 py-2 text-sm">
-          <span className="flex items-center gap-2 font-medium">
-            <Heart size={15} className="text-accent" /> Paired
-            {streak > 0 && (
-              <span className="ml-2 flex items-center gap-1 text-warning">
-                <Flame size={14} /> {streak} week{streak > 1 ? "s" : ""}
-              </span>
-            )}
-          </span>
-          <button ref={unpairButton} disabled={busy || recapBusy || Boolean(mediaBusy) || datePending} onClick={() => { setErr(null); setUnpairTarget({ coupleId: couple!.id, ownerId: user.id }); }} className="flex min-h-11 items-center gap-1 text-xs text-muted-foreground disabled:opacity-50">
-            <Unlink size={13} /> Unpair
-          </button>
-        </div>
-      )}
-
-      {/* Relay strips */}
-      {paired && (
-        <section className="flex flex-col gap-2">
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-medium text-muted-foreground">Relay strips</h2>
-            <button
-              onClick={() => router.push("/relay/new")}
-              className="flex min-h-9 items-center gap-1.5 rounded-full bg-accent/15 px-3 text-xs font-semibold text-accent"
-            >
-              <Clock size={14} /> Start a relay
-            </button>
-          </div>
-          {ready && openRelays.length > 0 && (
-            <div className="flex flex-col gap-2">
-              {openRelays.map((r) => {
-                const myTurn = relayIsMyTurn(r, user.id);
-                return (
-                  <button
-                    key={r.id}
-                    onClick={() => router.push(`/relay/${r.id}`)}
-                    className={`flex items-center justify-between rounded-xl border px-4 py-3 text-left text-sm ${
-                      myTurn ? "border-accent bg-accent/10" : "border-border"
-                    }`}
-                  >
-                    <span className="font-medium">
-                      {myTurn ? "Your turn to finish a relay" : "Waiting for your partner"}
-                    </span>
-                    <span className="text-xs text-muted-foreground">
-                      {new Date(r.created_at).toLocaleDateString()}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </section>
-      )}
-
-      {/* Photo dates */}
-      {paired && (
-        <section className="flex flex-col gap-2">
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-medium text-muted-foreground">Photo dates</h2>
-            <button
-              disabled={busy || datePending}
-              onClick={() =>
-                setDateForm(dateForm ? null : { title: "", when: "", cadence: "weekly" })
-              }
-              className="flex min-h-9 items-center gap-1.5 rounded-full bg-accent/15 px-3 text-xs font-semibold text-accent"
-            >
-              <CalendarHeart size={14} /> Schedule
-            </button>
-          </div>
-          <div className="flex flex-wrap gap-x-5 gap-y-2">
-            <Link href="/memories" className="min-h-11 content-center text-sm font-medium text-accent underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-ring">Browse memories and chapters</Link>
-            <Link href="/memories/rituals" className="min-h-11 content-center text-sm font-medium text-accent underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-ring">Open photo rituals and timezone settings</Link>
-          </div>
-          {dateForm && (
-            <div className="glass-card flex flex-col gap-2 rounded-xl p-3">
-              <input
-                disabled={busy || datePending}
-                aria-label="Reminder occasion"
-                value={dateForm.title}
-                onChange={(e) => setDateForm({ ...dateForm, title: e.target.value })}
-                placeholder="What's the occasion?"
-                className="min-h-11 rounded-lg border border-border bg-card px-3 outline-none focus:border-accent"
-              />
-              <div className="flex flex-col gap-2 sm:flex-row">
-                <input
-                  disabled={busy || datePending}
-                  aria-label="Reminder date and time"
-                  type="datetime-local"
-                  value={dateForm.when}
-                  onChange={(e) => setDateForm({ ...dateForm, when: e.target.value })}
-                  className="min-h-11 min-w-0 flex-1 rounded-lg border border-border bg-card px-3 text-sm outline-none focus:border-accent"
-                />
-                <Dropdown disabled={busy || datePending} label="Repeat photo date" value={dateForm.cadence} onChange={value => setDateForm({ ...dateForm, cadence: value as Cadence })} options={CADENCES.map(cadence => ({ value: cadence.id, label: cadence.label }))} className="min-w-28" />
-              </div>
-              <button
-                onClick={addDate}
-                disabled={busy || !dateForm.title || !dateForm.when}
-                className="min-h-11 rounded-lg bg-accent font-semibold text-accent-foreground disabled:opacity-50"
-              >
-                {busy ? "Saving…" : datePending ? "Retry this reminder" : "Set reminder"}
-              </button>
-              {datePending && !busy && <p className="text-sm">This reminder didn&apos;t save. Try again before adding another.</p>}
-              <p className="text-xs text-muted-foreground">
-                Both of you get an email when it&apos;s time.
-              </p>
-            </div>
-          )}
-          {ready && dates.length > 0 && (
-            <div className="flex flex-col gap-2">
-              {dates.map((d) => (
-                <div key={d.id} className="flex items-center justify-between rounded-xl border border-border px-4 py-2.5 text-sm">
-                  <div className="flex flex-col">
-                    <span className="font-medium">{d.title}</span>
-                    <span className="text-xs text-muted-foreground">
-                      {new Date(d.scheduled_at).toLocaleString([], { dateStyle: "medium", timeStyle: "short" })}
-                      {d.cadence !== "once" && ` · ${CADENCES.find((c) => c.id === d.cadence)?.label.toLowerCase()}`}
-                    </span>
-                  </div>
-                  <button disabled={busy} onClick={() => void removeDate(d.id)} aria-label="Delete photo date" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-muted-foreground focus-visible:outline-2 focus-visible:outline-ring disabled:opacity-50">
-                    <Trash2 size={15} />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
-      )}
-
-      {/* Strips */}
-      {!ready ? (
-        <div className="flex flex-1 items-center justify-center">
-          <Loader2 className="animate-spin text-muted-foreground" />
-        </div>
-      ) : loadErr ? (
-        <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center text-muted-foreground">
-          <p>Couldn&apos;t load your Shared Vault.</p>
-          <button
-            onClick={() => void refresh()}
-            className="rounded-full bg-accent px-5 py-2.5 font-semibold text-accent-foreground"
-          >
-            Try again
-          </button>
-        </div>
-      ) : strips.length === 0 ? (
-        <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center text-muted-foreground">
-          <p>No strips saved yet.</p>
-          <button onClick={() => router.push("/")} className="rounded-full bg-accent px-5 py-2.5 font-semibold text-accent-foreground">
-            Take some photos
-          </button>
-        </div>
-      ) : (
-        <section className="flex flex-col gap-3">
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-medium text-muted-foreground">
-              {weekSaved}/{WEEKLY_STRIP_CAP} this week
-            </h2>
-            {thisWeekCount > 1 && (
-              <button
-                onClick={makeRecap}
-                disabled={recapBusy}
-                className="flex min-h-9 items-center gap-1.5 rounded-full bg-accent/15 px-3 text-xs font-semibold text-accent disabled:opacity-50"
-              >
-                <Sparkles size={14} /> {recapBusy ? "Making…" : "Make this week's recap"}
-              </button>
-            )}
-            {recapBusy && <button onClick={() => recapWork.current?.abort()} className="min-h-11 px-2 text-sm underline">Cancel recap</button>}
-          </div>
-          {expiringCount > 0 && (
-            <p className="rounded-xl bg-muted/60 px-3 py-2 text-xs text-muted-foreground">
-              The vault clears when the week resets. Bookmark a strip to keep it
-              before then.
-            </p>
-          )}
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-          {strips.map((s) => (
-            <figure key={s.id} className="group relative">
-              {s.url && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={s.url}
-                  alt={s.caption ?? "Photo strip"}
-                  className="w-full rounded-lg border border-border shadow-sm"
-                />
-              )}
-              {s.mine && s.layout_id !== "recap" && (
-                <button
-                  onClick={() => toggleKeep(s)}
-                  disabled={mediaBusy !== null}
-                  aria-label={s.kept ? "Kept, tap to release" : "Keep this strip"}
-                  aria-pressed={s.kept}
-                  className={`absolute right-1.5 top-1.5 flex h-11 w-11 items-center justify-center rounded-full border border-border bg-card shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:opacity-50 ${
-                    s.kept ? "text-accent" : "text-muted-foreground"
-                  }`}
-                >
-                  {s.kept ? <BookmarkCheck size={15} /> : <Bookmark size={15} />}
-                </button>
-              )}
-              <figcaption className="mt-1 flex flex-wrap items-center justify-between text-xs text-muted-foreground">
-                <span className="flex flex-wrap items-center gap-1.5">
-                  {new Date(s.created_at).toLocaleDateString()}
-                  {(() => {
-                    const d = daysUntilPurge(s);
-                    if (d === null || d > 2) return null;
-                    return (
-                      <span className="text-warning">
-                        {d === 0 ? "expiring" : `${d}d left`}
+        <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_21rem]">
+          <div ref={vaultSidebar} className="flex min-w-0 flex-col gap-5 lg:col-start-2 lg:row-start-1 lg:sticky lg:top-[var(--sticky-top,5.5rem)] lg:self-start">
+            {!paired && (
+              <Section id="vault-pair-title" title="Pair with your partner" icon={Heart} tone="violet" bodyClassName="mt-3">
+                {pending ? (
+                  <div className="flex flex-col gap-3">
+                    <p className="text-sm text-muted-foreground">
+                      Share this code with your partner so your strips land in one Shared
+                      Vault.
+                    </p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="rounded-2xl bg-muted px-4 py-2.5 text-2xl font-black tracking-[0.24em] uppercase">
+                        {couple!.pair_code}
                       </span>
-                    );
-                  })()}
-                </span>
-                {s.mine && (
+                      <button
+                        onClick={copyCode}
+                        className="btn btn-tinted"
+                      >
+                        {copied ? <Check size={16} /> : <Copy size={16} />}
+                        {copied ? "Copied" : "Copy"}
+                      </button>
+                    </div>
+                    <button disabled={busy} onClick={() => void handleUnpair()} className="btn btn-plain -ml-3.5 min-h-10 self-start text-sm text-muted-foreground">
+                      Cancel this code
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-3 sm:flex-row lg:flex-col">
+                    <button
+                      onClick={handleCreate}
+                      disabled={busy}
+                      className="btn btn-primary min-h-12 flex-1"
+                    >
+                      Create a pairing code
+                    </button>
+                    <div className="flex flex-1 items-center gap-2">
+                      <input
+                        aria-label="Pairing code"
+                        value={joinInput}
+                        onChange={(e) => setJoinInput(normalizeRoomCode(e.target.value))}
+                        placeholder="Enter code"
+                        className="field min-h-12 min-w-0 flex-1 text-lg font-black tracking-[0.24em] uppercase placeholder:text-base placeholder:font-bold placeholder:tracking-normal placeholder:normal-case placeholder:text-muted-foreground"
+                      />
+                      <button
+                        onClick={handleJoin}
+                        disabled={busy || joinInput.length < 6}
+                        className="btn btn-partner min-h-12"
+                      >
+                        Join
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </Section>
+            )}
+
+            {paired && (
+              <Section
+                id="vault-paired-title"
+                title="Paired"
+                icon={Heart}
+                tone="violet"
+                bodyClassName="mt-3"
+                action={<button ref={unpairButton} disabled={busy || recapBusy || Boolean(mediaBusy) || datePending} onClick={() => { setErr(null); setUnpairTarget({ coupleId: couple!.id, ownerId: user.id }); }} className="btn btn-plain -mr-2 min-h-10 text-sm text-muted-foreground">
+                  <Unlink size={14} /> Unpair
+                </button>}
+              >
+                {streak > 0 && (
+                  <p className="flex items-center gap-2 text-warning">
+                    <Flame size={20} aria-hidden /> <span className="font-display text-2xl leading-none tabular-nums">{streak}</span> <span className="text-sm font-bold">week{streak > 1 ? "s" : ""}</span>
+                  </p>
+                )}
+              </Section>
+            )}
+
+            {paired && (
+              <Section
+                id="vault-relay-title"
+                title="Relay strips"
+                icon={Clock}
+                tone="rose"
+                bodyClassName="mt-3"
+                action={<button
+                  onClick={() => router.push("/relay/new")}
+                  className="btn btn-tinted min-h-10 text-sm"
+                >
+                  <Plus size={15} aria-hidden /> Start a relay
+                </button>}
+              >
+                {ready && openRelays.length > 0 && (
+                  <div className="flex flex-col gap-2">
+                    {openRelays.map((r) => {
+                      const myTurn = relayIsMyTurn(r, user.id);
+                      return (
+                        <button
+                          key={r.id}
+                          onClick={() => router.push(`/relay/${r.id}`)}
+                          className={`flex min-h-12 w-full items-center justify-between gap-3 rounded-2xl px-4 py-3 text-left text-sm transition-colors ${
+                            myTurn ? "bg-accent/12 shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--accent)_35%,transparent)]" : "bg-muted/70 hover:bg-muted"
+                          }`}
+                        >
+                          <span className="font-bold">
+                            {myTurn ? "Your turn to finish a relay" : "Waiting for your partner"}
+                          </span>
+                          <span className="shrink-0 text-xs text-muted-foreground">
+                            {new Date(r.created_at).toLocaleDateString()}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </Section>
+            )}
+
+            {paired && (
+              <Section
+                id="vault-dates-title"
+                title="Photo dates"
+                icon={CalendarDays}
+                tone="amber"
+                bodyClassName="mt-3"
+                action={<button
+                  disabled={busy || datePending}
+                  onClick={() =>
+                    setDateForm(dateForm ? null : { title: "", when: "", cadence: "weekly" })
+                  }
+                  className="btn btn-tinted min-h-10 text-sm"
+                >
+                  <Plus size={15} aria-hidden /> Schedule
+                </button>}
+              >
+                {dateForm || (ready && dates.length > 0) ? <div className="flex flex-col gap-3">
+                {dateForm && (
+                  <div className="panel-muted flex flex-col gap-2 p-3">
+                    <input
+                      disabled={busy || datePending}
+                      aria-label="Reminder occasion"
+                      value={dateForm.title}
+                      onChange={(e) => setDateForm({ ...dateForm, title: e.target.value })}
+                      placeholder="What's the occasion?"
+                      className="field font-medium"
+                    />
+                    <div className="flex flex-col gap-2 sm:flex-row lg:flex-col">
+                      <input
+                        disabled={busy || datePending}
+                        aria-label="Reminder date and time"
+                        type="datetime-local"
+                        value={dateForm.when}
+                        onChange={(e) => setDateForm({ ...dateForm, when: e.target.value })}
+                        className="field min-w-0 flex-1 text-sm font-medium"
+                      />
+                      <Dropdown disabled={busy || datePending} label="Repeat photo date" value={dateForm.cadence} onChange={value => setDateForm({ ...dateForm, cadence: value as Cadence })} options={CADENCES.map(cadence => ({ value: cadence.id, label: cadence.label }))} className="min-w-28" />
+                    </div>
+                    <button
+                      onClick={addDate}
+                      disabled={busy || !dateForm.title || !dateForm.when}
+                      className="btn btn-primary mt-1 w-full"
+                    >
+                      {busy ? "Saving…" : datePending ? "Retry this reminder" : "Set reminder"}
+                    </button>
+                    {datePending && !busy && <p className="text-sm font-bold text-warning">This reminder didn&apos;t save. Try again before adding another.</p>}
+                    <p className="text-xs text-muted-foreground">
+                      Both of you get an email when it&apos;s time.
+                    </p>
+                  </div>
+                )}
+                {ready && dates.length > 0 && (
+                  <ul className="-my-1 divide-y divide-border">
+                    {dates.map((d) => (
+                      <li key={d.id} className="flex items-center justify-between gap-2 py-2 text-sm">
+                        <div className="flex min-w-0 flex-col">
+                          <span className="font-bold [overflow-wrap:anywhere]">{d.title}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {new Date(d.scheduled_at).toLocaleString([], { dateStyle: "medium", timeStyle: "short" })}
+                            {d.cadence !== "once" && ` · ${CADENCES.find((c) => c.id === d.cadence)?.label.toLowerCase()}`}
+                          </span>
+                        </div>
+                        <button disabled={busy} onClick={() => void removeDate(d.id)} aria-label="Delete photo date" className="-mr-2 flex size-11 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive focus-visible:outline-2 focus-visible:outline-ring disabled:opacity-50">
+                          <Trash2 size={15} />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                </div> : null}
+              </Section>
+            )}
+          </div>
+
+          <div className="tile-stack min-w-0 lg:col-start-1 lg:row-start-1">
+            <Section
+              id="vault-strips-title"
+              title="Strips"
+              icon={Images}
+              tone="sky"
+              action={ready && !loadErr && strips.length > 0 ? <div className="flex flex-wrap items-center gap-1">
+                {thisWeekCount > 1 && (
                   <button
-                    onClick={() => void removeStrip(s)}
-                    disabled={mediaBusy !== null}
-                    aria-label="Delete strip"
-                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg focus-visible:outline-2 focus-visible:outline-ring disabled:opacity-50"
+                    onClick={makeRecap}
+                    disabled={recapBusy}
+                    className="btn btn-tinted min-h-10 text-sm"
                   >
-                    <Trash2 size={14} className="text-destructive" />
+                    <Sparkles size={15} /> {recapBusy ? "Making…" : "Make this week's recap"}
                   </button>
                 )}
-              </figcaption>
-            </figure>
-          ))}
+                {recapBusy && <button onClick={() => recapWork.current?.abort()} className="btn btn-plain min-h-10 text-sm">Cancel recap</button>}
+              </div> : undefined}
+            >
+              {!ready ? (
+                <div className="flex min-h-48 items-center justify-center">
+                  <Loader2 className="animate-spin text-muted-foreground motion-reduce:animate-none" />
+                </div>
+              ) : loadErr ? (
+                <div className="flex min-h-48 flex-col items-center justify-center gap-4 rounded-2xl bg-muted/50 px-6 py-10 text-center">
+                  <p className="font-bold">Couldn&apos;t load your Shared Vault.</p>
+                  <button
+                    onClick={() => void refresh()}
+                    className="btn btn-primary"
+                  >
+                    <RefreshCw size={17} aria-hidden /> Try again
+                  </button>
+                </div>
+              ) : strips.length === 0 ? (
+                <div className="flex min-h-56 flex-col items-center justify-center gap-4 rounded-2xl bg-muted/50 px-6 py-10 text-center">
+                  <p className="font-display text-xl">No strips saved yet</p>
+                  <button onClick={() => router.push("/")} className="btn btn-primary">
+                    <Camera size={18} aria-hidden /> Take some photos
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <div className="flex items-center gap-3">
+                    <div className="h-2 flex-1 overflow-hidden rounded-full bg-muted" aria-hidden><div className="h-full rounded-full bg-[#0ea5e9]" style={{ width: `${Math.min(100, weekSaved / WEEKLY_STRIP_CAP * 100)}%` }} /></div>
+                    <p className="shrink-0 text-sm font-bold tabular-nums">
+                      {weekSaved}/{WEEKLY_STRIP_CAP} this week
+                    </p>
+                  </div>
+                  {expiringCount > 0 && (
+                    <p className="notice mt-3 flex items-start gap-2 text-muted-foreground">
+                      <Bookmark size={15} className="mt-0.5 shrink-0" aria-hidden />
+                      The vault clears when the week resets. Bookmark a strip to keep it
+                      before then.
+                    </p>
+                  )}
+                  <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
+                  {strips.map((s) => (
+                    <figure key={s.id} className="group relative min-w-0">
+                      <div className="relative min-h-24 overflow-hidden rounded-2xl bg-muted shadow-[inset_0_0_0_1px_var(--panel-stroke)]">
+                      {s.url && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={s.url}
+                          alt={s.caption ?? "Photo strip"}
+                          className="block w-full"
+                        />
+                      )}
+                      {s.mine && s.layout_id !== "recap" && (
+                        <button
+                          onClick={() => toggleKeep(s)}
+                          disabled={mediaBusy !== null}
+                          aria-label={s.kept ? "Kept, tap to release" : "Keep this strip"}
+                          aria-pressed={s.kept}
+                          className={`glass absolute top-2 right-2 flex size-11 items-center justify-center rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:opacity-50 ${
+                            s.kept ? "text-accent" : "text-foreground"
+                          }`}
+                        >
+                          {s.kept ? <BookmarkCheck size={17} /> : <Bookmark size={17} />}
+                        </button>
+                      )}
+                      </div>
+                      <figcaption className="mt-1 flex items-center justify-between gap-1 pl-1 text-xs text-muted-foreground">
+                        <span className="flex flex-wrap items-center gap-1.5">
+                          {new Date(s.created_at).toLocaleDateString()}
+                          {(() => {
+                            const d = daysUntilPurge(s);
+                            if (d === null || d > 2) return null;
+                            return (
+                              <span className="rounded-full bg-warning/15 px-1.5 py-0.5 font-bold text-warning">
+                                {d === 0 ? "expiring" : `${d}d left`}
+                              </span>
+                            );
+                          })()}
+                        </span>
+                        {s.mine && (
+                          <button
+                            onClick={() => void removeStrip(s)}
+                            disabled={mediaBusy !== null}
+                            aria-label="Delete strip"
+                            className="flex size-11 shrink-0 items-center justify-center rounded-full text-destructive transition-colors hover:bg-destructive/10 focus-visible:outline-2 focus-visible:outline-ring disabled:opacity-50"
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        )}
+                      </figcaption>
+                    </figure>
+                  ))}
+                  </div>
+                </>
+              )}
+            </Section>
           </div>
-        </section>
-      )}
+        </div>
+      </div>
     </main>
   );
 }
@@ -705,17 +742,17 @@ function UnpairConfirmation({ busy, error, onCancel, onConfirm }: { busy: boolea
     element?.showModal(); keep.current?.focus();
     return () => element?.close();
   }, []);
-  return <dialog ref={dialog} aria-labelledby="unpair-title" aria-describedby="unpair-description" onCancel={event => { event.preventDefault(); if (!busy) onCancel(); }} className="m-auto max-h-[calc(100dvh_-_2rem)] w-[calc(100%_-_2rem)] max-w-lg overflow-y-auto rounded-2xl border border-border bg-card p-5 text-foreground shadow-xl backdrop:bg-black/50">
-    <h2 id="unpair-title" className="font-display text-xl font-semibold">End this pairing?</h2>
-    <div id="unpair-description" className="mt-3 space-y-2 text-sm leading-relaxed">
+  return <dialog ref={dialog} aria-labelledby="unpair-title" aria-describedby="unpair-description" onCancel={event => { event.preventDefault(); if (!busy) onCancel(); }} className="glass-strong m-auto max-h-[calc(100dvh_-_2rem)] w-[calc(100%_-_2rem)] max-w-lg overflow-y-auto rounded-[1.75rem] border-0 p-5 text-foreground sm:p-6">
+    <div className="flex items-center gap-3"><span className="glyph bg-[#8b5cf6]"><Unlink size={18} strokeWidth={2.25} aria-hidden /></span><h2 id="unpair-title" className="font-display text-xl leading-tight">End this pairing?</h2></div>
+    <div id="unpair-description" className="mt-4 space-y-2 text-sm">
       <p>You&apos;ll lose access to each other&apos;s strips, and your shared relays and photo dates will be deleted.</p>
-      <p>You&apos;ll each keep your own strips and photos. Save or export any finished relays first.</p>
+      <p className="text-muted-foreground">You&apos;ll each keep your own strips and photos. Save or export any finished relays first.</p>
     </div>
-    {error && <p role="alert" className="mt-3 text-sm text-destructive">{error}</p>}
-    {busy && <p role="status" className="mt-3 text-sm">Ending the pairing…</p>}
-    <div className="mt-5 flex flex-wrap gap-3">
-      <button ref={keep} disabled={busy} onClick={onCancel} className="min-h-11 rounded-xl border border-border px-4 text-sm font-semibold disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-ring">Stay paired</button>
-      <button disabled={busy} onClick={onConfirm} className="min-h-11 rounded-xl bg-destructive px-4 text-sm font-semibold text-white disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-ring">End pairing</button>
+    {error && <p role="alert" className="notice mt-4 border border-destructive/25 bg-destructive/8 font-bold text-destructive">{error}</p>}
+    {busy && <p role="status" className="mt-4 flex items-center gap-2 text-sm font-bold"><Loader2 size={16} className="animate-spin text-accent motion-reduce:animate-none" aria-hidden /> Ending the pairing…</p>}
+    <div className="mt-5 flex flex-wrap justify-end gap-2">
+      <button ref={keep} disabled={busy} onClick={onCancel} className="btn btn-quiet">Stay paired</button>
+      <button disabled={busy} onClick={onConfirm} className="btn btn-danger">End pairing</button>
     </div>
   </dialog>;
 }

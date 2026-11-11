@@ -3,7 +3,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { EventReviewClient } from "@/lib/events/review-client";
-import { eventControl } from "./EventHostControls";
+import { X } from "lucide-react";
 
 export function EventModerationPhoto({ client, eventId, submissionId, disabled, onClose, onBusyChange }: { client: EventReviewClient; eventId: string; submissionId: string; disabled: boolean; onClose(): void; onBusyChange(busy: boolean): void }) {
   const [preview, setPreview] = useState<string | null>(null), [error, setError] = useState(false);
@@ -32,5 +32,5 @@ export function EventModerationPhoto({ client, eventId, submissionId, disabled, 
     document.addEventListener("visibilitychange", hidden); window.addEventListener("offline", offline);
     return () => { clearInterval(timer); abort.abort(); if (url) URL.revokeObjectURL(url); callbacks.current.onBusyChange(false); document.removeEventListener("visibilitychange", hidden); window.removeEventListener("offline", offline); };
   }, [client, eventId, submissionId, disabled]);
-  return <figure ref={figure} tabIndex={-1} aria-label="Photo review" className="my-4 outline-none">{error ? <p role="alert" className="text-sm">This preview expired. Close it and refresh to try again.</p> : preview && !disabled ? <img src={preview} alt="Guest photo" className="max-h-80 max-w-full rounded-xl object-contain" /> : <p role="status" className="text-sm">Loading photo…</p>}<button className={`${eventControl} mt-2`} onClick={onClose}>Close</button></figure>;
+  return <figure ref={figure} tabIndex={-1} aria-label="Photo review" className="panel-muted mt-3 flex flex-col items-center gap-3 p-3 outline-none sm:p-4">{error ? <p role="alert" className="text-sm">This preview expired. Close it and refresh to try again.</p> : preview && !disabled ? <img src={preview} alt="Guest photo" className="max-h-80 max-w-full rounded-xl object-contain" /> : <p role="status" className="py-6 text-sm text-muted-foreground">Loading photo…</p>}<button className="btn btn-quiet min-h-10 text-sm" onClick={onClose}><X size={15} aria-hidden /> Close</button></figure>;
 }

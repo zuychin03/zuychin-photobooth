@@ -16,7 +16,6 @@ import { importRelayPhotos, relayFrameOriginal, relayOriginalEncoder } from "@/l
 import { playShutter, playTick } from "@/lib/sound";
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-const control = "min-h-11 rounded-xl border border-border px-4 py-2 text-sm disabled:opacity-40";
 const release = (frames: HTMLCanvasElement[]) => { for (const frame of frames) frame.width = frame.height = 0; };
 
 export function RoleCapture({ shots, filterId, onDone, onCheckpoint, initialOriginals = [], onUnsavedChange, hint, rehearsalPhotos }: {
@@ -105,22 +104,24 @@ export function RoleCapture({ shots, filterId, onDone, onCheckpoint, initialOrig
   };
   const remaining = shots - progress;
   return <div className="relative flex h-full min-h-0 flex-col">
-    {!error && <div className="relative min-h-48 flex-1 overflow-hidden"><CameraPreview videoRef={attachVideo} mirror={facing === "user"} filterCss={getFilter(filterId).css} />{!ready && <p className="absolute inset-0 flex items-center justify-center">Starting camera…</p>}<Countdown value={count} /><CaptureFlash trigger={flash} />{canFlip && !shooting && <button onClick={toggleFacing} aria-label="Switch camera" className="glass-card absolute top-4 right-4 flex h-11 w-11 items-center justify-center rounded-full"><SwitchCamera size={20} /></button>}</div>}
-    <div className="flex flex-col items-center gap-3 p-4 pb-6">
-      {error && <><p>Can&apos;t use your camera. Try again, or import your photos.</p><button disabled={shooting || nativeBusy} onClick={retry} className={control}>Try camera again</button></>}
-      <p role="status" className="text-center text-sm">{progress} of {shots} photos saved on this device.{shooting ? " Saving as you go…" : ""}</p>
-      {!shooting && !captureError && <button disabled={nativeBusy || (remaining > 0 && (!ready || unsaved))} onClick={() => void run()} className="min-h-13 rounded-full bg-accent px-6 py-3 font-semibold text-accent-foreground disabled:opacity-40">{remaining === 0 ? "Continue with saved photos" : progress ? "Continue shooting" : "Start shooting"}</button>}
-      {captureError && <p role="alert" className="max-w-sm text-center text-sm text-destructive">{captureError}</p>}
-      {nativeBusy && !shooting && <p role="status" className="max-w-sm text-sm">Still processing your photo. You can try again in a moment.</p>}
-      {shownOriginals.length > 0 && <RelayOriginalRecovery originals={shownOriginals} saved={!unsaved} />}
-      {captureError && <button disabled={shooting || nativeBusy} className={control} onClick={() => void run()}>{unsaved && shownOriginals.length === progress ? "Try again and continue" : "Try saving again and continue"}</button>}
-      {unsaved && !shooting && <><p className="max-w-sm text-sm">{unsaved && shownOriginals.length === progress ? "This photo hasn't saved yet. Your earlier photos are in My projects." : "This photo hasn't saved yet, but you can download it here. Your earlier photos are in My projects."}</p>{discarding ? <div role="alertdialog" aria-label="Discard unsaved photo"><p>Discard just this unsaved photo? Your saved ones stay.</p><button autoFocus disabled={nativeBusy} className={control} onClick={() => setDiscarding(false)}>Keep photo</button><button disabled={nativeBusy} className={control} onClick={discard}>Discard unsaved photo</button></div> : <button disabled={nativeBusy} className={control} onClick={() => setDiscarding(true)}>Discard unsaved photo</button>}</>}
-      <MobileControlPanel open={settingsOpen} onOpenChange={setSettingsOpen} disabled={shooting || nativeBusy} label="Camera options & import" title="Capture options">
-      {!shooting && <CaptureFeedbackSettings />}
-      {remaining > 0 && <label className={control}>Import {remaining} remaining {remaining === 1 ? "photo" : "photos"}<input className="mt-2 block max-w-full text-sm" type="file" accept="image/png,image/jpeg,image/webp" multiple disabled={shooting || nativeBusy || unsaved} onChange={event => { const files = Array.from(event.target.files ?? []); event.target.value = ""; if (files.length) { setSettingsOpen(false); void importPhotos(files); } }} /><span className="mt-1 block text-xs">Pick exactly {remaining} {remaining === 1 ? "image" : "images"}, up to 10 MB each.</span></label>}
-      {synthetic && remaining > 0 && <button disabled={shooting || nativeBusy || unsaved} className={control} onClick={() => { setSettingsOpen(false); void importPhotos(rehearsalPhotos!.slice(progress)); }}>Import synthetic photos</button>}
-      {!shooting && hint && <p className="text-center text-sm text-muted-foreground">{hint}</p>}
-      </MobileControlPanel>
+    {!error && <div className="relative min-h-48 flex-1 overflow-hidden"><CameraPreview videoRef={attachVideo} mirror={facing === "user"} filterCss={getFilter(filterId).css} />{!ready && <p className="absolute inset-0 flex items-center justify-center text-sm font-bold text-muted-foreground">Starting camera…</p>}<Countdown value={count} /><CaptureFlash trigger={flash} />{canFlip && !shooting && <button onClick={toggleFacing} aria-label="Switch camera" className="btn btn-glass absolute top-4 right-4 min-w-11 px-0"><SwitchCamera size={20} /></button>}</div>}
+    <div className="flex justify-center p-3 pb-4 sm:p-4">
+      <div className="panel flex w-full max-w-2xl flex-col items-center gap-3 p-4 sm:p-5">
+        {error && <><p className="text-center">Can&apos;t use your camera. Try again, or import your photos.</p><button disabled={shooting || nativeBusy} onClick={retry} className="btn btn-quiet">Try camera again</button></>}
+        <p role="status" className="text-center text-sm font-bold tabular-nums">{progress} of {shots} photos saved on this device.{shooting ? " Saving as you go…" : ""}</p>
+        {!shooting && !captureError && <button disabled={nativeBusy || (remaining > 0 && (!ready || unsaved))} onClick={() => void run()} className="btn btn-primary min-h-14 px-8 text-base">{remaining === 0 ? "Continue with saved photos" : progress ? "Continue shooting" : "Start shooting"}</button>}
+        {captureError && <p role="alert" className="max-w-sm text-center text-sm font-bold text-destructive">{captureError}</p>}
+        {nativeBusy && !shooting && <p role="status" className="max-w-sm text-center text-sm text-muted-foreground">Still processing your photo. You can try again in a moment.</p>}
+        {shownOriginals.length > 0 && <RelayOriginalRecovery originals={shownOriginals} saved={!unsaved} />}
+        {captureError && <button disabled={shooting || nativeBusy} className="btn btn-primary" onClick={() => void run()}>{unsaved && shownOriginals.length === progress ? "Try again and continue" : "Try saving again and continue"}</button>}
+        {unsaved && !shooting && <><p className="max-w-sm text-center text-sm">{unsaved && shownOriginals.length === progress ? "This photo hasn't saved yet. Your earlier photos are in My projects." : "This photo hasn't saved yet, but you can download it here. Your earlier photos are in My projects."}</p>{discarding ? <div role="alertdialog" aria-label="Discard unsaved photo" className="notice w-full max-w-sm text-center"><p>Discard just this unsaved photo? Your saved ones stay.</p><div className="mt-3 flex flex-wrap justify-center gap-2"><button autoFocus disabled={nativeBusy} className="btn btn-quiet min-h-10 text-sm" onClick={() => setDiscarding(false)}>Keep photo</button><button disabled={nativeBusy} className="btn btn-danger min-h-10 text-sm" onClick={discard}>Discard unsaved photo</button></div></div> : <button disabled={nativeBusy} className="btn btn-plain min-h-10 text-sm" onClick={() => setDiscarding(true)}>Discard unsaved photo</button>}</>}
+        <MobileControlPanel open={settingsOpen} onOpenChange={setSettingsOpen} disabled={shooting || nativeBusy} label="Camera options & import" title="Capture options">
+          {!shooting && <CaptureFeedbackSettings />}
+          {remaining > 0 && <label className="panel-muted block p-4 text-sm font-bold">Import {remaining} remaining {remaining === 1 ? "photo" : "photos"}<input className="mt-3 block max-w-full text-sm font-medium file:mr-3 file:min-h-10 file:rounded-full file:border-0 file:bg-card file:px-4 file:font-bold file:text-foreground" type="file" accept="image/png,image/jpeg,image/webp" multiple disabled={shooting || nativeBusy || unsaved} onChange={event => { const files = Array.from(event.target.files ?? []); event.target.value = ""; if (files.length) { setSettingsOpen(false); void importPhotos(files); } }} /><span className="mt-2 block text-xs font-medium text-muted-foreground">Pick exactly {remaining} {remaining === 1 ? "image" : "images"}, up to 10 MB each.</span></label>}
+          {synthetic && remaining > 0 && <button disabled={shooting || nativeBusy || unsaved} className="btn btn-quiet" onClick={() => { setSettingsOpen(false); void importPhotos(rehearsalPhotos!.slice(progress)); }}>Import synthetic photos</button>}
+          {!shooting && hint && <p className="text-center text-sm text-muted-foreground">{hint}</p>}
+        </MobileControlPanel>
+      </div>
     </div>
   </div>;
 }

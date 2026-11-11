@@ -3,12 +3,12 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Clock3 } from "lucide-react";
+import { Section } from "@/components/ui/Section";
 import { useAuth } from "@/lib/auth";
 import { useBoothSession } from "@/lib/session";
 import { loadRecentProjects, type RecentProject } from "@/lib/projects/recent";
 
-const control = "inline-flex min-h-11 items-center gap-2 rounded-xl px-3 text-sm font-medium hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:opacity-50";
 export function RecentProjects() {
   const { user, loading } = useAuth();
   return <RecentProjectList key={loading ? "loading" : user?.id ?? "device"} ownerId={loading ? null : user?.id ?? null} authLoading={loading} />;
@@ -34,9 +34,9 @@ function RecentProjectList({ ownerId, authLoading }: { ownerId: string | null; a
     } catch { if (active.current) setError(true); }
     finally { working.current = false; if (active.current) setBusy(null); }
   };
-  return <section aria-labelledby="recent-projects-title" className="mx-auto mb-10 w-full max-w-5xl border-t border-border px-6 pt-7">
-    <div className="flex flex-wrap items-center justify-between gap-3"><h2 id="recent-projects-title" className="font-display text-2xl">Pick up where you left off</h2><Link className={control} href="/projects">All projects <ArrowRight size={16} aria-hidden /></Link></div>
-    <p className="mt-2 text-sm text-muted-foreground">On this device{ownerId ? ", including your account drafts" : ""}. No automatic uploads.</p>
-    {loading ? <p role="status" className="py-5 text-sm text-muted-foreground">Checking recent projects…</p> : error ? <p role="alert" className="py-5 text-sm">Recent projects could not be opened. Use All projects to retry or recover a saved draft.</p> : rows.length ? <ul className="mt-4 divide-y divide-border">{rows.map(row => <li key={row.key} className="flex min-w-0 items-center justify-between gap-4 py-3"><div className="min-w-0"><h3 className="break-words font-medium">{row.name}</h3><p className="mt-1 text-sm text-muted-foreground">{row.scope.kind === "device" ? "Device project" : "Account draft"}{row.readOnly ? " · Recovery available" : ""}</p></div>{row.readOnly ? <Link className={`${control} shrink-0`} href="/projects">Recovery</Link> : <button className={`${control} shrink-0`} disabled={Boolean(busy) || session.hydrating} onClick={() => void resume(row)} aria-label={`Continue ${row.name}`}>{busy === row.key ? "Opening…" : "Continue"}<ArrowRight size={16} aria-hidden /></button>}</li>)}</ul> : <p className="py-5 text-sm text-muted-foreground">Your next saved project will appear here. Start a booth session or import a project from your library.</p>}
-  </section>;
+  return <div className="mx-auto mb-8 w-full max-w-6xl px-4 sm:px-8">
+    <Section id="recent-projects-title" title="Pick up where you left off" icon={Clock3} tone="violet" action={<Link className="btn btn-plain min-h-10 text-sm" href="/projects">All projects <ArrowRight size={16} aria-hidden /></Link>}>
+      {loading ? <p role="status" className="py-2 text-sm text-muted-foreground">Checking recent projects…</p> : error ? <p role="alert" className="py-2 text-sm">Recent projects could not be opened. Use All projects to retry or recover a saved draft.</p> : rows.length ? <ul className="-mx-2 grid gap-1 sm:grid-cols-2 lg:grid-cols-3">{rows.map(row => <li key={row.key} className="flex min-w-0 items-center justify-between gap-3 rounded-2xl px-3 py-2.5 transition-colors hover:bg-muted/60"><div className="min-w-0"><h3 className="truncate font-bold">{row.name}</h3><p className="mt-0.5 text-sm text-muted-foreground">{row.scope.kind === "device" ? "This device" : "Account draft"}{row.readOnly ? " · Recovery available" : ""}</p></div>{row.readOnly ? <Link className="btn btn-quiet min-h-10 shrink-0 text-sm" href="/projects">Recovery</Link> : <button type="button" className="btn btn-tinted min-h-10 shrink-0 text-sm" disabled={Boolean(busy) || session.hydrating} onClick={() => void resume(row)} aria-label={`Continue ${row.name}`}>{busy === row.key ? "Opening…" : "Continue"}</button>}</li>)}</ul> : <p className="py-1 text-sm text-muted-foreground">Nothing saved yet.</p>}
+    </Section>
+  </div>;
 }

@@ -3,9 +3,9 @@
 import { useAppNavigationGuard } from "@/components/AppNavigation";
 
 import { useEffect, useRef, useState } from "react";
+import { Mic } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { openVoiceRuntime, type VoiceRuntime } from "@/lib/memories/voice-runtime";
-import { cloudControl } from "@/components/cloud/CloudControls";
 import VoiceMemoryCaption from "./VoiceMemoryCaption";
 
 export function VoiceMemoryEntry({ ownerId, activityId, onClose }: { ownerId: string; activityId: string; onClose(): void }) {
@@ -40,10 +40,10 @@ export function VoiceMemoryEntry({ ownerId, activityId, onClose }: { ownerId: st
     window.addEventListener("beforeunload", leave);
     return () => window.removeEventListener("beforeunload", leave);
   }, [dirty]);
-  return <div className="mt-5 border-y border-border py-5">
-    <h3 ref={heading} tabIndex={-1} className="mb-4 text-lg font-medium outline-none">A note for this memory</h3>
-    {error ? <p role="alert" className="text-sm">Couldn&apos;t open the caption editor. Close this and try again.</p> : runtime?.client.ownerId === ownerId ? <VoiceMemoryCaption key={`${ownerId}:${activityId}`} activityId={activityId} client={runtime.client} journal={runtime.journal} onBusyChange={setBusy} onDirtyChange={setDirty} locked={confirmClose} /> : <p role="status" className="text-sm">Opening…</p>}
-    <button ref={closeButton} className={`${cloudControl} mt-5 border border-border`} disabled={busy || confirmClose} onClick={() => { if (dirty) setConfirmClose(true); else onClose(); }}>Close</button>
-    {confirmClose && <div role="group" aria-label="Leave caption editor?" onKeyDown={event => { if (event.key === "Escape" && !busy) { event.preventDefault(); keepEditing(); } }} className="mt-4 rounded-xl bg-muted p-4"><p className="max-w-xl text-sm leading-relaxed">Leave without saving? Text you haven&apos;t saved or kept as a draft will be lost.</p><div className="mt-3 flex flex-wrap gap-2"><button ref={keepButton} className={`${cloudControl} border border-border`} disabled={busy} onClick={keepEditing}>Keep editing</button><button className={cloudControl} disabled={busy} onClick={onClose}>Leave</button></div></div>}
+  return <div className="mt-3 rounded-2xl bg-card p-4 shadow-[inset_0_0_0_1px_var(--panel-stroke)] sm:p-5">
+    <h3 ref={heading} tabIndex={-1} className="mb-4 flex items-center gap-2 font-bold outline-none"><Mic size={16} className="text-accent" aria-hidden />A note for this memory</h3>
+    {error ? <p role="alert" className="notice border border-destructive/25 bg-destructive/8 font-bold text-destructive">Couldn&apos;t open the caption editor. Close this and try again.</p> : runtime?.client.ownerId === ownerId ? <VoiceMemoryCaption key={`${ownerId}:${activityId}`} activityId={activityId} client={runtime.client} journal={runtime.journal} onBusyChange={setBusy} onDirtyChange={setDirty} locked={confirmClose} /> : <p role="status" className="text-sm text-muted-foreground">Opening…</p>}
+    <button ref={closeButton} className="btn btn-quiet mt-4 min-h-10 text-sm" disabled={busy || confirmClose} onClick={() => { if (dirty) setConfirmClose(true); else onClose(); }}>Close</button>
+    {confirmClose && <div role="group" aria-label="Leave caption editor?" onKeyDown={event => { if (event.key === "Escape" && !busy) { event.preventDefault(); keepEditing(); } }} className="notice mt-3"><p>Leave without saving? Text you haven&apos;t saved or kept as a draft will be lost.</p><div className="mt-3 flex flex-wrap gap-2"><button ref={keepButton} className="btn btn-quiet min-h-10 text-sm" disabled={busy} onClick={keepEditing}>Keep editing</button><button className="btn btn-danger min-h-10 text-sm" disabled={busy} onClick={onClose}>Leave</button></div></div>}
   </div>;
 }

@@ -15,8 +15,9 @@ import { projectImageToCanvas } from "@/lib/projects/images";
 import type { ProjectScope } from "@/lib/projects/model";
 import { openProjectRepository, type LoadedProject } from "@/lib/projects/storage";
 import { RoomMetadataHousekeeping } from "@/components/RoomMetadataHousekeeping";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { Section } from "@/components/ui/Section";
 
-const control = "inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 text-sm font-medium transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-wait disabled:opacity-50";
 const message = (error: unknown) => error instanceof Error ? error.message : "Couldn't open the project. Try again, or download its recovery files to be safe.";
 const scopeId = (scope: ProjectScope) => scope.kind === "device" ? "device" : `account:${scope.ownerId}`;
 const megabytes = (bytes: number) => `${(bytes / 1024 / 1024).toLocaleString("en-AU", { maximumFractionDigits: 1 })} MiB`;
@@ -215,30 +216,34 @@ export default function ProjectsPage() {
     finally { setBusy(null); }
   };
 
-  return <main className="mx-auto flex min-h-dvh w-full max-w-4xl flex-1 flex-col px-5 py-6 sm:px-8 sm:py-8">
-    <nav aria-label="Project navigation" className="flex flex-wrap items-center justify-between gap-2"><Link href="/projects/cloud" className={`${control} hover:bg-muted`}><Cloud size={17} aria-hidden /> Cloud projects</Link></nav>
-    <header className="mt-8 flex flex-col gap-6 border-b border-border pb-7 sm:flex-row sm:items-end sm:justify-between">
-      <div><h1 ref={heading} tabIndex={-1} className="font-display text-4xl font-semibold sm:text-5xl">My projects</h1><p className="mt-3 max-w-lg text-base text-foreground/70">Your photos and edits, saved on this device.</p></div>
-      <div className="flex shrink-0 flex-wrap gap-2">
-        <button type="button" disabled={Boolean(busy) || session.hydrating} onClick={() => void create()} className={`${control} bg-accent text-accent-foreground hover:bg-accent/90`}><Camera size={17} aria-hidden /> New project</button>
-        <button type="button" disabled={Boolean(busy)} onClick={() => input.current?.click()} className={`${control} border border-border bg-card hover:bg-muted`}><ArrowUpFromLine size={17} aria-hidden /> Import project</button>
-        <input ref={input} type="file" accept=".pbproject,application/x-photobooth-project" className="sr-only" tabIndex={-1} aria-label="Import a .pbproject file" onChange={event => { const file = event.target.files?.[0]; event.target.value = ""; if (file) void importFile(file); }} />
+  const used = estimate?.usage !== undefined && estimate.quota ? Math.min(1, estimate.usage / estimate.quota) : null;
+  return <main className="mx-auto flex min-h-dvh w-full max-w-5xl flex-1 flex-col gap-6 px-4 pt-4 pb-10 sm:px-8 sm:pt-6">
+    <PageHeader title="My projects" headingRef={heading} meta={owner ? "Includes drafts from your account. Nothing uploads automatically." : undefined} actions={<>
+      <button type="button" disabled={Boolean(busy) || session.hydrating} onClick={() => void create()} className="btn btn-primary"><Camera size={18} aria-hidden /> New project</button>
+      <button type="button" disabled={Boolean(busy)} onClick={() => input.current?.click()} className="btn btn-quiet"><ArrowUpFromLine size={17} aria-hidden /> Import</button>
+      <Link href="/projects/cloud" className="btn btn-quiet"><Cloud size={17} aria-hidden /> Cloud projects</Link>
+      <input ref={input} type="file" accept=".pbproject,application/x-photobooth-project" className="sr-only" tabIndex={-1} aria-label="Import a .pbproject file" onChange={event => { const file = event.target.files?.[0]; event.target.value = ""; if (file) void importFile(file); }} />
+    </>} />
+    <div className="page-body flex flex-col gap-5">
+      {error && <div role="alert" className="notice border border-destructive/25 bg-destructive/8"><p className="font-bold text-destructive">That didn&apos;t work</p><p className="mt-1 break-words">{error}</p><p className="mt-1 text-muted-foreground">If it&apos;s open in another tab, refresh and try again.</p></div>}
+      {notice && <p role="status" className="notice max-w-2xl">{notice}</p>}
+      {busy && <p role="status" className="flex items-center gap-2 text-sm font-bold"><LoaderCircle size={16} className="animate-spin text-accent motion-reduce:animate-none" aria-hidden /> {busy === "import" ? "Importing the project…" : busy === "create" ? "Starting a new project…" : "Working on it…"}</p>}
+      {loading ? <p role="status" className="panel flex min-h-48 items-center justify-center gap-2 text-sm text-muted-foreground"><LoaderCircle size={18} className="animate-spin motion-reduce:animate-none" aria-hidden /> Loading your projects…</p> : visible.length ? <section aria-labelledby="project-list-title" className="panel overflow-hidden">
+        <div className="flex items-center justify-between gap-3 border-b border-border py-2 pr-2 pl-4 sm:pl-5"><h2 id="project-list-title" className="text-sm font-bold text-muted-foreground tabular-nums">{visible.length} {visible.length === 1 ? "project" : "projects"}</h2><button type="button" className="btn btn-plain min-h-10 text-sm" disabled={Boolean(busy) || loading} onClick={() => setRefresh(value => value + 1)}><RefreshCw size={15} aria-hidden /> Refresh</button></div>
+        <ul aria-label="Your projects" className="divide-y divide-border">{page.map(item => <ProjectLibraryRow key={item.key} item={item} thumbnail={thumbnails[item.key]} busy={Boolean(busy)} onAction={act} onRecovery={readRecovery} />)}</ul>
+        {visible.length > page.length && <div className="border-t border-border p-3 text-center"><button type="button" onClick={() => setCount(value => value + 20)} className="btn btn-quiet text-sm">Show more projects</button></div>}
+      </section> : !error && <section className="panel flex min-h-64 flex-col items-center justify-center gap-4 px-6 py-12 text-center"><span className="glyph size-14 rounded-2xl bg-[#f43f5e]"><Camera size={26} aria-hidden /></span><h2 className="font-display text-2xl">No projects yet</h2><button type="button" disabled={Boolean(busy) || session.hydrating} onClick={() => void create()} className="btn btn-primary"><Camera size={18} aria-hidden /> Start your first project</button></section>}
+      <div className="grid gap-5 lg:grid-cols-2">
+        <Section id="project-backup-title" title="Back up your projects" icon={HardDrive} tone="sky" bodyClassName="mt-3">
+          <p className="text-sm text-muted-foreground">Browsers can clear their storage, so export anything you want to keep.</p>
+          {estimate && <div className="mt-4">
+            {used !== null && <div className="h-2 overflow-hidden rounded-full bg-muted" aria-hidden><div className="h-full rounded-full bg-[#0ea5e9]" style={{ width: `${Math.max(2, used * 100)}%` }} /></div>}
+            <p className="mt-2 text-sm font-bold tabular-nums">{estimate.usage !== undefined ? `${megabytes(estimate.usage)} used` : "Storage use unknown"}{estimate.quota !== undefined ? <span className="font-medium text-muted-foreground"> of about {megabytes(estimate.quota)}</span> : null}</p>
+          </div>}
+          <button type="button" disabled={Boolean(busy) || estimate?.persisted} onClick={() => void persist()} className="btn btn-quiet mt-4 text-sm">{estimate?.persisted ? "Your browser is keeping these files" : "Ask your browser to keep these files"}</button>
+        </Section>
+        <RoomMetadataHousekeeping ownerId={authLoading ? null : owner} />
       </div>
-    </header>
-    <div className="mt-5 flex flex-wrap items-center justify-between gap-2 text-sm text-foreground/70"><p>{owner ? "Includes drafts from your account. Nothing uploads automatically." : "No account needed."}</p><button type="button" className={control} disabled={Boolean(busy) || loading} onClick={() => setRefresh(value => value + 1)}><RefreshCw size={15} aria-hidden /> Refresh</button></div>
-    {error && <div role="alert" className="mt-4 rounded-xl border border-border bg-muted p-4"><p className="font-medium">That didn&apos;t work</p><p className="mt-1 break-words text-sm">{error}</p><p className="mt-2 text-sm text-foreground/70">If it&apos;s open in another tab, refresh and try again.</p></div>}
-    {notice && <p role="status" className="mt-4 max-w-2xl rounded-xl bg-muted p-4 text-sm">{notice}</p>}
-    {busy && <p role="status" className="mt-4 flex items-center gap-2 text-sm"><LoaderCircle size={16} className="animate-spin motion-reduce:animate-none" aria-hidden /> {busy === "import" ? "Importing the project…" : busy === "create" ? "Starting a new project…" : "Working on it…"}</p>}
-    {loading ? <p role="status" className="flex min-h-48 items-center justify-center gap-2 text-sm text-foreground/70"><LoaderCircle size={18} className="animate-spin motion-reduce:animate-none" aria-hidden /> Loading your projects…</p> : visible.length ? <>
-      <ul aria-label="Your projects" className="mt-6">{page.map(item => <ProjectLibraryRow key={item.key} item={item} thumbnail={thumbnails[item.key]} busy={Boolean(busy)} onAction={act} onRecovery={readRecovery} />)}</ul>
-      {visible.length > page.length && <button type="button" onClick={() => setCount(value => value + 20)} className={`${control} my-4 self-center bg-muted`}>Show more projects</button>}
-    </> : !error && <section className="flex min-h-64 flex-col items-start justify-center py-10 sm:py-14"><h2 className="font-display text-2xl font-semibold">Start your first project.</h2><p className="mt-3 max-w-lg text-foreground/70">Take photos or import a .pbproject backup.</p><button type="button" disabled={Boolean(busy) || session.hydrating} onClick={() => void create()} className={`${control} mt-5 bg-accent text-accent-foreground hover:bg-accent/90`}><Camera size={17} aria-hidden /> Start your first project</button></section>}
-    <footer className="mt-8 border-t border-border pt-6 pb-3">
-      <RoomMetadataHousekeeping ownerId={authLoading ? null : owner} />
-      <div className="mt-6 flex items-start gap-3"><HardDrive size={19} className="mt-0.5 shrink-0 text-foreground/60" aria-hidden /><div><h2 className="font-medium">Back up your projects</h2><p className="mt-2 max-w-2xl text-sm text-foreground/70">Browsers can clear their storage, so export anything you want to keep.</p>
-        {estimate && <p className="mt-2 text-sm text-foreground/70 tabular-nums">{estimate.usage !== undefined ? `${megabytes(estimate.usage)} used` : "Storage use unknown"}{estimate.quota !== undefined ? ` of about ${megabytes(estimate.quota)}` : ""}</p>}
-        <button type="button" disabled={Boolean(busy) || estimate?.persisted} onClick={() => void persist()} className={`${control} -ml-4 mt-2 underline underline-offset-4`}>{estimate?.persisted ? "Your browser is keeping these files" : "Ask your browser to keep these files"}</button>
-      </div></div>
-    </footer>
+    </div>
   </main>;
 }

@@ -34,7 +34,7 @@ export function HelpTooltip({ label, children, className = "" }: Props) {
       setPortalRoot(trigger.current.closest("dialog[open]") ?? document.body);
       const computed = getComputedStyle(trigger.current);
       const variables: Record<string, string> = { fontFamily: computed.fontFamily };
-      for (const name of ["--card", "--foreground", "--border"]) variables[name] = computed.getPropertyValue(name);
+      for (const name of ["--card", "--foreground", "--border", "--glass-fill-strong", "--glass-edge", "--glass-stroke", "--glass-shadow"]) variables[name] = computed.getPropertyValue(name);
       setTheme(variables as CSSProperties);
     }
     setOpen(true);
@@ -100,13 +100,13 @@ export function HelpTooltip({ label, children, className = "" }: Props) {
   useEffect(() => cancelHide, [cancelHide]);
 
   const popup = open ? <span ref={bubble} id={id} role="tooltip" popover={portalRoot ? undefined : "manual"}
-    className="m-0 overflow-y-auto rounded-xl border border-border bg-card px-3 py-2.5 text-left text-sm leading-relaxed font-normal tracking-normal whitespace-normal text-foreground normal-case shadow-lg shadow-black/15"
+    className="glass-strong m-0 overflow-y-auto rounded-2xl border-0 px-3.5 py-3 text-left text-sm leading-relaxed font-medium tracking-normal whitespace-normal text-foreground normal-case"
     style={{ ...theme, position: "fixed", inset: "auto", zIndex: 1100, display: "block", visibility: "hidden", overflowWrap: "anywhere" }}
     onPointerEnter={cancelHide} onPointerLeave={leave}>{children}</span> : null;
 
   return <span className={`inline-flex shrink-0 align-middle ${className}`}>
     <button ref={trigger} type="button" aria-label={label} aria-describedby={open ? id : undefined} aria-expanded={open}
-      className="inline-flex size-8 items-center justify-center rounded-full text-muted-foreground transition hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring [@media(pointer:coarse)]:size-11"
+      className="inline-flex size-8 items-center justify-center rounded-full text-muted-foreground transition hover:bg-foreground/8 hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring [@media(pointer:coarse)]:size-11"
       onPointerEnter={event => { if (event.pointerType === "mouse" || event.pointerType === "pen") show(); }}
       onPointerLeave={leave}
       onFocus={event => { if (event.currentTarget.matches(":focus-visible")) show(); }}

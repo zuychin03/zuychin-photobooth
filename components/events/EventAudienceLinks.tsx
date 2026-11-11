@@ -5,7 +5,8 @@ import { useEffect, useId, useRef, useState } from "react";
 import { Dropdown } from "@/components/Dropdown";
 import type { EventHostClient } from "@/lib/events/client";
 import { EventInvitationQr } from "./EventInvitationQr";
-import { EventHostConfirm, eventControl, eventInput, useEventLeaveWarning } from "./EventHostControls";
+import { Link2 } from "lucide-react";
+import { EventHostConfirm, EventPanelHead, useEventLeaveWarning } from "./EventHostControls";
 import { useEventHostTask } from "./useEventHostTask";
 
 type Audience = "gallery" | "wall";
@@ -38,20 +39,19 @@ export function EventAudienceLinks({ client, eventId, expiresAt, disabled = fals
       setPending(null);
     }).finally(() => { requestAnimationFrame(() => { if (alive.current) { if (link.current) link.current.focus(); else heading.current?.focus(); } }); });
   };
-  if (task.lost) return <section className="border-t border-border py-6"><p role="alert">Your event access changed. Go back to your events and reopen this one.</p></section>;
-  return <section className="border-t border-border py-6" aria-labelledby={`${id}-title`}>
+  if (task.lost) return <section className="panel p-4 sm:p-6"><p role="alert" className="font-bold">Your event access changed. Go back to your events and reopen this one.</p></section>;
+  return <section className="panel p-4 sm:p-6" aria-labelledby={`${id}-title`}>
     <div inert={confirm ? true : undefined}>
-      <h3 ref={heading} tabIndex={-1} id={`${id}-title`} className="font-display text-2xl outline-none">Gallery and wall links</h3>
-      <p className="mt-3 max-w-2xl text-sm leading-relaxed text-foreground/70">Share approved photos with a gallery or wall link. People can view photos but not upload.</p>
-      <div className="mt-4 grid max-w-xl gap-4 sm:grid-cols-2">
+      <EventPanelHead id={`${id}-title`} headingRef={heading} icon={Link2} tone="green">Gallery and wall links</EventPanelHead>
+      <p className="mt-3 text-sm text-muted-foreground">People can view photos but not upload. Anyone with the link can open it or pass it on.</p>
+      <div className="mt-4 grid gap-4 sm:grid-cols-2">
         <Dropdown label="Link type" showLabel value={audience} disabled={disabled || task.busy || !!pending} options={[{ value: "gallery", label: "Event gallery" }, { value: "wall", label: "Event wall" }]} onChange={value => setAudience(value as Audience)} />
         <Dropdown label="Expires after" showLabel value={duration} disabled={disabled || task.busy || !!pending} options={[{ value: "1", label: "1 hour" }, { value: "24", label: "24 hours" }, { value: "event", label: "Until photos expire" }]} onChange={setDuration} />
       </div>
-      <p className="mt-3 text-xs leading-relaxed text-foreground/70">Anyone with the link can open it or pass it on.</p>
-      {task.error && <p role="alert" className="mt-3 text-sm">{task.error}</p>}{notice && <p role="status" className="mt-3 text-sm leading-relaxed">{notice}</p>}
-      <div className="mt-4 flex flex-wrap gap-2">{pending ? <><button className={`${eventControl} border border-border`} disabled={disabled || task.busy || recovery && pending.kind === "issue"} onClick={() => run(pending)}>Try again</button><button className={eventControl} disabled={disabled || task.busy} onClick={() => setConfirm("discard")}>Dismiss…</button></> : <button className={`${eventControl} border border-border`} disabled={recovery || disabled || task.busy || expired} onClick={() => setConfirm("issue")}>Create {audience} link…</button>}</div>
-      {pending && <p className="mt-3 text-sm leading-relaxed">The link may already exist. Try again to get it back.</p>}
-      {visible && <div className="mt-5 max-w-xl"><label htmlFor={`${id}-link`} className="text-sm font-medium">Your {visible.audience} link</label><input ref={link} id={`${id}-link`} className={`${eventInput} mt-2`} readOnly value={`${location.origin}/e/${eventId}/${visible.audience}#token=${visible.token}`} onFocus={event => event.currentTarget.select()} /><p className="mt-2 text-xs text-foreground/70">Expires {new Date(visible.expiresAt).toLocaleString("en-AU")}. Keep a copy in case you want to revoke it later.</p><EventInvitationQr eventId={eventId} token={visible.token} expiresAt={visible.expiresAt} audience={visible.audience} /><button className={`${eventControl} mt-3 border border-border`} disabled={disabled || task.busy || !!pending} onClick={() => setConfirm("revoke")}>Revoke this {visible.audience} link…</button></div>}
+      {task.error && <p role="alert" className="notice mt-4 border border-destructive/25 bg-destructive/8">{task.error}</p>}{notice && <p role="status" className="notice mt-4">{notice}</p>}
+      <div className="mt-4 flex flex-wrap gap-2">{pending ? <><button className="btn btn-quiet min-h-10 text-sm" disabled={disabled || task.busy || recovery && pending.kind === "issue"} onClick={() => run(pending)}>Try again</button><button className="btn btn-plain min-h-10 text-sm" disabled={disabled || task.busy} onClick={() => setConfirm("discard")}>Dismiss…</button></> : <button className="btn btn-tinted min-h-10 text-sm" disabled={recovery || disabled || task.busy || expired} onClick={() => setConfirm("issue")}>Create {audience} link…</button>}</div>
+      {pending && <p className="mt-3 text-sm">The link may already exist. Try again to get it back.</p>}
+      {visible && <div className="panel-muted mt-4 p-4"><label htmlFor={`${id}-link`} className="text-sm font-bold">Your {visible.audience} link</label><input ref={link} id={`${id}-link`} className="field mt-1.5 text-sm font-medium" readOnly value={`${location.origin}/e/${eventId}/${visible.audience}#token=${visible.token}`} onFocus={event => event.currentTarget.select()} /><p className="mt-2 text-xs text-muted-foreground">Expires {new Date(visible.expiresAt).toLocaleString("en-AU")}. Keep a copy in case you want to revoke it later.</p><EventInvitationQr eventId={eventId} token={visible.token} expiresAt={visible.expiresAt} audience={visible.audience} /><button className="btn btn-quiet mt-3 min-h-10 text-sm" disabled={disabled || task.busy || !!pending} onClick={() => setConfirm("revoke")}>Revoke this {visible.audience} link…</button></div>}
     </div>
     {confirm && <EventHostConfirm title={confirm === "issue" ? `Create a ${audience} link?` : confirm === "revoke" ? "Revoke this link?" : "Dismiss?"} action={confirm === "issue" ? "Create link" : confirm === "revoke" ? "Revoke link" : "Dismiss"} busy={task.busy} onKeep={() => setConfirm(null)} onConfirm={() => {
       if (confirm === "issue") run({ kind: "issue", audience, requestId: crypto.randomUUID(), expiresAt: new Date(Math.min(Date.parse(expiresAt), duration === "event" ? Infinity : Date.now() + Number(duration) * 3600000)).toISOString() });

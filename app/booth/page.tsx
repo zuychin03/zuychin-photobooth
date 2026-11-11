@@ -4,7 +4,7 @@ import { useAppNavigationGuard } from "@/components/AppNavigation";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
-import { ImagePlus, RefreshCcw } from "lucide-react";
+import { CameraOff, ImagePlus, LoaderCircle, RefreshCcw, Repeat2 } from "lucide-react";
 import { MobileControlPanel } from "@/components/MobileControlPanel";
 import { CameraPreview } from "@/components/CameraPreview";
 import { StoryGuide } from "@/components/StoryGuide";
@@ -275,64 +275,87 @@ export default function BoothPage() {
     finally { operation.current = false; setBusy(false); }
   };
 
+  const sideControl = "glass-strong flex size-12 shrink-0 items-center justify-center rounded-full disabled:opacity-40";
+  const importControl = `${sideControl} cursor-pointer transition-[scale] duration-300 ease-[var(--spring-press)] focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-ring active:scale-95 ${busy || pending ? "opacity-40" : ""}`;
   return (
     <main className="booth-mode flex min-h-[calc(100dvh-var(--app-nav-height,0px)-var(--app-bottom-nav-height,0px))] flex-col bg-background md:h-[calc(100dvh-var(--app-nav-height,0px))] md:flex-row md:items-stretch md:justify-center md:overflow-hidden">
-      <div className={`relative flex shrink-0 items-center justify-center px-4 pt-3 pb-2 md:flex-1 md:p-6 md:min-h-0 md:max-w-4xl ${capture?.fillLight ? "bg-white" : ""}`}>
-        {hydrating || !capture ? <div className="space-y-3 text-center"><p role="status">{failure ?? "Opening your project…"}</p>{failure && !hydrating && <button onClick={() => { setFailure(null); void startProject().catch(error => setFailure(explain(error))); }} className="min-h-11 rounded-xl bg-accent px-4 text-accent-foreground">Try again</button>}</div> : error ? (
-          <div className="flex flex-col items-center justify-center gap-4 px-4 text-center">
-            <p className="text-lg font-semibold">{error === "denied" ? "Camera access was blocked" : error === "no-camera" ? "No camera found" : "Couldn't start the camera"}</p>
-            <p className="max-w-sm text-sm text-muted-foreground">{error === "denied" ? "Allow camera access in your browser settings, or import photos below." : "Choose another camera or import photos below."}</p>
-            <button onClick={retry} disabled={busy} className="glass-card flex min-h-12 items-center gap-2 rounded-2xl px-5 font-semibold"><RefreshCcw size={18} /> Try camera again</button>
+      <div className={`relative flex shrink-0 flex-col items-center justify-center gap-4 px-4 pt-3 pb-4 md:min-h-0 md:max-w-4xl md:flex-1 md:p-6 ${capture?.fillLight ? "bg-white" : ""}`}>
+        {hydrating || !capture ? <div className="flex flex-col items-center gap-3 text-center"><p role="status" className="flex items-center gap-2 text-sm font-bold text-muted-foreground">{!failure && <LoaderCircle size={17} className="animate-spin motion-reduce:animate-none" aria-hidden />}{failure ?? "Opening your project…"}</p>{failure && !hydrating && <button onClick={() => { setFailure(null); void startProject().catch(error => setFailure(explain(error))); }} className="btn btn-primary">Try again</button>}</div> : error ? (
+          <div className="panel flex max-w-sm flex-col items-center justify-center gap-3 px-6 py-8 text-center">
+            <span className="mb-1 flex size-14 items-center justify-center rounded-full bg-muted text-muted-foreground"><CameraOff size={26} aria-hidden /></span>
+            <p className="font-display text-xl">{error === "denied" ? "Camera access was blocked" : error === "no-camera" ? "No camera found" : "Couldn't start the camera"}</p>
+            <p className="text-sm text-muted-foreground">{error === "denied" ? "Allow camera access in your browser settings, or import photos below." : "Choose another camera or import photos below."}</p>
+            <button onClick={retry} disabled={busy} className="btn btn-glass mt-2"><RefreshCcw size={18} aria-hidden /> Try camera again</button>
           </div>
         ) : (
-          <div className="relative w-[min(100%,max(24dvh,calc(100dvh_-_23rem))*var(--cell-ar))] overflow-hidden rounded-2xl bg-black shadow-2xl shadow-black/40 md:w-[min(100%,74dvh*var(--cell-ar))]" style={{ aspectRatio: layout.cellAspect, "--cell-ar": layout.cellAspect } as React.CSSProperties}>
+          <div className="relative w-[min(100%,max(24dvh,calc(100dvh_-_23rem))*var(--cell-ar))] overflow-hidden rounded-[1.75rem] bg-black shadow-2xl shadow-black/40 md:w-[min(100%,calc((100dvh_-_var(--app-nav-height,0px)_-_14rem)_*_var(--cell-ar)))]" style={{ aspectRatio: layout.cellAspect, "--cell-ar": layout.cellAspect } as React.CSSProperties}>
             <CameraPreview videoRef={attachVideo} mirror={capture.mirror} filterCss={filter.css} />
             {referenceCanvas && project?.editor.thenNow && <ThenNowGhost reference={referenceCanvas} plan={project.editor.thenNow} aspect={layout.cellAspect} />}
-            {!ready && <div className="absolute inset-0 flex items-center justify-center text-white">Starting camera…</div>}
+            {!ready && <div className="absolute inset-0 flex items-center justify-center gap-2 text-sm font-bold text-white/80"><LoaderCircle size={18} className="animate-spin motion-reduce:animate-none" aria-hidden />Starting camera…</div>}
             <Countdown value={count} /><CaptureFlash trigger={flash} />
-            {activePose && <p aria-live="polite" className="absolute inset-x-2 bottom-2 rounded-lg bg-black/80 px-3 py-2 text-center text-sm text-white md:hidden">{activePose.prompt}</p>}
+            {activePose && <p aria-live="polite" className="glass absolute inset-x-3 bottom-3 rounded-2xl px-3 py-2 text-center text-sm font-bold text-white md:hidden">{activePose.prompt}</p>}
           </div>
         )}
+        {capture && <div className="flex w-full max-w-md flex-col items-center gap-3">
+          <p role="status" className="glass-strong rounded-full px-3.5 py-1.5 text-xs font-bold tabular-nums">{requiredShots - missing.length} of {requiredShots} shots saved{busy ? (count ? ". Get ready…" : ". Saving…") : ""}</p>
+          <div className="grid min-h-20 w-full grid-cols-[1fr_auto_1fr] items-center gap-3">
+            <div className="flex justify-center">
+              {!complete && retakeTargets.length === 0 && <label title="Import photos" className={importControl}><ImagePlus size={20} aria-hidden /><span className="sr-only">Import photos</span><input type="file" accept="image/jpeg,image/png,image/webp" multiple disabled={busy || Boolean(pending)} className="sr-only" onChange={event => { void onUpload(event.target.files); event.target.value = ""; }} /></label>}
+              {retakeTargets.length > 0 && <label title="Replace selected with imports" className={importControl}><ImagePlus size={20} aria-hidden /><span className="sr-only">Replace selected with imports</span><input type="file" accept="image/jpeg,image/png,image/webp" multiple disabled={busy || Boolean(pending)} className="sr-only" onChange={event => { void onUpload(event.target.files, true); event.target.value = ""; }} /></label>}
+            </div>
+            <div className="flex justify-center">
+              {!complete && retakeTargets.length === 0 && <button onClick={() => void shoot()} disabled={!ready || busy || Boolean(pending) || curated.loading} aria-label={missing.length === requiredShots ? "Start shooting" : "Take the remaining shots"} className="glass flex size-20 shrink-0 items-center justify-center rounded-full p-[0.4375rem] disabled:opacity-40"><span className="size-full rounded-full bg-accent shadow-[inset_0_1px_0_rgb(255_255_255/0.4),inset_0_-3px_8px_rgb(0_0_0/0.18)]" /></button>}
+              {retakeTargets.length > 0 && <button disabled={!ready || busy || Boolean(pending) || curated.loading} onClick={() => void shoot(retakeTargets)} className="btn btn-primary min-h-12 px-5">Retake {retakeTargets.length} selected {retakeTargets.length === 1 ? "photo" : "photos"}</button>}
+              {complete && retakeTargets.length === 0 && <button disabled={busy || Boolean(pending)} onClick={() => router.push("/customize")} className="btn btn-primary min-h-12 px-6">Edit this strip</button>}
+            </div>
+            <div className="flex justify-center">
+              <button ref={motionTrigger} type="button" title="Record a short loop" disabled={!ready || busy || Boolean(pending)} onClick={() => setMotionProject(motionKey)} className={sideControl}><Repeat2 size={20} aria-hidden /><span className="sr-only">Record a short loop</span></button>
+            </div>
+          </div>
+          {complete && retakeTargets.length === 0 && <button disabled={busy || Boolean(pending)} onClick={() => void nextRound()} className="btn glass-strong min-h-10 text-sm">Go again with the same settings</button>}
+        </div>}
       </div>
-      <div className="z-40 flex shrink-0 flex-col gap-3 px-4 pt-2 pb-4 md:w-96 md:overflow-y-auto md:p-6">
-        {(failure || storageError) && <div role="alert" className="rounded-xl border border-destructive p-3 text-sm"><p>{failure ?? storageError}</p>{pending && <><p className="mt-2">This shot hasn&apos;t saved yet.</p><button disabled={busy || downloadingPending} onClick={() => void retryPending()} className="mt-2 min-h-11 rounded-lg bg-foreground px-4 text-background">Try saving again</button><button disabled={busy || downloadingPending} onClick={() => void downloadUnsavedPhoto()} className="mt-1 min-h-11 px-3 text-sm underline underline-offset-4">{downloadingPending ? "Preparing download…" : "Download this photo"}</button><button disabled={busy || downloadingPending} onClick={() => { setPending(null); setFailure(null); }} className="mt-1 min-h-11 px-3 text-sm underline underline-offset-4">Discard it</button></>}</div>}
+      <div className="z-40 flex shrink-0 flex-col gap-4 px-4 pb-6 md:w-96 md:overflow-y-auto md:overscroll-contain md:py-6 md:pr-6 md:pl-0">
+        {(failure || storageError) && <div role="alert" className="notice border border-destructive/30 bg-destructive/10"><p className="font-bold break-words">{failure ?? storageError}</p>{pending && <><p className="mt-1 text-muted-foreground">This shot hasn&apos;t saved yet.</p><div className="mt-3 flex flex-wrap gap-2"><button disabled={busy || downloadingPending} onClick={() => void retryPending()} className="btn btn-primary min-h-10 text-sm">Try saving again</button><button disabled={busy || downloadingPending} onClick={() => void downloadUnsavedPhoto()} className="btn btn-quiet min-h-10 text-sm">{downloadingPending ? "Preparing download…" : "Download this photo"}</button><button disabled={busy || downloadingPending} onClick={() => { setPending(null); setFailure(null); }} className="btn btn-plain min-h-10 text-sm text-destructive">Discard it</button></div></>}</div>}
         {capture && <>
-          <p role="status" className="text-sm text-muted-foreground">{requiredShots - missing.length} of {requiredShots} shots saved{busy ? (count ? ". Get ready…" : ". Saving…") : ""}</p>
-          {!complete && retakeTargets.length === 0 && <div className="flex items-center justify-center gap-5">
-            <button onClick={() => void shoot()} disabled={!ready || busy || Boolean(pending) || curated.loading} aria-label={missing.length === requiredShots ? "Start shooting" : "Take the remaining shots"} className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full border-4 border-foreground/70 bg-accent transition active:scale-95 disabled:opacity-40"><span className="h-14 w-14 rounded-full bg-white/90" /></button>
-            <label className={`relative flex min-h-12 cursor-pointer items-center gap-2 rounded-xl border border-border px-4 font-semibold focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-ring ${busy || pending ? "opacity-40" : ""}`}><ImagePlus size={18} /> Import photos<input type="file" accept="image/jpeg,image/png,image/webp" multiple disabled={busy || Boolean(pending)} className="sr-only" onChange={event => { void onUpload(event.target.files); event.target.value = ""; }} /></label>
-          </div>}
-          {retakeTargets.length > 0 && <div className="space-y-2">
-            <button disabled={!ready || busy || Boolean(pending) || curated.loading} onClick={() => void shoot(retakeTargets)} className="min-h-12 w-full rounded-xl bg-accent px-4 font-semibold text-accent-foreground disabled:opacity-40">Retake {retakeTargets.length} selected {retakeTargets.length === 1 ? "photo" : "photos"}</button>
-            <label className="flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-xl border border-border px-3 text-sm focus-within:outline-2 focus-within:outline-ring"><ImagePlus size={18} /> Replace selected with imports<input type="file" accept="image/jpeg,image/png,image/webp" multiple disabled={busy || Boolean(pending)} className="sr-only" onChange={event => { void onUpload(event.target.files, true); event.target.value = ""; }} /></label>
-            <p className="text-xs text-muted-foreground">Imports replace shots {retakeTargets.map(index => index + 1).join(", ")}, in that order.</p>
-            <button disabled={busy || Boolean(pending)} onClick={() => { setRetakeSelection(null); focusSavedPhotos(); }} className="min-h-11 w-full text-sm underline underline-offset-4">Cancel selection</button>
-          </div>}
-          {complete && retakeTargets.length === 0 && <><button disabled={busy || Boolean(pending)} onClick={() => router.push("/customize")} className="min-h-12 rounded-xl bg-accent px-5 font-semibold text-accent-foreground">Edit this strip</button><button disabled={busy || Boolean(pending)} onClick={() => void nextRound()} className="min-h-11 text-sm font-medium underline underline-offset-4">Go again with the same settings</button></>}
-          {thumbs.some(Boolean) && <p ref={savedPhotosHeading} tabIndex={-1} aria-label="Saved photos" className="rounded text-sm text-muted-foreground focus-visible:outline-2 focus-visible:outline-ring">Tap photos to select them for a retake.</p>}
-          <div className="grid grid-cols-4 gap-2">
-            {indices.map(index => <div key={index} className="min-w-0">
-              {thumbs[index] ? <button type="button" disabled={busy || Boolean(pending)} aria-pressed={retakeTargets.includes(index)} aria-label={`Select shot ${index + 1} to retake`} onClick={() => setRetakeSelection({ projectId: project!.id, indices: retakeTargets.includes(index) ? retakeTargets.filter(item => item !== index) : [...retakeTargets, index] })} className={`w-full overflow-hidden rounded-lg border-2 text-sm disabled:opacity-40 ${retakeTargets.includes(index) ? "border-accent bg-accent text-accent-foreground" : "border-transparent bg-muted"}`}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={thumbs[index]!} alt={`Saved shot ${index + 1}`} className="aspect-[3/2] w-full object-cover" />
-                <span className="flex min-h-11 items-center justify-center">{retakeTargets.includes(index) ? "Selected" : `Shot ${index + 1}`}</span>
-              </button> : <div className="flex aspect-[3/2] items-center justify-center rounded-lg border border-dashed border-border text-sm text-muted-foreground">{index + 1}</div>}
-            </div>)}
+          <div className="panel p-3 sm:p-4">
+            {thumbs.some(Boolean) && <p ref={savedPhotosHeading} tabIndex={-1} aria-label="Saved photos" className="mb-3 rounded px-1 text-sm text-muted-foreground focus-visible:outline-2 focus-visible:outline-ring">Tap photos to select them for a retake.</p>}
+            <div className="grid grid-cols-4 gap-2">
+              {indices.map(index => <div key={index} className="min-w-0">
+                {thumbs[index] ? <button type="button" disabled={busy || Boolean(pending)} aria-pressed={retakeTargets.includes(index)} aria-label={`Select shot ${index + 1} to retake`} onClick={() => setRetakeSelection({ projectId: project!.id, indices: retakeTargets.includes(index) ? retakeTargets.filter(item => item !== index) : [...retakeTargets, index] })} className={`w-full overflow-hidden rounded-xl text-xs font-bold disabled:opacity-40 ${retakeTargets.includes(index) ? "bg-accent text-accent-foreground shadow-[0_0_0_2px_var(--accent)]" : "bg-muted text-muted-foreground"}`}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={thumbs[index]!} alt={`Saved shot ${index + 1}`} className="aspect-[3/2] w-full object-cover" />
+                  <span className="flex min-h-11 items-center justify-center">{retakeTargets.includes(index) ? "Selected" : `Shot ${index + 1}`}</span>
+                </button> : <div className="flex aspect-[3/2] items-center justify-center rounded-xl border border-dashed border-border text-sm font-bold text-muted-foreground tabular-nums">{index + 1}</div>}
+              </div>)}
+            </div>
+            {retakeTargets.length > 0 && <div className="mt-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-t border-border pt-3">
+              <p className="px-1 text-xs text-muted-foreground">Imports replace shots {retakeTargets.map(index => index + 1).join(", ")}, in that order.</p>
+              <button disabled={busy || Boolean(pending)} onClick={() => { setRetakeSelection(null); focusSavedPhotos(); }} className="btn btn-plain min-h-10 text-sm">Cancel selection</button>
+            </div>}
           </div>
           <MobileControlPanel open={controlsOpen} onOpenChange={setControlsOpen} disabled={busy || Boolean(pending)}>
-          {(failure || storageError) && <p role="alert" className="text-sm text-destructive md:hidden">{failure ?? storageError}</p>}
-          {project?.editor.template ? <p className="text-sm text-muted-foreground">This template takes {requiredShots} photos.</p> : <div className="flex flex-wrap gap-2">
-            {LAYOUTS.filter(item => item.mode === "solo").map(item => <button key={item.id} disabled={busy || Boolean(pending) || Boolean((project?.capturedAt || project?.media.some(item => item.kind === "photo")))} onClick={() => void changeLayout(item.id)} className={`min-h-11 rounded-full px-4 text-sm font-medium disabled:opacity-60 ${session.layoutId === item.id ? "bg-foreground text-background" : "bg-muted text-muted-foreground"}`}>{item.name} · {item.shots}</button>)}
-          </div>}
-          {curated.loading && <p role="status" className="text-sm text-muted-foreground">Loading artwork…</p>}
-          {curated.fallback.length > 0 && <p role="status" className="text-sm text-muted-foreground">Couldn&apos;t load {curated.fallback.join(", ")}. Using a built-in background.</p>}
-          {project && <div id="photo-story" ref={storyAnchor} tabIndex={-1} aria-label="Photo story" className="scroll-mt-4 rounded-xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"><StoryGuide plan={project.editor.story ?? null} members={project.participants.map(person => ({ id: person.id, name: "You" }))} activeStep={busy ? storyIndex : undefined} disabled={busy || Boolean(pending) || Boolean((project.capturedAt !== null || project.media.some(item => item.kind === "photo"))) || Boolean(project.editor.template && requiredShots !== 4)} onChange={story => void changeStory(story)} /></div>}
+          {(failure || storageError) && <p role="alert" className="notice border border-destructive/30 bg-destructive/10 font-bold md:hidden">{failure ?? storageError}</p>}
+          {project?.editor.template ? <p className="panel p-4 text-sm text-muted-foreground">This template takes {requiredShots} photos.</p> : <section aria-labelledby="booth-layout-title" className="panel p-4 sm:p-5">
+            <h3 id="booth-layout-title" className="font-display text-[1.0625rem]">Layout</h3>
+            <div className="mt-3 grid grid-cols-3 gap-2">
+              {LAYOUTS.filter(item => item.mode === "solo").map(item => <button key={item.id} disabled={busy || Boolean(pending) || Boolean((project?.capturedAt || project?.media.some(item => item.kind === "photo")))} onClick={() => void changeLayout(item.id)} className={`flex flex-col items-center gap-2 rounded-2xl px-2 py-3 text-center disabled:opacity-60 ${session.layoutId === item.id ? "bg-accent/15 text-foreground shadow-[inset_0_0_0_2px_var(--accent)]" : "bg-muted text-muted-foreground"}`}>
+                <span aria-hidden className="flex h-12 items-center"><span className="grid gap-[3px]" style={{ gridTemplateColumns: `repeat(${item.cols}, 0.875rem)` }}>{Array.from({ length: item.rows * item.cols }, (_, cell) => <span key={cell} className={`rounded-[3px] ${session.layoutId === item.id ? "bg-accent" : "bg-current opacity-60"}`} style={{ aspectRatio: item.cellAspect }} />)}</span></span>
+                <span className="text-xs leading-tight font-bold">{item.name}</span>
+                <span className="text-[0.6875rem] tabular-nums">{item.shots} photos</span>
+              </button>)}
+            </div>
+          </section>}
+          {curated.loading && <p role="status" className="notice text-muted-foreground">Loading artwork…</p>}
+          {curated.fallback.length > 0 && <p role="status" className="notice text-muted-foreground">Couldn&apos;t load {curated.fallback.join(", ")}. Using a built-in background.</p>}
+          {project && <div id="photo-story" ref={storyAnchor} tabIndex={-1} aria-label="Photo story" className="scroll-mt-4 rounded-[1.5rem] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"><StoryGuide className="panel p-4 sm:p-5" plan={project.editor.story ?? null} members={project.participants.map(person => ({ id: person.id, name: "You" }))} activeStep={busy ? storyIndex : undefined} disabled={busy || Boolean(pending) || Boolean((project.capturedAt !== null || project.media.some(item => item.kind === "photo"))) || Boolean(project.editor.template && requiredShots !== 4)} onChange={story => void changeStory(story)} /></div>}
           <CaptureSettings value={capture} cameras={cameras} disabled={busy || Boolean(pending)} onChange={patch => void changeCapture(patch)} />
-          <FilterBar value={session.filterId} onChange={id => { if (!busy && !pending) void update({ filterId: id }).catch(error => setFailure(explain(error))); }} layoutClass="scrollbar-hide overflow-x-auto md:flex-wrap md:overflow-visible" />
+          <section aria-labelledby="booth-filter-title" className="panel p-4 sm:p-5">
+            <h3 id="booth-filter-title" className="font-display text-[1.0625rem]">Filter</h3>
+            <div className="-mx-1 mt-2"><FilterBar value={session.filterId} onChange={id => { if (!busy && !pending) void update({ filterId: id }).catch(error => setFailure(explain(error))); }} layoutClass="scrollbar-hide overflow-x-auto md:flex-wrap md:overflow-visible" /></div>
+          </section>
           {project && <ThenNowStudio key={`${project.scope.kind}:${project.scope.kind === "account" ? project.scope.ownerId : "device"}:${project.id}`} project={project} disabled={captureBusy || Boolean(pending)} onBusyChange={setReferenceBusy} />}
           </MobileControlPanel>
-          <button ref={motionTrigger} type="button" disabled={!ready || busy || Boolean(pending)} onClick={() => setMotionProject(motionKey)} className="min-h-11 rounded-xl border border-border px-4 text-sm font-medium disabled:opacity-40">Record a short loop</button>
-
         </>}
       </div>
       {project && capture && motionProject === motionKey && <SoloMotionStudio key={motionKey} getVideo={getMotionVideo} mirror={capture.mirror} filterId={session.filterId} name={project.name} close={() => { setMotionProject(null); requestAnimationFrame(() => motionTrigger.current?.focus({ preventScroll: true })); }} />}

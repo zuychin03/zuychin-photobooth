@@ -2,12 +2,11 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Download, LoaderCircle, Pause, Play, Share2 } from "lucide-react";
-import { Dropdown } from "./Dropdown";
 import { ExportJob } from "@/lib/exports/still";
 import type { MotionArtifact, MotionVideoCapability } from "@/lib/exports/motion";
 import { downloadProjectBlob, projectDownloadName } from "@/lib/projects/download";
 
-const control = "inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:opacity-50";
+const control = "btn text-sm";
 const byteLabel = (bytes: number) => bytes < 1024 * 1024 ? `${Math.ceil(bytes / 1024)} KB` : `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 
 export function MotionExportPanel({ getFrames, name, delayMs = 500, warnings = [], disabled = false, onBusyChange }: {
@@ -77,25 +76,27 @@ export function MotionExportPanel({ getFrames, name, delayMs = 500, warnings = [
   };
   const media = artifact && urls?.artifact === artifact ? urls : null;
   return <section aria-label="Motion export" className="space-y-4">
-    <Dropdown showLabel label="Format" value={format} disabled={blocked} onChange={value => { reset(); setFormat(value as typeof format); }} options={[
-      { value: "gif", label: "GIF · animated image" },
-      ...["mp4", "webm"].map(value => ({ value, label: `${value.toUpperCase()} · video`, disabled: !capabilities?.find(item => item.format === value)?.available })),
-    ]} />
-    <button type="button" disabled={blocked} onClick={() => void run(true)} className={`${control} border border-border`}>{busy === "checking" && <LoaderCircle size={16} className="animate-spin motion-reduce:animate-none" />}{capabilities ? "Check video formats again" : "Check video support"}</button>
+    <div>
+      <span className="mb-1.5 block text-sm font-bold">Format</span>
+      <div role="group" aria-label="Format" className="segmented w-full">
+        {(["gif", "mp4", "webm"] as const).map(value => <button key={value} type="button" aria-pressed={format === value} disabled={blocked || (value !== "gif" && !capabilities?.find(item => item.format === value)?.available)} onClick={() => { if (format !== value) { reset(); setFormat(value); } }} className="flex-1 disabled:opacity-40">{value === "webm" ? "WebM" : value.toUpperCase()}</button>)}
+      </div>
+    </div>
+    <button type="button" disabled={blocked} onClick={() => void run(true)} className={`${control} btn-quiet`}>{busy === "checking" && <LoaderCircle size={16} className="animate-spin motion-reduce:animate-none" aria-hidden />}{capabilities ? "Check video formats again" : "Check video support"}</button>
     {capabilities && <p role="status" className="text-sm text-muted-foreground">{capabilities.map(item => `${item.format.toUpperCase()}: ${item.available ? "works here" : "not supported in this browser"}`).join(". ")}.</p>}
-    <label className="flex min-h-11 items-center gap-2 text-sm"><input type="checkbox" checked={boomerang} disabled={blocked} onChange={event => { reset(); setBoomerang(event.target.checked); }} className="h-4 w-4 accent-accent" /> Play forwards, then backwards</label>
+    <label className="flex min-h-11 cursor-pointer items-center gap-3 text-sm font-bold"><input type="checkbox" checked={boomerang} disabled={blocked} onChange={event => { reset(); setBoomerang(event.target.checked); }} className="size-5 accent-accent" /> Play forwards, then backwards</label>
     {warnings.map(warning => <p key={warning} className="text-sm text-muted-foreground">{warning}</p>)}
-    {error && <p role="alert" className="text-sm text-destructive">{error}</p>}{notice && <p role="status" className="text-sm">{notice}</p>}
-    {busy && <div role="status" className="space-y-2 text-sm"><p>{busy === "checking" ? "Testing a short sample video. Keep this tab open…" : `Making your loop · ${progress}%`}</p>{busy === "encoding" && <progress value={progress} max={100} aria-label="Loop progress" className="w-full accent-accent" />}<button type="button" onClick={() => controller.current?.abort()} className={`${control} border border-border`}>Cancel</button></div>}
+    {error && <p role="alert" className="text-sm font-bold text-destructive">{error}</p>}{notice && <p role="status" className="text-sm">{notice}</p>}
+    {busy && <div role="status" className="notice space-y-3"><p className="font-bold tabular-nums">{busy === "checking" ? "Testing a short sample video. Keep this tab open…" : `Making your loop · ${progress}%`}</p>{busy === "encoding" && <progress value={progress} max={100} aria-label="Loop progress" className="h-2 w-full accent-accent" />}<button type="button" onClick={() => controller.current?.abort()} className={`${control} btn-quiet min-h-10`}>Cancel</button></div>}
     {artifact && !busy ? <div className="space-y-3 border-t border-border pt-4">
-      <p role="status" className="text-sm">{artifact.extension.toUpperCase()} ready · {byteLabel(artifact.bytes)} · {artifact.width} × {artifact.height} · {(artifact.durationMs / 1000).toFixed(1)} seconds</p>
+      <p role="status" className="text-sm font-bold tabular-nums">{artifact.extension.toUpperCase()} ready · {byteLabel(artifact.bytes)} · {artifact.width} × {artifact.height} · {(artifact.durationMs / 1000).toFixed(1)} seconds</p>
       {artifact.warnings.map(warning => <p key={warning} className="text-sm text-muted-foreground">{warning}</p>)}
       {media && (artifact.extension === "gif" ? <div className="space-y-2">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={playing ? media.animation : media.poster} alt={playing ? "Your animated photo loop" : "First frame of your photo loop"} className="mx-auto max-h-[45dvh] max-w-full rounded-lg" />
-        <button type="button" disabled={disabled && !playing} onClick={() => setPlaying(value => !value)} className={`${control} border border-border`}>{playing ? <Pause size={16} /> : <Play size={16} />}{playing ? "Stop preview" : "Play preview"}</button>
-      </div> : <video src={media.animation} poster={media.poster} controls playsInline preload="metadata" aria-label="Loop preview" className="mx-auto max-h-[45dvh] max-w-full rounded-lg" />)}
-      <div className="flex flex-wrap gap-2"><button type="button" disabled={blocked} onClick={download} className={`${control} flex-1 bg-accent text-accent-foreground`}><Download size={17} />Download {artifact.extension.toUpperCase()}</button><button type="button" disabled={blocked} onClick={() => void share()} className={`${control} border border-border`}><Share2 size={17} />Share</button></div>
-    </div> : !busy && <button type="button" disabled={blocked} onClick={() => void run()} className={`${control} w-full bg-accent text-accent-foreground`}>Make {format.toUpperCase()}</button>}
+        <img src={playing ? media.animation : media.poster} alt={playing ? "Your animated photo loop" : "First frame of your photo loop"} className="mx-auto max-h-[45dvh] max-w-full rounded-2xl" />
+        <button type="button" disabled={disabled && !playing} onClick={() => setPlaying(value => !value)} className={`${control} btn-quiet`}>{playing ? <Pause size={16} aria-hidden /> : <Play size={16} aria-hidden />}{playing ? "Stop preview" : "Play preview"}</button>
+      </div> : <video src={media.animation} poster={media.poster} controls playsInline preload="metadata" aria-label="Loop preview" className="mx-auto max-h-[45dvh] max-w-full rounded-2xl" />)}
+      <div className="flex flex-wrap gap-2"><button type="button" disabled={blocked} onClick={download} className={`${control} btn-primary flex-1`}><Download size={17} aria-hidden />Download {artifact.extension.toUpperCase()}</button><button type="button" disabled={blocked} onClick={() => void share()} className={`${control} btn-quiet`}><Share2 size={17} aria-hidden />Share</button></div>
+    </div> : !busy && <button type="button" disabled={blocked} onClick={() => void run()} className={`${control} btn-primary w-full`}>Make {format.toUpperCase()}</button>}
   </section>;
 }

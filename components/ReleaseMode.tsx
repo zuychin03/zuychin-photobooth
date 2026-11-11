@@ -3,6 +3,7 @@
 import { createContext, useContext, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
+import { CirclePause, LogOut } from "lucide-react";
 import { FeatureIncoming } from "@/components/FeatureIncoming";
 import { useKioskLocked } from "@/components/events/EventKioskGuard";
 import { incomingFeature, recoveryPausedFeature, recoverySignOutRequested } from "@/lib/release-mode";
@@ -38,14 +39,19 @@ function RecoverySignOut() {
     } catch { setError("Couldn't sign you out. Check your account and try again."); }
     finally { resume?.(); setBusy(false); }
   };
-  return <main className="mx-auto w-full max-w-2xl px-5 py-12">
-    <h1 ref={heading} tabIndex={-1} className="font-display text-3xl font-semibold outline-none">{loading ? "Checking your account…" : user ? "Sign out of this account?" : "You're signed out"}</h1>
-    <p className="mt-4 text-muted-foreground">Your account drafts stay on this device, hidden until you sign in again.</p>
-    {error && <p role="alert" className="mt-4">{error}</p>}
-    <div className="mt-6 flex flex-wrap gap-3">
-      {!loading && user && <button disabled={busy} onClick={() => void leave()} className="min-h-12 rounded-2xl bg-accent px-5 py-3 font-semibold text-accent-foreground">{busy ? "Signing out…" : "Sign out"}</button>}
-      <Link href="/projects" aria-disabled={busy || undefined} onNavigate={event => { if (busy) event.preventDefault(); }} className="inline-flex min-h-12 items-center rounded-2xl border border-border px-5 py-3">Your projects</Link>
-    </div>
+  return <main className="mx-auto flex min-h-[70dvh] w-full max-w-xl flex-1 flex-col items-center justify-center px-4 py-12">
+    <section className="page-head panel flex w-full flex-col items-center gap-5 px-6 py-10 text-center sm:px-10 sm:py-12">
+      <span className="glyph size-16 rounded-[1.25rem] bg-[#64748b]"><LogOut size={28} strokeWidth={2.25} aria-hidden /></span>
+      <div>
+        <h1 ref={heading} tabIndex={-1} className="font-display text-3xl leading-tight outline-none">{loading ? "Checking your account…" : user ? "Sign out of this account?" : "You're signed out"}</h1>
+        <p className="mx-auto mt-3 max-w-sm text-sm text-muted-foreground">Your account drafts stay on this device, hidden until you sign in again.</p>
+      </div>
+      {error && <p role="alert" className="notice w-full border border-destructive/25 bg-destructive/8 font-bold text-destructive">{error}</p>}
+      <div className="flex flex-wrap justify-center gap-2">
+        {!loading && user && <button disabled={busy} onClick={() => void leave()} className="btn btn-primary">{busy ? "Signing out…" : "Sign out"}</button>}
+        <Link href="/projects" aria-disabled={busy || undefined} onNavigate={event => { if (busy) event.preventDefault(); }} className="btn btn-quiet">Your projects</Link>
+      </div>
+    </section>
   </main>;
 }
 
@@ -54,5 +60,5 @@ export function ReleaseFeatureBoundary({ children }: { children: ReactNode }) {
   if (recovery && !locked && recoverySignOutRequested(pathname, search)) return <RecoverySignOut />;
   const feature = recovery ? recoveryPausedFeature(pathname, search) : localOnly ? incomingFeature(pathname, search) : null;
   if (feature && !locked) return <FeatureIncoming feature={feature} recovery={recovery} />;
-  return <>{recovery && !locked && <p role="status" className="mx-auto w-full max-w-6xl px-5 py-2 text-sm text-muted-foreground sm:px-8">New uploads are paused. Your saved projects, photos and downloads remain available.</p>}{children}</>;
+  return <>{recovery && !locked && <p role="status" className="notice mx-auto mt-3 flex w-[calc(100%-2rem)] max-w-[60rem] items-center gap-2.5 text-muted-foreground sm:w-[calc(100%-4rem)]"><CirclePause size={17} className="shrink-0 text-warning" aria-hidden />New uploads are paused. Your saved projects, photos and downloads remain available.</p>}{children}</>;
 }

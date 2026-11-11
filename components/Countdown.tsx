@@ -9,8 +9,7 @@ export function Countdown({ value }: { value: number | null }) {
     <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center">
       <span
         key={value}
-        className={`${reducedMotion ? "" : "countdown-pulse"} text-[9rem] leading-none font-bold text-white drop-shadow-[0_2px_24px_rgba(0,0,0,0.55)]`}
-        style={{ fontFamily: "var(--font-fraunces)" }}
+        className={`${reducedMotion ? "" : "countdown-pulse"} font-display text-[9rem] leading-none text-white tabular-nums drop-shadow-[0_2px_24px_rgba(0,0,0,0.55)]`}
       >
         {value}
       </span>

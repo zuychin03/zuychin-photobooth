@@ -74,7 +74,7 @@ function RemotePane({
   );
   return (
     <div
-      className={`relative overflow-hidden rounded-xl border border-border/40 bg-black ${PANE_W}`}
+      className={`relative overflow-hidden rounded-2xl bg-black ${PANE_W}`}
       style={paneStyle}
     >
       <video
@@ -91,7 +91,7 @@ function RemotePane({
         }}
       />
       <span
-        className={`absolute bottom-2 left-3 z-10 rounded-full px-3 py-1 text-xs font-semibold ${ROLE_COLORS[role]}`}
+        className={`absolute bottom-2 left-3 z-10 rounded-full px-3 py-1 text-xs font-bold ${ROLE_COLORS[role]}`}
       >
         {label}
       </span>
@@ -514,14 +514,14 @@ function RoomInner({ rehearsal }: { rehearsal?: LegacyRoomRehearsal }) {
           <button
             onClick={() => { if (canLeave()) { cancelled.current = true; router.push("/"); } }}
             aria-label="Leave room"
-            className="glass-card flex h-11 w-11 items-center justify-center rounded-full"
+            className="btn btn-glass min-w-11 px-0"
           >
             <ArrowLeft size={20} />
           </button>
-          <div className="glass-card flex min-h-11 items-center gap-2 rounded-full px-4 font-mono text-sm tracking-[0.25em]">
+          <div className="glass flex min-h-11 items-center gap-3 rounded-full px-5 text-lg font-black tracking-[0.24em] uppercase">
             {code}
             {memberRoles.length > 1 && (
-              <span className="font-sans text-xs tracking-normal text-muted-foreground">
+              <span className="text-xs font-bold tracking-normal text-muted-foreground tabular-nums">
                 {memberRoles.length}/4
               </span>
             )}
@@ -533,7 +533,7 @@ function RoomInner({ rehearsal }: { rehearsal?: LegacyRoomRehearsal }) {
           style={paneVars}
         >
           <div
-            className={`relative overflow-hidden rounded-xl border border-accent/50 bg-black ${PANE_W}`}
+            className={`relative overflow-hidden rounded-2xl border border-accent/50 bg-black ${PANE_W}`}
             style={{ aspectRatio: paneAr }}
           >
             {error ? (
@@ -541,7 +541,7 @@ function RoomInner({ rehearsal }: { rehearsal?: LegacyRoomRehearsal }) {
                 <p>Can&apos;t use your camera. Allow camera access to join the booth.</p>
                 <button
                   onClick={retry}
-                  className="glass-card min-h-11 rounded-full px-4 font-medium text-foreground"
+                  className="btn btn-glass"
                 >
                   Try again
                 </button>
@@ -562,7 +562,7 @@ function RoomInner({ rehearsal }: { rehearsal?: LegacyRoomRehearsal }) {
               style={{ filter: filter.css !== "none" ? filter.css : undefined }}
             />
             <span
-              className={`absolute bottom-2 left-3 z-10 rounded-full px-3 py-1 text-xs font-semibold ${ROLE_COLORS[myRole]}`}
+              className={`absolute bottom-2 left-3 z-10 rounded-full px-3 py-1 text-xs font-bold ${ROLE_COLORS[myRole]}`}
             >
               You
             </span>
@@ -582,29 +582,29 @@ function RoomInner({ rehearsal }: { rehearsal?: LegacyRoomRehearsal }) {
 
           {remotes.length === 0 && (
             <div
-              className={`relative flex flex-col items-center justify-center gap-3 rounded-xl border border-border/40 bg-card/60 px-6 text-center ${PANE_W}`}
+              className={`relative flex flex-col items-center justify-center gap-3 rounded-2xl bg-card px-6 text-center ${PANE_W}`}
               style={{ aspectRatio: paneAr }}
             >
               <Heart className="text-partner" size={28} />
               {status === "waiting" || status === "connecting" ? (
                 <>
-                  <p className="font-semibold">Waiting for the others…</p>
+                  <p className="font-bold">Waiting for the others…</p>
                   <button
                     onClick={copyInvite}
-                    className="glass-card flex min-h-11 items-center gap-2 rounded-full px-4 text-sm font-medium"
+                    className="btn btn-glass text-sm"
                   >
                     {copied ? <Check size={16} className="text-success" /> : <Copy size={16} />}
                     {copied ? "Link copied!" : "Copy invite link"}
                   </button>
                 </>
               ) : status === "full" ? (
-                <p className="font-semibold">This booth is already full (4 max).</p>
+                <p className="font-bold">This booth is already full (4 max).</p>
               ) : status === "failed" ? (
-                <p className="font-semibold">
+                <p className="font-bold">
                   Couldn&apos;t connect. Some networks block this, so try another Wi-Fi network or mobile data.
                 </p>
               ) : (
-                <p className="font-semibold">Everyone left the room.</p>
+                <p className="font-bold">Everyone left the room.</p>
               )}
             </div>
           )}
@@ -615,7 +615,7 @@ function RoomInner({ rehearsal }: { rehearsal?: LegacyRoomRehearsal }) {
 
         {prompt && (
           <div className="pointer-events-none absolute top-16 left-1/2 z-20 w-max max-w-[85%] -translate-x-1/2">
-            <div className="glass-card rounded-2xl px-5 py-2.5 text-center font-semibold shadow-lg">
+            <div className="glass rounded-2xl px-5 py-2.5 text-center font-bold">
               {prompt}
             </div>
           </div>
@@ -639,70 +639,71 @@ function RoomInner({ rehearsal }: { rehearsal?: LegacyRoomRehearsal }) {
       <div className="z-40 flex shrink-0 flex-col gap-3 overflow-y-auto p-4 pb-6 md:w-96 md:[justify-content:safe_center] md:gap-5 md:p-6">
         {!shooting && (
           <>
-            <div className="scrollbar-hide flex gap-2 overflow-x-auto md:flex-wrap md:overflow-visible">
-              {roomLayouts.map((l) => (
-                <button
-                  key={l.id}
-                  onClick={() => setRoomLayoutId(l.id)}
-                  className={`min-h-11 shrink-0 rounded-full px-4 text-sm font-medium transition ${
-                    activeLayoutId === l.id
-                      ? "bg-foreground text-background"
-                      : "bg-muted text-muted-foreground"
-                  }`}
-                >
-                  {l.name}
-                </button>
-              ))}
-            </div>
-            <FilterBar
-              value={roomFilterId}
-              onChange={setRoomFilterId}
-              layoutClass="scrollbar-hide overflow-x-auto md:flex-wrap md:overflow-visible"
-            />
-            {connected && (
-              <div className="scrollbar-hide flex items-center gap-2 overflow-x-auto md:flex-wrap md:overflow-visible">
-                <span className="shrink-0 text-xs font-medium text-muted-foreground">
-                  Scene
-                </span>
-                <button
-                  onClick={() => applyScene(null, true)}
-                  className={`min-h-11 shrink-0 rounded-xl border-2 px-3 text-xs font-medium ${
-                    roomScene === null ? "border-accent" : "border-border"
-                  }`}
-                >
-                  None
-                </button>
-                {SCENES.map((s) => (
+            <div className="flex flex-col gap-3 md:panel md:gap-4 md:p-5">
+              <div className="scrollbar-hide flex gap-2 overflow-x-auto md:flex-wrap md:overflow-visible">
+                {roomLayouts.map((l) => (
                   <button
-                    key={s.id}
-                    onClick={() => applyScene(s.id, true)}
-                    title={s.name}
-                    aria-label={s.name}
-                    className={`h-11 w-16 shrink-0 overflow-hidden rounded-xl border-2 ${
-                      roomScene === s.id ? "border-accent" : "border-border"
+                    key={l.id}
+                    onClick={() => setRoomLayoutId(l.id)}
+                    className={`btn shrink-0 text-sm ${
+                      activeLayoutId === l.id
+                        ? "bg-foreground text-background"
+                        : "btn-quiet text-muted-foreground"
                     }`}
-                    style={{ background: s.previewCss }}
                   >
-                    {/* Curated thumbnails use validated local delivery paths. */}
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    {s.assetId && <img src={getCuratedAsset(s.assetId)!.thumbnail.path} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" onError={event => { event.currentTarget.hidden = true; }} />}
+                    {l.name}
                   </button>
                 ))}
               </div>
-            )}
-            <CaptureFeedbackSettings disabled={shooting} />
+              <FilterBar
+                value={roomFilterId}
+                onChange={setRoomFilterId}
+                layoutClass="scrollbar-hide overflow-x-auto md:flex-wrap md:overflow-visible"
+              />
+              {connected && (
+                <div className="scrollbar-hide flex items-center gap-2 overflow-x-auto md:flex-wrap md:overflow-visible">
+                  <span className="shrink-0 text-xs font-bold text-muted-foreground">
+                    Scene
+                  </span>
+                  <button
+                    onClick={() => applyScene(null, true)}
+                    className={`min-h-11 shrink-0 rounded-2xl border-2 px-3 text-xs font-bold ${
+                      roomScene === null ? "border-accent" : "border-border"
+                    }`}
+                  >
+                    None
+                  </button>
+                  {SCENES.map((s) => (
+                    <button
+                      key={s.id}
+                      onClick={() => applyScene(s.id, true)}
+                      title={s.name}
+                      aria-label={s.name}
+                      className={`h-11 w-16 shrink-0 overflow-hidden rounded-2xl border-2 ${
+                        roomScene === s.id ? "border-accent" : "border-border"
+                      }`}
+                      style={{ background: s.previewCss }}
+                    >
+                      {/* Curated thumbnails use validated local delivery paths. */}
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      {s.assetId && <img src={getCuratedAsset(s.assetId)!.thumbnail.path} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" onError={event => { event.currentTarget.hidden = true; }} />}
+                    </button>
+                  ))}
+                </div>
+              )}
+              <CaptureFeedbackSettings disabled={shooting} />
+            </div>
             <button
               onClick={armShoot}
               disabled={!connected || !ready || hydrating || curated.loading}
               aria-label="Start shooting together"
-              className="mx-auto mt-1 flex h-20 w-20 shrink-0 items-center justify-center rounded-full border-4 border-white/80 bg-accent shadow-lg shadow-accent/40 transition active:scale-95 disabled:opacity-40"
+              className="mx-auto mt-1 flex h-20 w-20 shrink-0 items-center justify-center rounded-full border-4 border-white/80 bg-accent shadow-[0_10px_28px_-10px_rgb(0_0_0/0.8)] transition active:scale-95 disabled:opacity-40"
             >
               <span className="h-14 w-14 rounded-full bg-white/90" />
             </button>
             {connected && (
               <p className="text-center text-xs text-muted-foreground">
-                Anyone can press the shutter, and the countdown starts on every screen
-                at once. {activeLayout.shots} shots.
+                Anyone can press the shutter. {activeLayout.shots} shots.
                 {skewMs !== null && ` Screens were ${skewMs}ms apart last time.`}
               </p>
             )}
@@ -715,10 +716,10 @@ function RoomInner({ rehearsal }: { rehearsal?: LegacyRoomRehearsal }) {
         )}
         {curated.loading && !roundSceneFallback && <p role="status" className="text-center text-sm text-muted-foreground">Loading the background…</p>}
         {(roundSceneFallback || curated.fallback.length > 0) && <p role="status" className="text-center text-sm text-muted-foreground">The live preview is using a built-in background this round. Your saved photos will get the real one once it loads.</p>}
-        {saveError && <div role="alert" className="rounded-xl border border-destructive p-3 text-sm">
+        {saveError && <div role="alert" className="notice border border-destructive/25 bg-destructive/8">
           <p>{saveError}</p>
-          {pendingFrames > 0 && <><p className="mt-2">Some photos haven&apos;t saved yet. Try again before you leave.</p><button disabled={retrying} onClick={() => void retryFrames()} className="mt-2 min-h-11 rounded-lg bg-foreground px-4 text-background">{retrying ? "Trying again…" : "Try saving and sending again"}</button></>}
-          {incomplete && pendingFrames === 0 && <button onClick={() => { cancelled.current = true; router.push("/customize"); }} className="mt-2 min-h-11 px-2 font-medium underline underline-offset-4">Continue with the photos you have</button>}
+          {pendingFrames > 0 && <><p className="mt-2">Some photos haven&apos;t saved yet. Try again before you leave.</p><button disabled={retrying} onClick={() => void retryFrames()} className="btn btn-primary mt-3 min-h-10 text-sm">{retrying ? "Trying again…" : "Try saving and sending again"}</button></>}
+          {incomplete && pendingFrames === 0 && <button onClick={() => { cancelled.current = true; router.push("/customize"); }} className="btn btn-plain mt-2 min-h-10 -ml-3 text-sm">Continue with the photos you have</button>}
         </div>}
       </div>
     </main>
