@@ -39,8 +39,10 @@ function LoginInner() {
           email,
           options: { emailRedirectTo: `${location.origin}/auth/callback?next=${encodeURIComponent(next)}` },
         });
-        if (error) throw error;
-        setMsg({ kind: "success", text: "Check your email for the magic link." });
+        // With sign-ups off, an unknown address gets its own error; answering it like a sent
+        // link keeps the form from showing who has an account.
+        if (error && error.code !== "signup_disabled" && error.code !== "otp_disabled") throw error;
+        setMsg({ kind: "success", text: "If this email can sign in here, a magic link is on its way." });
       }
     } catch (err) {
       setMsg({ kind: "error", text: err instanceof Error ? err.message : "Sign-in failed." });
