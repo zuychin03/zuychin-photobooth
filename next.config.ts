@@ -1,6 +1,11 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Self-hosted origin: ship the traced server bundle, not the repo.
+  output: "standalone",
+  // Page-data collection defaults to one worker per core; at this route count
+  // that exhausts RAM on a 16 GB machine. Raise on a dedicated build runner.
+  experimental: { cpus: Number(process.env.NEXT_BUILD_CPUS ?? 2) },
   async headers() {
     return [
       {
